@@ -20,6 +20,14 @@ public class Cliente {
     @OneToOne
     private Usuario usuario;
 
+    /*
+     @OneToMany(mappedBy = "cliente")
+    private List<Reserva> reserva = new ArrayList<>();
+
+     @OneToMany(mappedBy = "cliente")
+    private List<Resena> resenas = new ArrayList<>();
+     */
+
     public Long getId() {
         return id;
     }

@@ -23,6 +23,13 @@ public class Restaurant {
     @Column(nullable = false)
     @NotBlank(message = "La ubicacion es obligatoria")
     private String ubicacion;
+     /*
+     @OneToMany(mappedBy = "Restaurants")
+    private List<Reserva> reserva = new ArrayList<>();
+
+    @OneToMany(mappedBy = "Restaurants")
+    private List<Resena> resenas = new ArrayList<>();
+     */
 
 
 }
