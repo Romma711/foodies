@@ -19,6 +19,11 @@ public class Usuario {
     @NotBlank
     private String telefono;
 
+    public Usuario(String email, String password, String telefono) {
+        this.email = email;
+        this.password = password;
+        this.telefono = telefono;
+    }
 
     public Long getId() {
         return id;
