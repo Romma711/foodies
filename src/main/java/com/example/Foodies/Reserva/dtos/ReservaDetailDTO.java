@@ -10,6 +10,6 @@ public record ReservaDetailDTO(
     LocalTime horariollegada,
     LocalTime horariofin,
     EstadoReserva estadoReserva,
-    Long idCliente,
-    Long idRestaurant
+    String nombreCliente,
+    String nombreResto
 ) { }

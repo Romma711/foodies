@@ -28,6 +28,9 @@ public class Resena {
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
 
+    public Resena(String comentario, int calificacion, Cliente cliente, Restaurant restaurante) {
+    }
+
     public Long getId() {return id;}
     public void setId(Long id) {this.id = id;}
     public @NotBlank(message = "No se permite añadir reseña sin comentario") String getComentario() {return comentario;}
