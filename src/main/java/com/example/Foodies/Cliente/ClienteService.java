@@ -2,6 +2,7 @@ package com.example.Foodies.Cliente;
 
 import com.example.Foodies.Cliente.dtos.ClienteDetailDTO;
 import com.example.Foodies.Cliente.dtos.ClienteListDTO;
+import com.example.Foodies.Cliente.dtos.ClientePatchDTO;
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
@@ -55,5 +56,23 @@ public class ClienteService {
                 cliente.getNombre(),
                 cliente.getApellido(),
                 cliente.getUsuario().getTelefono());
+    }
+
+    public ClienteDetailDTO updateCliente(Long id, ClientePatchDTO update){
+        Cliente existente = clienteRepo.findById(id).orElseThrow(()-> new RuntimeException("ERROR: el cliente  no existe"));
+        existente.setNombre(update.getNombre());
+        existente.setApellido(update.getApellido());
+        existente.getUsuario().setTelefono(update.getTelefono());
+        clienteRepo.save(existente);
+        return new ClienteDetailDTO(existente.getUsuario().getId(),
+                existente.getId(),
+                existente.getUsuario().getEmail(),
+                existente.getNombre(),
+                existente.getApellido(),
+                existente.getUsuario().getTelefono());
+    }
+
+    public void deleteCliente(Long id){
+        clienteRepo.deleteById(id);
     }
 }
