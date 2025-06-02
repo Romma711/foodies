@@ -27,6 +27,12 @@ public class Cliente {
     }
 
     /*
+    @OneToOne
+    @JoinColum(name = "usuario_id",nullable = false)
+    private Usuario usuario;
+
+
+
      @OneToMany(mappedBy = "cliente")
     private List<Reserva> reserva = new ArrayList<>();
 

@@ -1,5 +1,7 @@
 package com.example.Foodies.Usuario;
 
+import com.example.Foodies.Cliente.Cliente;
+import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
@@ -18,7 +20,14 @@ public class Usuario {
 
     @NotBlank
     private String telefono;
+   /*
+    @OneToOne(mappedBy = "usuario")
+    private Restaurant restaurant;
 
+    @OneToOne(mappedBy = "usuairio")
+    private Cliente cliente;
+
+   */
     public Usuario(String email, String password, String telefono) {
         this.email = email;
         this.password = password;
