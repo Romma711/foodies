@@ -4,6 +4,6 @@ public record ResenaDetailDTO(
         Long id,
         String comentario,
         int calificacion,
-        Long idCliente,
-        Long idRestaurant
+        String nombreCliente,
+        String nombreRestaurant
 ) { }

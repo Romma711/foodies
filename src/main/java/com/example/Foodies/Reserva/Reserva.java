@@ -1,6 +1,7 @@
 package com.example.Foodies.Reserva;
 
 import com.example.Foodies.Cliente.Cliente;
+import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Enums.TipoDeComida;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -36,6 +37,9 @@ public class Reserva {
     @ManyToOne
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
+
+    public Reserva(Long cantidad, EstadoReserva estadoReserva, ClienteRequestDTO cliente, RestaurantRequestDTO restaurant) {
+    }
 
     public Long getId() {return id;}
     public void setId(Long id) {this.id = id;}

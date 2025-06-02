@@ -8,8 +8,5 @@ public record ReservaListDTO(
         Long id,
         Long cantidad,
         LocalTime horariollegada,
-        EstadoReserva estadoReserva,
-        String nombreCliente,
-        String nombreResto
-
+        EstadoReserva estadoReserva
 ) { }
