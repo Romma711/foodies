@@ -1,16 +1,16 @@
 package com.example.Foodies.EspecialidadDeComida.Dtos;
 
-import com.example.Foodies.Enums.TipoDeComida;
+import com.example.Foodies.Enums.EspecialidadDeComida;
 
 public class EspecialidadDeComidaRequestDTO {
 
-    private TipoDeComida tipoDeComida;
+    private EspecialidadDeComida tipoDeComida;
 
-    public TipoDeComida getTipoDeComida() {
+    public EspecialidadDeComida getTipoDeComida() {
         return tipoDeComida;
     }
 
-    public void setTipoDeComida(TipoDeComida tipoDeComida) {
+    public void setTipoDeComida(EspecialidadDeComida tipoDeComida) {
         this.tipoDeComida = tipoDeComida;
     }
 }

@@ -14,16 +14,16 @@ public class CartaController {
 
     @GetMapping("/{id}/descargar")
     public ResponseEntity<byte[]> descargarCarta(@PathVariable Long id) {
-        byte[] pdf = cartaService.descargarCarta(id);
+        Carta carta = cartaService.descargarCarta(id);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentDisposition(ContentDisposition
                 .inline()  // o .attachment()
-                .filename("carta.pdf")
+                .filename(carta.getNombreArchivo())
                 .build());
 
-        return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
+        return new ResponseEntity<>(carta.getContenidoPdf(), headers, HttpStatus.OK);
     }
 
     @PostMapping("/subir")
@@ -34,4 +34,25 @@ public class CartaController {
         cartaService.guardarCarta(archivo, restaurantId);
         return ResponseEntity.ok("Carta subida correctamente");
     }
+
+    @PutMapping("/actualizar")
+    public ResponseEntity<String> actualizarCarta(
+            @RequestParam("archivo") MultipartFile archivo,
+            @RequestParam("restaurantId") Long restaurantId
+    ) {
+        cartaService.actualizarCarta(archivo, restaurantId);
+        return ResponseEntity.ok("Carta actualizada correctamente");
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarCarta(@PathVariable Long id) {
+        cartaService.eliminarCarta(id);
+        return ResponseEntity.noContent().build();
+    }
+
+
+
+
+
+
 }

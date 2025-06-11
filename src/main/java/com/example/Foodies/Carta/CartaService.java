@@ -60,10 +60,37 @@ public class CartaService {
         return cartaMapper.toDTO(carta);
     }
 
-    public byte[] descargarCarta(Long cartaId) {
+    public Carta descargarCarta(Long cartaId) {
         Carta carta = cartaRepository.findById(cartaId)
                 .orElseThrow(() -> new EntityNotFoundException("Carta no encontrada"));
-        return carta.getContenidoPdf();
+        return carta;
+    }
+
+    public void actualizarCarta(MultipartFile nuevoArchivo, Long restaurantId) {
+        if (!nuevoArchivo.getContentType().equals("application/pdf")) {
+            throw new BusinessException("Solo se permiten archivos PDF");
+        }
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
+
+        Carta carta = cartaRepository.findByRestaurant(restaurant)
+                .orElseThrow(() -> new EntityNotFoundException("La carta para este restaurante no existe"));
+
+        try {
+            carta.setNombreArchivo(nuevoArchivo.getOriginalFilename());
+            carta.setContenidoPdf(nuevoArchivo.getBytes());
+            cartaRepository.save(carta);
+        } catch (IOException e) {
+            throw new BusinessException("Error al leer el archivo PDF");
+        }
+    }
+
+    public void eliminarCarta (Long cartaId){
+        Carta carta = cartaRepository.findById(cartaId)
+                .orElseThrow(()-> new EntityNotFoundException("Carta no encontrada"));
+
+        cartaRepository.delete(carta);
     }
 
 

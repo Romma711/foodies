@@ -1,10 +1,10 @@
 package com.example.Foodies.EspecialidadDeComida.Dtos;
 
-import com.example.Foodies.Enums.TipoDeComida;
+import com.example.Foodies.Enums.EspecialidadDeComida;
 
 public record EspecialidadDeComidaListDTO(
         Long id,
-        TipoDeComida tipoDeComida
+        EspecialidadDeComida tipoDeComida
 
 ) {
 }

@@ -23,6 +23,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/cliente/create").permitAll()
                         .requestMatchers("/api/reserva/create").hasRole("CLIENTE")
                         .requestMatchers("/api/cliente/update").hasRole("CLIENTE")
+                        .requestMatchers("/api/carta/*/descargar").permitAll()
+                        .requestMatchers("/api/carta/**").hasAnyRole("ENCARGADO","ADMIN")
+                        .requestMatchers("/api/admin/restaurantes/*/aprobar").hasRole("ADMIN")
+                        .requestMatchers("/api/registro/restaurante").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

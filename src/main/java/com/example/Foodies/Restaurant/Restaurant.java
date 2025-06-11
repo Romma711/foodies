@@ -1,13 +1,14 @@
 package com.example.Foodies.Restaurant;
 
 import com.example.Foodies.Carta.Carta;
-import com.example.Foodies.EspecialidadDeComida.EspecialidadDeComida;
+import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Resena.Resena;
 import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Usuario.Usuario;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +34,10 @@ public class Restaurant {
     @NotBlank(message = "La ubicacion es obligatoria")
     private String ubicacion;
 
+    @NotNull
+    private boolean aprobado = false;
+
+
 
      @OneToOne(mappedBy = "restaurant")
      private Carta carta;
@@ -51,6 +56,14 @@ public class Restaurant {
      @OneToMany(mappedBy = "Restaurants")
      private List<Resena> resenas = new ArrayList<>();
 
+
+    public boolean isAprobado() {
+        return aprobado;
+    }
+
+    public void setAprobado(boolean aprobado) {
+        this.aprobado = aprobado;
+    }
 
     public Long getId() {
         return id;

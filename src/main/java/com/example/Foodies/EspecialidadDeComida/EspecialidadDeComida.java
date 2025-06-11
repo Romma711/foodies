@@ -1,6 +1,5 @@
 package com.example.Foodies.EspecialidadDeComida;
 
-import com.example.Foodies.Enums.TipoDeComida;
 import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
 
@@ -17,7 +16,7 @@ public class EspecialidadDeComida {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private TipoDeComida tipoDeComida;
+    private com.example.Foodies.Enums.EspecialidadDeComida tipoDeComida;
 
 
     @OneToMany(mappedBy = "especialidad")
@@ -31,11 +30,11 @@ public class EspecialidadDeComida {
         this.id = id;
     }
 
-    public TipoDeComida getTipoDeComida() {
+    public com.example.Foodies.Enums.EspecialidadDeComida getTipoDeComida() {
         return tipoDeComida;
     }
 
-    public void setTipoDeComida(TipoDeComida tipoDeComida) {
+    public void setTipoDeComida(com.example.Foodies.Enums.EspecialidadDeComida tipoDeComida) {
         this.tipoDeComida = tipoDeComida;
     }
 }

@@ -59,4 +59,11 @@ public class GlobalExecptionHandler {
                 ));
     }
 
+    @ExceptionHandler(EmailDuplicadoException.class)
+    public ResponseEntity<?> handlerEmailDuplicadoException(EmailDuplicadoException ex){
+        return  ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("error","error conflicto","mensaje","Este email esta en uso"));
+    }
+
 }

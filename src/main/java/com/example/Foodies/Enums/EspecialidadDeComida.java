@@ -1,6 +1,6 @@
 package com.example.Foodies.Enums;
 
-public enum TipoDeComida {
+public enum EspecialidadDeComida {
 
     PESCADOS,
     PARRILLA,

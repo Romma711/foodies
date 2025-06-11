@@ -3,7 +3,6 @@ package com.example.Foodies.Reserva;
 import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Enums.EstadoReserva;
-import com.example.Foodies.Enums.TipoDeComida;
 import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
