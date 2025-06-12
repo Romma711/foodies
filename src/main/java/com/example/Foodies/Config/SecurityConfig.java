@@ -10,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -17,32 +18,42 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain (HttpSecurity http) throws Exception{
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/restaurants",
-                                "/api/reseñas",
-                                "/api/carta/*/descargar",
-                                "/api/cliente/create",
-                                "/api/registro/restaurante"
-                        ).permitAll()
-                        .requestMatchers("/api/reserva/create",
-                                "/api/cliente/update"
-                        ).hasRole("CLIENTE")
-                        .requestMatchers("/api/carta/**").hasAnyRole("ENCARGADO","ADMIN")
-                        .requestMatchers("/api/admin/restaurantes/*/aprobar").hasRole("ADMIN")
-                        .anyRequest().authenticated()
-                )
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .httpBasic(basic -> {}
-                );
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/restaurants",
+                                "/api/reseñas",
+                                "/api/carta/*/descargar",
+                                "/api/cliente/create",
+                                "/api/registro/restaurante",
+                                "/api/auth/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/reserva/create",
+                                "/api/cliente/update"
+                        ).hasRole("CLIENTE")
+                        .requestMatchers("/api/carta/**").hasAnyRole("ENCARGADO", "ADMIN")
+                        .requestMatchers("/api/admin/restaurantes/*/aprobar").hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public JwtAuthFilter jwtAuthFilter() {
+        return new JwtAuthFilter();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }
