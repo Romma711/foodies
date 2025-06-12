@@ -3,6 +3,7 @@ package com.example.Foodies.Reserva;
 import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Cliente.ClienteRepository;
 import com.example.Foodies.Restaurant.Restaurant;
+import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Restaurante.Restaurante;
 import com.example.Foodies.Restaurante.RestauranteRepository;
 import com.example.Foodies.Reserva.dtos.*;
@@ -21,7 +22,7 @@ public class ReservaService {
     private ClienteRepository clienteRepo;
 
     @Autowired
-    private RestauranteRepository restauranteRepo;
+    private RestaurantRepository restauranteRepo;
 
     public ReservaDetailDTO createReserva(ReservaRequesDTO dto) {
         Cliente cliente = clienteRepo.findById(dto.getId())

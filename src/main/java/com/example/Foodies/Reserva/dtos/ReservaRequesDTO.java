@@ -2,6 +2,7 @@ package com.example.Foodies.Reserva.dtos;
 
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Enums.EstadoReserva;
+import com.example.Foodies.Restaurant.Dtos.RestaurantRequestDTO;
 
 public class ReservaRequesDTO {
     private Long id;

@@ -4,9 +4,12 @@ import com.example.Foodies.Cliente.dtos.ClienteDetailDTO;
 import com.example.Foodies.Cliente.dtos.ClienteListDTO;
 import com.example.Foodies.Cliente.dtos.ClientePatchDTO;
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
+import com.example.Foodies.Config.PasswordConfig;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,13 +22,17 @@ public class ClienteService {
     @Autowired
     private UsuarioRepository usuarioRepo;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Transactional
     public ClienteDetailDTO createCliente (ClienteRequestDTO entrante){
         if(usuarioRepo.existsByEmail(entrante.getUsuario().getEmail())){
             throw new RuntimeException("ERROR: El email ya existe");
         }
         Cliente cliente = clienteRepo.save(new Cliente(entrante.getNombre(), entrante.getApellido(), usuarioRepo.save(
                 new Usuario(entrante.getUsuario().getEmail(),
-                        entrante.getUsuario().getPassword(),
+                        passwordEncoder.encode(entrante.getUsuario().getPassword()),
                         entrante.getUsuario().getTelefono())
                 )
             )

@@ -1,7 +1,7 @@
 package com.example.Foodies.Usuario;
 
 import com.example.Foodies.Cliente.Cliente;
-import com.example.Foodies.Enums.Rol;
+import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -21,22 +21,24 @@ public class Usuario {
 
     @NotBlank
     private String telefono;
+
     @NotBlank
-    private Rol rol;
+    @Enumerated(EnumType.STRING)
+    private Role rol;
 
     @OneToOne(mappedBy = "usuario")
     private Restaurant restaurant;
 
-    @OneToOne(mappedBy = "usuairio")
+    @OneToOne(mappedBy = "usuario")
     private Cliente cliente;
 
 
-    public Rol getRol() {
+    public Role getRol() {
         return rol;
     }
 
-    public void setRol(Rol rol) {
-        this.rol = rol;
+    public void setRol(Role role) {
+        this.rol = role;
     }
 
     public Restaurant getRestaurant() {

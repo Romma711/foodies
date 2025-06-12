@@ -49,7 +49,7 @@ public class RestaurantService {
         // Crear restaurante
         Restaurant restaurant = restaurantMapper.toEntity(dto);
         restaurant.setUsuario(usuario);
-        restaurant.setEspecialidad(especialidad);
+        restaurant.setEspecialidad(especialidad.getTipoDeComida());
 
         Restaurant saved = restaurantRepo.save(restaurant);
 

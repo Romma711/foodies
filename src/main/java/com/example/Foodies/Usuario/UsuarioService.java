@@ -1,6 +1,6 @@
 package com.example.Foodies.Usuario;
 
-import com.example.Foodies.Enums.Rol;
+import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Registro.RegistroRestauranteRequestDTO;
@@ -9,11 +9,18 @@ import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioRequestDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
-public class UsuarioService {
+public class UsuarioService implements UserDetailsService {
     @Autowired
     private UsuarioRepository usuarioRepo;
     @Autowired
@@ -30,6 +37,18 @@ public class UsuarioService {
         return usuarioRepo.save(new Usuario(nuevo.getEmail(), nuevo.getPassword(), nuevo.getTelefono()));
     }
 
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Usuario usuario = usuarioRepo.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        return new User(
+                usuario.getEmail(),
+                usuario.getPassword(),
+                List.of(new SimpleGrantedAuthority(usuario.getRol().toString()))
+        );
+    }
+
     public Usuario getById(Long id){
         return usuarioRepo.findById(id).orElseThrow(() -> new RuntimeException("El usuario no existe"));
     }
@@ -42,7 +61,7 @@ public class UsuarioService {
         usuario.setEmail(r.getEmail());
         usuario.setPassword(passwordEncoder.encode(r.getPassword()));
         usuario.setTelefono(r.getTelefono());
-        usuario.setRol(Rol.CLIENTE);
+        usuario.setRol(Role.ROLE_CLIENTE);
 
         Restaurant rest = new Restaurant();
         rest.setNombre(r.getNombreRestaurante());
@@ -66,7 +85,7 @@ public class UsuarioService {
             throw new IllegalStateException("Este usuario no tiene restaurante asociado");
         }
 
-        usuario.setRol(Rol.ENCARGADO);
+        usuario.setRol(Role.ROLE_ENCARGADO);
         usuario.getRestaurant().setAprobado(true);
 
         return usuarioMapper.toDTO(usuario);
