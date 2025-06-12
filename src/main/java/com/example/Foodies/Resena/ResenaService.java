@@ -3,7 +3,7 @@ package com.example.Foodies.Resena;
 import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Cliente.ClienteRepository;
 import com.example.Foodies.Restaurant.Restaurant;
-import com.example.Foodies.Restaurant3.RestauranteRepository;
+import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Resena.dtos.ResenaDetailDTO;
 import com.example.Foodies.Resena.dtos.ResenaListDTO;
 import com.example.Foodies.Resena.dtos.ResenaPatchDTO;
@@ -23,13 +23,13 @@ public class ResenaService {
     private ClienteRepository clienteRepo;
 
     @Autowired
-    private RestauranteRepository restauranteRepo;
+    private RestaurantRepository restauranteRepo;
 
     public ResenaDetailDTO createResena(ResenaRequestDTO dto) {
         Cliente cliente = clienteRepo.findById(dto.getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        Restaurant restaurante = restauranteRepo.findById(dto.idRestaurant())
+        Restaurant restaurante = restauranteRepo.findById(dto.getId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
         Resena resena = new Resena(
@@ -53,9 +53,8 @@ public class ResenaService {
         return resenaRepo.findAll().stream()
                 .map(r -> new ResenaListDTO(
                         r.getId(),
-                        r.getCalificacion(),
-                        r.getCliente().getNombre(),
-                        r.getRestaurante().getNombre()
+                        r.getComentario(),
+                        r.getCalificacion()
                 )).toList();
     }
 
@@ -68,7 +67,7 @@ public class ResenaService {
                 r.getComentario(),
                 r.getCalificacion(),
                 r.getCliente().getNombre(),
-                r.getRestaurante().getNombre()
+                r.getRestaurant().getNombre()
         );
     }
 
@@ -90,7 +89,7 @@ public class ResenaService {
                 r.getComentario(),
                 r.getCalificacion(),
                 r.getCliente().getNombre(),
-                r.getRestaurante().getNombre()
+                r.getRestaurant().getNombre()
         );
     }
 

@@ -4,8 +4,6 @@ import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Cliente.ClienteRepository;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
-import com.example.Foodies.Restaurante.Restaurante;
-import com.example.Foodies.Restaurante.RestauranteRepository;
 import com.example.Foodies.Reserva.dtos.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,7 +26,7 @@ public class ReservaService {
         Cliente cliente = clienteRepo.findById(dto.getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        Restaurant restaurante = restauranteRepo.findById(dto.getRestaurant().getId())
+        Restaurant restaurante = restauranteRepo.findById(dto.getId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
         Reserva reserva = new Reserva(dto.getCantidad(),  dto.getEstadoReserva(), dto.getCliente(), dto.getRestaurant());
@@ -49,10 +47,9 @@ public class ReservaService {
         return reservaRepo.findAll().stream()
                 .map(r -> new ReservaListDTO(
                         r.getId(),
+                        r.getCantidad(),
                         r.getHorariollegada(),
-                        r.getHorariofin(),
-                        r.getCliente().getNombre(),
-                        r.getRestaurante().getNombre()
+                        r.getEstadoReserva()
                 )).toList();
     }
 
@@ -67,7 +64,7 @@ public class ReservaService {
                 r.getHorariofin(),
                 r.getEstadoReserva(),
                 r.getCliente().getNombre(),
-                r.getRestaurante().getNombre()
+                r.getRestaurant().getNombre()
         );
     }
 
@@ -87,7 +84,7 @@ public class ReservaService {
                 r.getHorariofin(),
                 r.getEstadoReserva(),
                 r.getCliente().getNombre(),
-                r.getRestaurante().getNombre()
+                r.getRestaurant().getNombre()
         );
     }
 
