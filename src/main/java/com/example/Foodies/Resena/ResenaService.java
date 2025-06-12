@@ -8,6 +8,7 @@ import com.example.Foodies.Resena.dtos.ResenaDetailDTO;
 import com.example.Foodies.Resena.dtos.ResenaListDTO;
 import com.example.Foodies.Resena.dtos.ResenaPatchDTO;
 import com.example.Foodies.Resena.dtos.ResenaRequestDTO;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,7 @@ public class ResenaService {
     @Autowired
     private RestaurantRepository restauranteRepo;
 
+    @Transactional
     public ResenaDetailDTO createResena(ResenaRequestDTO dto) {
         Cliente cliente = clienteRepo.findById(dto.getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));

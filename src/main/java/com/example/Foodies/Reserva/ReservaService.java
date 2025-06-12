@@ -5,6 +5,7 @@ import com.example.Foodies.Cliente.ClienteRepository;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Reserva.dtos.*;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class ReservaService {
     @Autowired
     private RestaurantRepository restauranteRepo;
 
+    @Transactional
     public ReservaDetailDTO createReserva(ReservaRequesDTO dto) {
         Cliente cliente = clienteRepo.findById(dto.getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
