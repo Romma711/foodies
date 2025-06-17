@@ -11,6 +11,6 @@ public interface CartaRepository extends JpaRepository<Carta,Long> {
 
     Optional<Carta> findByRestaurant(Restaurant restaurant);
 
-    boolean existByRestaurantId(Long id);
+    boolean existsByRestaurantId(Long id);
 
 }

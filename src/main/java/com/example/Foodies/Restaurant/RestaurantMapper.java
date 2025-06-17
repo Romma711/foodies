@@ -19,7 +19,7 @@ public interface RestaurantMapper {
 
     List<RestaurantListDTO> toListDTO(List<Restaurant> restaurantes);
 
-    @MappingTarget
+
     void patchRestaurantFromDTO(RestaurantPatchDTO dto, @MappingTarget Restaurant restaurant);
 
 

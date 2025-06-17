@@ -42,18 +42,17 @@ public class Restaurant {
      @OneToOne(mappedBy = "restaurant")
      private Carta carta;
 
-     @ManyToOne
-     @JoinColumn(name = "especialidad_id", nullable = false)
+     @Enumerated(EnumType.STRING)
      private EspecialidadDeComida especialidad;
 
      @OneToOne
      @JoinColumn(name = "usuario_id",nullable = false)
      private Usuario usuario;
 
-     @OneToMany(mappedBy = "Restaurants")
+     @OneToMany(mappedBy = "restaurant")
      private List<Reserva> reserva = new ArrayList<>();
 
-     @OneToMany(mappedBy = "Restaurants")
+     @OneToMany(mappedBy = "restaurant")
      private List<Resena> resenas = new ArrayList<>();
 
 

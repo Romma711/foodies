@@ -1,7 +1,6 @@
 package com.example.Foodies.Carta;
 
 import com.example.Foodies.Carta.Dtos.CartaDetailDTO;
-import com.example.Foodies.Carta.Dtos.CartaRequestDTO;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -34,7 +33,7 @@ public class CartaService {
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
         // Verificamos si ya tiene una carta asociada
-        if (cartaRepository.existByRestaurantId(restaurantId)) {
+        if (cartaRepository.existsByRestaurantId(restaurantId)) {
             throw new BusinessException("Este restaurante ya tiene una carta");
         }
 

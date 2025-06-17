@@ -1,6 +1,7 @@
 package com.example.Foodies.Resena.dtos;
 
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
+import com.example.Foodies.Restaurant.Dtos.RestaurantRequestDTO;
 
 public class ResenaRequestDTO {
     private Long id;

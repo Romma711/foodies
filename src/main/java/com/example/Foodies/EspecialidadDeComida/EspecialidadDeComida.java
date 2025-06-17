@@ -1,3 +1,4 @@
+/*
 package com.example.Foodies.EspecialidadDeComida;
 
 import com.example.Foodies.Restaurant.Restaurant;
@@ -38,3 +39,4 @@ public class EspecialidadDeComida {
         this.tipoDeComida = tipoDeComida;
     }
 }
+*/

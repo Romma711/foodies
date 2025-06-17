@@ -10,7 +10,7 @@ public record RestaurantDetailDTO(
         Long id,
         String nombre,
         Integer cupoMaximo,
-        String ubicacion,
+        String ubicacion
 
 ) {
 }

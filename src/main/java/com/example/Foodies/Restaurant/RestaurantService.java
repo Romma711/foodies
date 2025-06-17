@@ -1,15 +1,13 @@
 package com.example.Foodies.Restaurant;
 
-import com.example.Foodies.EspecialidadDeComida.EspecialidadDeComida;
-import com.example.Foodies.EspecialidadDeComida.EspecialidadRepository;
-import com.example.Foodies.Exception.BusinessException;
+
+
+import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Dtos.RestaurantDetailDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantListDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
-import com.example.Foodies.Restaurant.Dtos.RestaurantRequestDTO;
-import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,13 +22,11 @@ public class RestaurantService {
     @Autowired
     private UsuarioRepository usuarioRepo;
     @Autowired
-    private EspecialidadRepository especialidadRepo;
-    @Autowired
     private RestaurantMapper restaurantMapper;
 
 
 
-
+  /*
     public RestaurantDetailDTO crearRestaurant(RestaurantRequestDTO dto) {
 
         // Buscar usuario
@@ -55,6 +51,8 @@ public class RestaurantService {
 
         return restaurantMapper.toDetailDTO(saved);
     }
+
+   */
 
     public List<RestaurantListDTO> listarTodos() {
         List<Restaurant> restaurantes = restaurantRepo.findAll();
@@ -86,6 +84,14 @@ public class RestaurantService {
         return restaurantMapper.toDetailDTO(restaurant);
     }
 
+
+    public List<RestaurantListDTO> restaurantByEspecialidad(EspecialidadDeComida especialidadDeComida){
+        List<Restaurant> restaurants = restaurantRepo.findByEspecialidad(especialidadDeComida);
+        if(restaurants.isEmpty()){
+            throw new ListNoContentException("No existen restaurantes con esta especialidad");
+        }
+        return restaurantMapper.toListDTO(restaurants);
+    }
 
 
 }

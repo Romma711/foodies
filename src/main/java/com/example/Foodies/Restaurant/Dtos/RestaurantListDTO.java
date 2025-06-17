@@ -4,6 +4,6 @@ public record RestaurantListDTO(
 
         Long id,
         String nombre,
-        String ubicacion;
+        String ubicacion
 ) {
 }
