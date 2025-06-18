@@ -18,7 +18,7 @@ public class ReservaController {
     private ReservaService reservaService;
 
     @PostMapping("/create")
-    public ResponseEntity<ReservaDetailDTO> handleCreateReserva(@RequestBody ReservaRequesDTO reserva) {
+    public ResponseEntity<Reserva> handleCreateReserva(@RequestBody Reserva reserva) {
         return ResponseEntity.ok(reservaService.createReserva(reserva));
     }
 

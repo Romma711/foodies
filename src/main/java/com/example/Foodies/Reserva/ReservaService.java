@@ -31,7 +31,7 @@ public class ReservaService {
         Restaurant restaurante = restauranteRepo.findById(reserva.getId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
-        Reserva reservanueva = new Reserva(reserva.getCantidad(),  reserva.getEstadoReserva(), reserva.getCliente(), reserva.getRestaurant());
+        Reserva reservanueva = new Reserva(reserva.getId(),reserva.getCantidad(), reserva.getHorariollegada(),reserva.getHorariofin(), reserva.getEstadoReserva(), reserva.getCliente(), reserva.getRestaurant());
         reservanueva = reservaRepo.save(reservanueva);
 
         return new Reserva(

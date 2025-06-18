@@ -18,7 +18,7 @@ public class ResenaController {
     private ResenaService resenaService;
 
     @PostMapping("/create")
-    public ResponseEntity<ResenaDetailDTO> handleCreateResena(@RequestBody ResenaRequestDTO resena) {
+    public ResponseEntity<Resena> handleCreateResena(@RequestBody Resena resena) {
         return ResponseEntity.ok(resenaService.createResena(resena));
     }
 
