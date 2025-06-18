@@ -38,7 +38,14 @@ public class Reserva {
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
 
-    public Reserva(Long cantidad, EstadoReserva estadoReserva, ClienteRequestDTO cliente, RestaurantRequestDTO restaurant) {
+    public Reserva(Long id, Long cantidad, LocalTime horariollegada, LocalTime horariofin, EstadoReserva estadoReserva, Cliente cliente, Restaurant restaurant) {
+        this.id = id;
+        this.cantidad = cantidad;
+        this.horariollegada = horariollegada;
+        this.horariofin = horariofin;
+        this.estadoReserva = estadoReserva;
+        this.cliente = cliente;
+        this.restaurant = restaurant;
     }
 
     public Long getId() {return id;}

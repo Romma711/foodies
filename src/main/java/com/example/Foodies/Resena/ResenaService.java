@@ -27,27 +27,28 @@ public class ResenaService {
     private RestaurantRepository restauranteRepo;
 
     @Transactional
-    public ResenaDetailDTO createResena(ResenaRequestDTO dto) {
-        Cliente cliente = clienteRepo.findById(dto.getId())
+    public Resena createResena(Resena resena) {
+        Cliente cliente = clienteRepo.findById(resena.getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        Restaurant restaurante = restauranteRepo.findById(dto.getId())
+        Restaurant restaurante = restauranteRepo.findById(resena.getId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
-        Resena resena = new Resena(
-                dto.getComentario(),
-                dto.getCalificacion(),
-                cliente,
-                restaurante
-        );
-        resena = resenaRepo.save(resena);
-
-        return new ResenaDetailDTO(
+        Resena resenanueva = new Resena(
                 resena.getId(),
                 resena.getComentario(),
                 resena.getCalificacion(),
-                cliente.getNombre(),
-                restaurante.getNombre()
+                cliente,
+                restaurante
+        );
+        resenanueva = resenaRepo.save(resenanueva);
+
+        return new Resena(
+                resenanueva.getId(),
+                resenanueva.getComentario(),
+                resenanueva.getCalificacion(),
+                cliente,
+                restaurante
         );
     }
 

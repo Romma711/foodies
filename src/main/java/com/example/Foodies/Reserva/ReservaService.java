@@ -24,24 +24,24 @@ public class ReservaService {
     private RestaurantRepository restauranteRepo;
 
     @Transactional
-    public ReservaDetailDTO createReserva(ReservaRequesDTO dto) {
-        Cliente cliente = clienteRepo.findById(dto.getId())
+    public Reserva createReserva(Reserva reserva) {
+        Cliente cliente = clienteRepo.findById(reserva.getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        Restaurant restaurante = restauranteRepo.findById(dto.getId())
+        Restaurant restaurante = restauranteRepo.findById(reserva.getId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
-        Reserva reserva = new Reserva(dto.getCantidad(),  dto.getEstadoReserva(), dto.getCliente(), dto.getRestaurant());
-        reserva = reservaRepo.save(reserva);
+        Reserva reservanueva = new Reserva(reserva.getCantidad(),  reserva.getEstadoReserva(), reserva.getCliente(), reserva.getRestaurant());
+        reservanueva = reservaRepo.save(reservanueva);
 
-        return new ReservaDetailDTO(
-                reserva.getId(),
-                reserva.getCantidad(),
-                reserva.getHorariollegada(),
-                reserva.getHorariofin(),
-                reserva.getEstadoReserva(),
-                cliente.getNombre(),
-                restaurante.getNombre()
+        return new Reserva(
+                reservanueva.getId(),
+                reservanueva.getCantidad(),
+                reservanueva.getHorariollegada(),
+                reservanueva.getHorariofin(),
+                reservanueva.getEstadoReserva(),
+                cliente,
+                restaurante
         );
     }
 
