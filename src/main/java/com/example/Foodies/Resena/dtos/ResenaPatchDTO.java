@@ -3,9 +3,9 @@ package com.example.Foodies.Resena.dtos;
 public class ResenaPatchDTO {
    private Long id;
     private String comentario;
-    private int calificacion;
+    private Integer calificacion;
 
-    public ResenaPatchDTO(Long id, String comentario, int calificacion) {
+    public ResenaPatchDTO(Long id, String comentario, Integer calificacion) {
         this.id = id;
         this.comentario = comentario;
         this.calificacion = calificacion;
@@ -27,11 +27,11 @@ public class ResenaPatchDTO {
         this.comentario = comentario;
     }
 
-    public int getCalificacion() {
+    public Integer getCalificacion() {
         return calificacion;
     }
 
-    public void setCalificacion(int calificacion) {
+    public void setCalificacion(Integer calificacion) {
         this.calificacion = calificacion;
     }
 }

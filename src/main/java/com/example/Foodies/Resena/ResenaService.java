@@ -28,28 +28,32 @@ public class ResenaService {
 
     @Transactional
     public Resena createResena(Resena resena) {
-        Cliente cliente = clienteRepo.findById(resena.getId())
+        Cliente cliente = clienteRepo.findById(resena.getCliente().getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        Restaurant restaurante = restauranteRepo.findById(resena.getId())
+        Restaurant restaurante = restauranteRepo.findById(resena.getRestaurant().getId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
-        Resena resenanueva = new Resena(
-                resena.getId(),
+
+        boolean yaExiste = resenaRepo.existsByClienteAndRestaurant(cliente, restaurante);
+        if (yaExiste) {
+            throw new RuntimeException("El cliente ya realizó una reseña para este restaurante.");
+        }
+
+        if (resena.getCalificacion() < 1 || resena.getCalificacion() > 5) {
+            throw new RuntimeException("La calificación debe estar entre 1 y 5.");
+        }
+
+        Resena resenaNueva = new Resena(
+                null,
                 resena.getComentario(),
                 resena.getCalificacion(),
                 cliente,
                 restaurante
         );
-        resenanueva = resenaRepo.save(resenanueva);
+        resenaNueva = resenaRepo.save(resenaNueva);
 
-        return new Resena(
-                resenanueva.getId(),
-                resenanueva.getComentario(),
-                resenanueva.getCalificacion(),
-                cliente,
-                restaurante
-        );
+        return resenaNueva;
     }
 
     public List<ResenaListDTO> getAllResenas() {
@@ -81,8 +85,12 @@ public class ResenaService {
         if (dto.getComentario() != null) {
             r.setComentario(dto.getComentario());
         }
-        if (dto.getCalificacion() < 6 && dto.getCalificacion() > 0) {
-            r.setCalificacion(dto.getCalificacion());
+        if (dto.getCalificacion() != null) {
+            int calificacion = dto.getCalificacion();
+            if (calificacion < 1 || calificacion > 5) {
+                throw new RuntimeException("La calificación debe estar entre 1 y 5.");
+            }
+            r.setCalificacion(calificacion);
         }
 
         r = resenaRepo.save(r);
@@ -97,6 +105,9 @@ public class ResenaService {
     }
 
     public void deleteResena(Long id) {
+        if (!resenaRepo.existsById(id)) {
+            throw new RuntimeException("La reseña no existe.");
+        }
         resenaRepo.deleteById(id);
     }
 }
