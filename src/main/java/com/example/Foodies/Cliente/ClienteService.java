@@ -5,6 +5,7 @@ import com.example.Foodies.Cliente.dtos.ClienteListDTO;
 import com.example.Foodies.Cliente.dtos.ClientePatchDTO;
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Config.PasswordConfig;
+import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
@@ -30,11 +31,11 @@ public class ClienteService {
         if(usuarioRepo.existsByEmail(entrante.getUsuario().getEmail())){
             throw new RuntimeException("ERROR: El email ya existe");
         }
-        Cliente cliente = clienteRepo.save(new Cliente(entrante.getNombre(), entrante.getApellido(), usuarioRepo.save(
+        Cliente cliente = clienteRepo.save(new Cliente(entrante.getNombre(), entrante.getApellido(),
                 new Usuario(entrante.getUsuario().getEmail(),
                         passwordEncoder.encode(entrante.getUsuario().getPassword()),
-                        entrante.getUsuario().getTelefono())
-                )
+                        entrante.getUsuario().getTelefono(),
+                        Role.ROLE_CLIENTE)
             )
         );
         return new ClienteDetailDTO(cliente.getUsuario().getId(),

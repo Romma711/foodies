@@ -22,7 +22,6 @@ public class Usuario {
     @NotBlank
     private String telefono;
 
-    @NotBlank
     @Enumerated(EnumType.STRING)
     private Role rol;
 
@@ -32,39 +31,33 @@ public class Usuario {
     @OneToOne(mappedBy = "usuario")
     private Cliente cliente;
 
+    public Usuario(String email, String password, String telefono, Role rol) {
+        this.email = email;
+        this.password = password;
+        this.telefono = telefono;
+        this.rol = rol;
+    }
+    public Usuario(){}
+
 
     public Role getRol() {
         return rol;
     }
-
     public void setRol(Role role) {
         this.rol = role;
     }
-
     public Restaurant getRestaurant() {
         return restaurant;
     }
-
     public void setRestaurant(Restaurant restaurant) {
         this.restaurant = restaurant;
     }
-
     public Cliente getCliente() {
         return cliente;
     }
-
     public void setCliente(Cliente cliente) {
         this.cliente = cliente;
     }
-
-    public Usuario(){}
-
-    public Usuario(String email, String password, String telefono) {
-        this.email = email;
-        this.password = password;
-        this.telefono = telefono;
-    }
-
     public Long getId() {
         return id;
     }

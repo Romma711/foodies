@@ -20,8 +20,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -30,9 +30,9 @@ public class SecurityConfig {
                                 "/api/restaurants",
                                 "/api/reseñas",
                                 "/api/carta/*/descargar",
-                                "/api/cliente/create",
-                                "/api/registro/restaurante",
-                                "/api/auth/**"
+                                "/api/auth/login",
+                                "/api/auth/register/cliente",
+                                "/api/auth/register/restaurant"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/reserva/create",

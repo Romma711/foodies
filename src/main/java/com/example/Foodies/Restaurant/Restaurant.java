@@ -45,7 +45,7 @@ public class Restaurant {
      @Enumerated(EnumType.STRING)
      private EspecialidadDeComida especialidad;
 
-     @OneToOne
+     @OneToOne(orphanRemoval = true, cascade = CascadeType.ALL)
      @JoinColumn(name = "usuario_id",nullable = false)
      private Usuario usuario;
 

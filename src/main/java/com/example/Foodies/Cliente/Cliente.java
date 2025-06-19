@@ -17,7 +17,7 @@ public class Cliente {
     @NotBlank
     private String apellido;
 
-    @OneToOne
+    @OneToOne(orphanRemoval = true, cascade = CascadeType.ALL)
     private Usuario usuario;
 
     public Cliente(String nombre, String apellido, Usuario usuario) {
@@ -26,6 +26,8 @@ public class Cliente {
         this.usuario = usuario;
     }
 
+    public Cliente() {
+    }
     /*
     @OneToOne
     @JoinColum(name = "usuario_id",nullable = false)

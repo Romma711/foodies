@@ -1,5 +1,6 @@
 package com.example.Foodies.Usuario;
 
+import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
@@ -9,6 +10,7 @@ import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioRequestDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,15 +30,6 @@ public class UsuarioService implements UserDetailsService {
     @Autowired
     private UsuarioMapper usuarioMapper;
 
-
-    public Usuario createCliente (UsuarioRequestDTO nuevo){
-        if(usuarioRepo.existsByEmail(nuevo.getEmail())){
-            throw new RuntimeException("El email ya existe");
-        }
-
-        return usuarioRepo.save(new Usuario(nuevo.getEmail(), nuevo.getPassword(), nuevo.getTelefono()));
-    }
-
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Usuario usuario = usuarioRepo.findByEmail(username)
@@ -48,6 +41,15 @@ public class UsuarioService implements UserDetailsService {
                 List.of(new SimpleGrantedAuthority(usuario.getRol().toString()))
         );
     }
+
+    public String login (String email, String password){
+        Usuario usuario = usuarioRepo.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        UserDetails userDetails = loadUserByUsername(email);
+        return JwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
+    }
+
 
     public Usuario getById(Long id){
         return usuarioRepo.findById(id).orElseThrow(() -> new RuntimeException("El usuario no existe"));
