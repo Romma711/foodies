@@ -27,18 +27,26 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/restaurants",
+
                                 "/api/reseñas",
                                 "/api/carta/*/descargar",
                                 "/api/auth/login",
                                 "/api/auth/register/cliente",
                                 "/api/auth/register/restaurant"
+                                "/api/cliente/create",
+                                "/api/registro/restaurante",
+                                "/api/auth/**",
+                                "/api/restaurante/all",
+                                "/api/restaurante/especialidad",
+                                "/api/restaurante/{id}"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/reserva/create",
                                 "/api/cliente/update"
                         ).hasRole("CLIENTE")
-                        .requestMatchers("/api/carta/**").hasAnyRole("ENCARGADO", "ADMIN")
+                        .requestMatchers("/api/carta/**",
+                                "/api/restaurante/actualizar/*"
+                                ).hasAnyRole("ENCARGADO", "ADMIN")
                         .requestMatchers("/api/admin/restaurantes/*/aprobar").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

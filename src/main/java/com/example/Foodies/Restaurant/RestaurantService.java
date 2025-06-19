@@ -54,7 +54,15 @@ public class RestaurantService {
 
    */
 
-    public List<RestaurantListDTO> listarTodos() {
+    public List<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida){
+        List<Restaurant> restaurants = restaurantRepo.findAll();
+        if(restaurants.isEmpty()){
+            throw new ListNoContentException("No hay restaurantes con esta especialidad");
+        }
+        return restaurantMapper.toListDTO(restaurants);
+    }
+
+    public List<RestaurantListDTO> getAll() {
         List<Restaurant> restaurantes = restaurantRepo.findAll();
         if(restaurantes.isEmpty()){
             throw new ListNoContentException("No hay restaurantes");
@@ -85,13 +93,6 @@ public class RestaurantService {
     }
 
 
-    public List<RestaurantListDTO> restaurantByEspecialidad(EspecialidadDeComida especialidadDeComida){
-        List<Restaurant> restaurants = restaurantRepo.findByEspecialidad(especialidadDeComida);
-        if(restaurants.isEmpty()){
-            throw new ListNoContentException("No existen restaurantes con esta especialidad");
-        }
-        return restaurantMapper.toListDTO(restaurants);
-    }
 
 
 }
