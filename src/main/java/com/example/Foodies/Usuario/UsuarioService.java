@@ -1,11 +1,13 @@
 package com.example.Foodies.Usuario;
 
 import com.example.Foodies.Config.JwtUtil;
+import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Registro.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Restaurant.Restaurant;
+import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioRequestDTO;
 import jakarta.transaction.Transactional;
@@ -25,6 +27,8 @@ import java.util.List;
 public class UsuarioService implements UserDetailsService {
     @Autowired
     private UsuarioRepository usuarioRepo;
+    @Autowired
+    private RestaurantRepository restaurantRepo;
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
@@ -63,17 +67,18 @@ public class UsuarioService implements UserDetailsService {
         usuario.setEmail(r.getEmail());
         usuario.setPassword(passwordEncoder.encode(r.getPassword()));
         usuario.setTelefono(r.getTelefono());
-        usuario.setRol(Role.ROLE_CLIENTE);
+        usuario.setRol(Role.ROLE_PENDIENTE);
 
         Restaurant rest = new Restaurant();
         rest.setNombre(r.getNombreRestaurante());
         rest.setUbicacion(r.getDireccion());
         rest.setAprobado(false);
-        rest.setEspecialidad(r.getEspecialidadDeComida());
+        rest.setEspecialidad(EspecialidadDeComida.valueOf(r.getEspecialidadDeComida()));
         rest.setCupoMaximo(r.getCupoMaximo());
 
-        usuario.setRestaurant(rest);
-        usuarioRepo.save(usuario);
+        rest.setUsuario(usuario);
+        restaurantRepo.save(rest);
+
 
         return usuarioMapper.toDTO(usuario);
 

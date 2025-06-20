@@ -31,7 +31,7 @@ public class UsuarioController {
     }
 
     @PostMapping("/register/restaurant")
-    public UsuarioDetailDTO handleRegisterCliente(@RequestBody RegistroRestauranteRequestDTO usuario){
+    public UsuarioDetailDTO handleRegisterRestaurant(@RequestBody RegistroRestauranteRequestDTO usuario){
         return usuarioService.peticionRegistroRestaurante(usuario);
     }
 }

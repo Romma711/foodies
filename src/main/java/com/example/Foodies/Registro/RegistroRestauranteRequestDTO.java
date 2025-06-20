@@ -8,14 +8,14 @@ public class RegistroRestauranteRequestDTO {
     String nombreRestaurante;
     String direccion;
     String telefono;
-    EspecialidadDeComida especialidadDeComida;
+    String especialidadDeComida;
     Integer cupoMaximo;
 
-    public EspecialidadDeComida getEspecialidadDeComida() {
+    public String getEspecialidadDeComida() {
         return especialidadDeComida;
     }
 
-    public void setEspecialidadDeComida(EspecialidadDeComida especialidadDeComida) {
+    public void setEspecialidadDeComida(String especialidadDeComida) {
         this.especialidadDeComida = especialidadDeComida;
     }
 
