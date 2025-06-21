@@ -1,8 +1,13 @@
 package com.example.Foodies.Cliente;
 
+import com.example.Foodies.Resena.Resena;
+import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Usuario.Usuario;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "cliente")
@@ -12,13 +17,21 @@ public class Cliente {
     private Long id;
 
     @NotBlank
+    @Column(nullable = false)
     private String nombre;
 
     @NotBlank
+    @Column(nullable = false)
     private String apellido;
 
     @OneToOne(orphanRemoval = true, cascade = CascadeType.ALL)
     private Usuario usuario;
+
+     @OneToMany(mappedBy = "cliente")
+    private List<Reserva> reserva = new ArrayList<>();
+
+     @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
+    private List<Resena> resenas = new ArrayList<>();
 
     public Cliente(String nombre, String apellido, Usuario usuario) {
         this.nombre = nombre;
@@ -28,19 +41,6 @@ public class Cliente {
 
     public Cliente() {
     }
-    /*
-    @OneToOne
-    @JoinColum(name = "usuario_id",nullable = false)
-    private Usuario usuario;
-
-
-
-     @OneToMany(mappedBy = "cliente")
-    private List<Reserva> reserva = new ArrayList<>();
-
-     @OneToMany(mappedBy = "cliente")
-    private List<Resena> resenas = new ArrayList<>();
-     */
 
     public Long getId() {
         return id;

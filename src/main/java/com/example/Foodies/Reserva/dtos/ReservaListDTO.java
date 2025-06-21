@@ -6,7 +6,7 @@ import java.time.LocalTime;
 
 public record ReservaListDTO(
         Long id,
-        Long cantidad,
+        Integer cantidad,
         LocalTime horariollegada,
         EstadoReserva estadoReserva
 ) { }

@@ -4,34 +4,39 @@ import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Restaurant.Dtos.RestaurantRequestDTO;
 
-public class ReservaRequesDTO {
-    private Long id;
-    private Long cantidad;
-    private EstadoReserva estadoReserva;
-    private ClienteRequestDTO cliente;
-    private RestaurantRequestDTO restaurant;
+import java.sql.Time;
+import java.time.LocalTime;
 
-    public ReservaRequesDTO(Long id, Long cantidad, EstadoReserva estadoReserva, ClienteRequestDTO cliente, RestaurantRequestDTO restaurant) {
-        this.id = id;
+public class ReservaRequesDTO {
+    private Integer cantidad;
+    private EstadoReserva estadoReserva;
+    private String fechaReserva;
+    private String horarioLlegada;
+    private Long idCliente;
+    private Long idRestaurant;
+
+    public ReservaRequesDTO(Integer cantidad, EstadoReserva estadoReserva, String fechaReserva, String horarioLlegada, Long idCliente, Long idRestaurant) {
         this.cantidad = cantidad;
         this.estadoReserva = estadoReserva;
-        this.cliente = cliente;
-        this.restaurant = restaurant;
+        this.fechaReserva = fechaReserva;
+        this.horarioLlegada = horarioLlegada;
+        this.idCliente = idCliente;
+        this.idRestaurant = idRestaurant;
     }
 
-    public Long getId() {
-        return id;
+    public String getHorarioLlegada() {
+        return horarioLlegada;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setHorarioLlegada(String horarioLlegada) {
+        this.horarioLlegada = horarioLlegada;
     }
 
-    public Long getCantidad() {
+    public Integer getCantidad() {
         return cantidad;
     }
 
-    public void setCantidad(Long cantidad) {
+    public void setCantidad(Integer cantidad) {
         this.cantidad = cantidad;
     }
 
@@ -43,19 +48,27 @@ public class ReservaRequesDTO {
         this.estadoReserva = estadoReserva;
     }
 
-    public ClienteRequestDTO getCliente() {
-        return cliente;
+    public Long getIdCliente() {
+        return idCliente;
     }
 
-    public void setCliente(ClienteRequestDTO cliente) {
-        this.cliente = cliente;
+    public void setIdCliente(Long idCliente) {
+        this.idCliente = idCliente;
     }
 
-    public RestaurantRequestDTO getRestaurant() {
-        return restaurant;
+    public Long getIdRestaurant() {
+        return idRestaurant;
     }
 
-    public void setRestaurant(RestaurantRequestDTO restaurant) {
-        this.restaurant = restaurant;
+    public void setIdRestaurant(Long idRestaurant) {
+        this.idRestaurant = idRestaurant;
+    }
+
+    public String getFechaReserva() {
+        return fechaReserva;
+    }
+
+    public void setFechaReserva(String fechaReserva) {
+        this.fechaReserva = fechaReserva;
     }
 }

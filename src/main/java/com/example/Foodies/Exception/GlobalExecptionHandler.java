@@ -66,4 +66,17 @@ public class GlobalExecptionHandler {
                 .body(Map.of("error","error conflicto","mensaje","Este email esta en uso"));
     }
 
+    @ExceptionHandler(NotApprovedException.class)
+    public ResponseEntity<?> handlerNotApprovedException(EmailDuplicadoException ex){
+        return  ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
+    }
+
+    @ExceptionHandler(NotValidCupoException.class)
+    public ResponseEntity<?> handlerNotValidCupoException(EmailDuplicadoException ex){
+        return  ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
+    }
 }

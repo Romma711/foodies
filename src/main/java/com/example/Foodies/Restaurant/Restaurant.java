@@ -49,10 +49,10 @@ public class Restaurant {
      @JoinColumn(name = "usuario_id",nullable = false)
      private Usuario usuario;
 
-     @OneToMany(mappedBy = "restaurant")
+     @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<Reserva> reserva = new ArrayList<>();
 
-     @OneToMany(mappedBy = "restaurant")
+     @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<Resena> resenas = new ArrayList<>();
 
 

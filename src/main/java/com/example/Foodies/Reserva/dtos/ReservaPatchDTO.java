@@ -3,19 +3,19 @@ package com.example.Foodies.Reserva.dtos;
 import com.example.Foodies.Enums.EstadoReserva;
 
 public class ReservaPatchDTO {
-    private Long cantidad;
+    private Integer cantidad;
     private EstadoReserva estadoReserva;
 
-    public ReservaPatchDTO(Long cantidad, EstadoReserva estadoReserva) {
+    public ReservaPatchDTO(Integer cantidad, EstadoReserva estadoReserva) {
         this.cantidad = cantidad;
         this.estadoReserva = estadoReserva;
     }
 
-    public Long getCantidad() {
+    public Integer getCantidad() {
         return cantidad;
     }
 
-    public void setCantidad(Long cantidad) {
+    public void setCantidad(Integer cantidad) {
         this.cantidad = cantidad;
     }
 

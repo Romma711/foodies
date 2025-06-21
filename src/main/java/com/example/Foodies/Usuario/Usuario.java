@@ -4,7 +4,9 @@ import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "usuario")
@@ -14,12 +16,16 @@ public class Usuario {
     private Long id;
 
     @NotBlank
+    @Email(message = "El email debe ser valido")
+    @Column(nullable = false)
     private String email;
 
     @NotBlank
+    @Size(min = 6, max = 30, message = "La contraseña tiene que tener entre 6 y 30 caracteres")
     private String password;
 
     @NotBlank
+    @Column(nullable = false)
     private String telefono;
 
     @Enumerated(EnumType.STRING)

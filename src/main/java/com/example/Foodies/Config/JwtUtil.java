@@ -13,7 +13,7 @@ public class JwtUtil {
             ? System.getenv("JWT_SECRET")
             : "clave-ultra-secreta-andy-deja-el-lol-necesitamos-una-clave-mas-larga-para-cumplir-con-256-bits";
 
-    private static final long EXPIRATION = 3600000L; // 1 hora
+    private static final long EXPIRATION =18000000L; // 5 horas |  3600000L 1 hora
 
     private static final SecretKey KEY = Jwts.SIG.HS256.key().build();
 

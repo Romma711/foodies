@@ -4,6 +4,7 @@ import com.example.Foodies.Cliente.dtos.ClienteDetailDTO;
 import com.example.Foodies.Cliente.dtos.ClienteListDTO;
 import com.example.Foodies.Cliente.dtos.ClientePatchDTO;
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,11 +16,6 @@ import java.util.List;
 public class ClienteController {
     @Autowired
     private ClienteService clienteService;
-
-    @PostMapping("/create")
-    public ResponseEntity<ClienteDetailDTO> handleCreateCliente(@RequestBody ClienteRequestDTO cliente){
-        return ResponseEntity.ok(clienteService.createCliente(cliente));
-    }
 
     @GetMapping("/list")
     public ResponseEntity<List<ClienteListDTO>> handleGetAllClientes(){

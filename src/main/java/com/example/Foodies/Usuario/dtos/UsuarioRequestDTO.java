@@ -2,12 +2,14 @@ package com.example.Foodies.Usuario.dtos;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class UsuarioRequestDTO {
     @NotBlank
-    @Email
+    @Email(message = "El email debe ser valido")
     private String email;
     @NotBlank
+    @Size(min = 6, max = 30, message = "La contraseña tiene que tener entre 6 y 30 caracteres")
     private String password;
     @NotBlank
     private String telefono;
