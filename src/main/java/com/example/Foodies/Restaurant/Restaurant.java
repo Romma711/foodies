@@ -39,8 +39,8 @@ public class Restaurant {
 
 
 
-     @OneToOne(mappedBy = "restaurant")
-     private Carta carta;
+    @OneToOne(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Carta carta;
 
      @Enumerated(EnumType.STRING)
      private EspecialidadDeComida especialidad;

@@ -9,6 +9,7 @@ import com.example.Foodies.Restaurant.Dtos.RestaurantDetailDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantListDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
 import com.example.Foodies.Usuario.UsuarioRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -76,19 +77,26 @@ public class RestaurantService {
        return restaurantMapper.toDetailDTO(restaurant);
     }
 
-
-    public RestaurantDetailDTO patchRestaurant(Long restaurantId, RestaurantPatchDTO patchDTO) {
-        // 1. Buscar el restaurante existente
-        Restaurant restaurant = restaurantRepo.findById(restaurantId)
+    @Transactional
+    public RestaurantDetailDTO patchRestaurantFromDTO(RestaurantPatchDTO patchDTO, Long id) {
+        Restaurant restaurant = restaurantRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
-        // 2. Mapear los campos que vienen en patchDTO al entity (sin sobrescribir campos null)
-        restaurantMapper.patchRestaurantFromDTO(patchDTO, restaurant);
+        if (patchDTO.getNombre() != null) {
+            restaurant.setNombre(patchDTO.getNombre());
+        }
+        if (patchDTO.getCupoMaximo() != null) {
+            restaurant.setCupoMaximo(patchDTO.getCupoMaximo());
+        }
+        if (patchDTO.getUbicacion() != null) {
+            restaurant.setUbicacion(patchDTO.getUbicacion());
+        }
+        if (patchDTO.getEspecialidad() != null) {
+            restaurant.setEspecialidad(patchDTO.getEspecialidad());
+        }
 
-        // 3. Guardar el restaurante modificado
         restaurant = restaurantRepo.save(restaurant);
 
-        // 4. Mapear a DTO de detalle y devolver
         return restaurantMapper.toDetailDTO(restaurant);
     }
 

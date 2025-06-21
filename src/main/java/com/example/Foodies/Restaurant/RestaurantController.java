@@ -40,7 +40,7 @@ public class RestaurantController {
 
     @PatchMapping("/actualizar/{id}")
     public ResponseEntity<?> actualizarRestaurante(@PathVariable Long id, @RequestBody RestaurantPatchDTO restaurantPatchDTO){
-        RestaurantDetailDTO restaurantDetailDTO = restaurantService.patchRestaurant(id,restaurantPatchDTO);
+       RestaurantDetailDTO restaurantDetailDTO = restaurantService.patchRestaurantFromDTO(restaurantPatchDTO,id);
         return ResponseEntity.ok(restaurantDetailDTO);
 
 

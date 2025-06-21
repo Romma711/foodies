@@ -16,8 +16,9 @@ public class Carta {
     @Column(nullable = false)
     private String nombreArchivo;
 
+
     @Lob
-    @Column(name = "contenido_pdf", nullable = false)
+    @Column(name = "contenido_pdf", columnDefinition = "LONGBLOB")
     private byte[] contenidoPdf;
 
     @OneToOne

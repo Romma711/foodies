@@ -1,5 +1,9 @@
 package com.example.Foodies.Config;
 
+import com.example.Foodies.Enums.Role;
+import com.example.Foodies.Usuario.Usuario;
+import com.example.Foodies.Usuario.UsuarioRepository;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -45,9 +49,10 @@ public class SecurityConfig {
                                 "/api/cliente/update"
                         ).hasRole("CLIENTE")
                         .requestMatchers("/api/carta/**",
+                                "api/carta/*",
                                 "/api/restaurante/actualizar/*"
                                 ).hasAnyRole("ENCARGADO", "ADMIN")
-                        .requestMatchers("/api/admin/restaurantes/*/aprobar").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/*/aprobar").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
@@ -59,6 +64,8 @@ public class SecurityConfig {
     public JwtAuthFilter jwtAuthFilter() {
         return new JwtAuthFilter();
     }
+
+
 
 
 }

@@ -5,6 +5,7 @@ import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -85,9 +86,10 @@ public class CartaService {
         }
     }
 
-    public void eliminarCarta (Long cartaId){
+    @Transactional
+    public void eliminarCarta(Long cartaId) {
         Carta carta = cartaRepository.findById(cartaId)
-                .orElseThrow(()-> new EntityNotFoundException("Carta no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Carta no encontrada"));
 
         cartaRepository.delete(carta);
     }

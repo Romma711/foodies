@@ -19,9 +19,9 @@ public class AdminRestauranteController {
     private UsuarioService usuarioService;
 
 
-    @PutMapping("/{usuarioid}/aprobar")
-    public ResponseEntity<UsuarioDetailDTO> aprobarEncargado(@PathVariable Long usuarioID){
-        UsuarioDetailDTO dto = usuarioService.aprobarEncargado(usuarioID);
+    @PutMapping("/{usuarioId}/aprobar")
+    public ResponseEntity<UsuarioDetailDTO> aprobarEncargado(@PathVariable Long usuarioId){
+        UsuarioDetailDTO dto = usuarioService.aprobarEncargado(usuarioId);
         return ResponseEntity.ok(dto);
     }
 }
