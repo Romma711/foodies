@@ -4,6 +4,7 @@ import com.example.Foodies.Cliente.ClienteService;
 import com.example.Foodies.Cliente.dtos.ClienteDetailDTO;
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Registro.RegistroRestauranteRequestDTO;
+import com.example.Foodies.Usuario.dtos.LoginRequestDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioRequestDTO;
 import jakarta.validation.Valid;
@@ -22,7 +23,7 @@ public class UsuarioController {
     private ClienteService clienteService;
 
     @PostMapping("/login")
-    public String handleLogin(@Valid @RequestBody UsuarioRequestDTO usuario){
+    public String handleLogin(@Valid @RequestBody LoginRequestDTO usuario){
         return usuarioService.login(usuario.getEmail(), usuario.getPassword());
     }
 
