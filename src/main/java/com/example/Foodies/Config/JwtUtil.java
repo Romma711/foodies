@@ -1,5 +1,6 @@
 package com.example.Foodies.Config;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -7,6 +8,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public class JwtUtil {
     private static final String SECRET = System.getenv("JWT_SECRET") != null
@@ -15,7 +17,7 @@ public class JwtUtil {
 
     private static final long EXPIRATION =18000000L; // 5 horas |  3600000L 1 hora
 
-    private static final SecretKey KEY = Jwts.SIG.HS256.key().build();
+    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
 
 
     public static String createToken(String username, List<String> roles) {
@@ -60,5 +62,23 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody()
                 .get("roles");
+    }
+
+    public static void printTokenInfo(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .setSigningKey(KEY)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            System.out.println("👉 Información del token:");
+            for (Map.Entry<String, Object> entry : claims.entrySet()) {
+                System.out.println("  🔹 " + entry.getKey() + ": " + entry.getValue());
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Token inválido: " + e.getMessage());
+        }
     }
 }

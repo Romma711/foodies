@@ -69,14 +69,14 @@ public class GlobalExecptionHandler {
     @ExceptionHandler(NotApprovedException.class)
     public ResponseEntity<?> handlerNotApprovedException(EmailDuplicadoException ex){
         return  ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
     }
 
     @ExceptionHandler(NotValidCupoException.class)
     public ResponseEntity<?> handlerNotValidCupoException(EmailDuplicadoException ex){
         return  ResponseEntity
-                .status(HttpStatus.CONFLICT)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
     }
 }

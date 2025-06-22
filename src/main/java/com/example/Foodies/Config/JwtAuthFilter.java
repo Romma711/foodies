@@ -14,6 +14,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+    private static final List<String> PUBLIC_URLS = List.of(
+            "/api/reseñas",
+            "/api/carta/*/descargar",
+            "/api/auth/test",
+            "/api/auth/login",
+            "/api/auth/register/cliente",
+            "/api/auth/register/restaurant",
+            "/api/cliente/create",
+            "/api/registro/restaurante",
+            "/api/restaurante/all",
+            "/api/restaurante/especialidad",
+            "/api/restaurante/{id}"
+    );
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -23,9 +38,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getServletPath();
 
         // ⛔ Ignorar rutas públicas
-        if (path.startsWith("/api/auth/login") ||
-                path.startsWith("/api/auth/register/cliente") ||
-                path.startsWith("/api/auth/register/restaurant")) {
+        if (PUBLIC_URLS.contains(path)) {
             chain.doFilter(request, response);
             return;
         }
@@ -54,7 +67,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Token inválido o expirado");
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Token inválido o expirado\"}");
             return;
         }
 

@@ -28,13 +28,13 @@ public class ClienteService {
 
     @Transactional
     public ClienteDetailDTO createCliente (ClienteRequestDTO entrante){
-        if(usuarioRepo.existsByEmail(entrante.getUsuario().getEmail())){
+        if(usuarioRepo.existsByEmail(entrante.getEmail())){
             throw new RuntimeException("ERROR: El email ya existe");
         }
         Cliente cliente = clienteRepo.save(new Cliente(entrante.getNombre(), entrante.getApellido(),
-                new Usuario(entrante.getUsuario().getEmail(),
-                        passwordEncoder.encode(entrante.getUsuario().getPassword()),
-                        entrante.getUsuario().getTelefono(),
+                new Usuario(entrante.getEmail(),
+                        passwordEncoder.encode(entrante.getPassword()),
+                        entrante.getTelefono(),
                         Role.ROLE_CLIENTE)
             )
         );

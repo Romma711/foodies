@@ -3,8 +3,10 @@ package com.example.Foodies.Usuario;
 import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
+import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
+import com.example.Foodies.Exception.NotApprovedException;
 import com.example.Foodies.Registro.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -45,10 +47,14 @@ public class UsuarioService implements UserDetailsService {
                 List.of(new SimpleGrantedAuthority(usuario.getRol().toString()))
         );
     }
-
+    @Transactional
     public String login (String email, String password){
         Usuario usuario = usuarioRepo.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        if(!passwordEncoder.matches(password,usuario.getPassword())){
+            throw new NotApprovedException("Email o contraseña incorrectos, intente nuevamente");
+        }
 
         UserDetails userDetails = loadUserByUsername(email);
         return JwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
@@ -98,6 +104,9 @@ public class UsuarioService implements UserDetailsService {
         return usuarioMapper.toDTO(usuario);
     }
 
+    public void lanzarError(String mensaje){
+        throw new BusinessException(mensaje);
+    }
 
 
 }
