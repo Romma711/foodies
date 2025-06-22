@@ -53,7 +53,6 @@ JWT con filtro personalizado (JwtAuthFilter)
 Codificación de contraseñas con BCrypt
 
 Usuarios: Cliente, Encargado, Admin
-
 @PreAuthorize("hasRole('ADMIN')")
 
 🚀 Instalación y Ejecución
@@ -69,7 +68,6 @@ MySQL
 Pasos
 
 Clonar el repositorio:
-
 git clone https://github.com/usuario/foodies.git
 
 Crear la base de datos en MySQL:
@@ -83,19 +81,11 @@ spring.datasource.username=root
 spring.datasource.password=asd123
 
 Ejecutar el proyecto desde IntelliJ o con:
-
 ./mvnw spring-boot:run
 
 🌐 API REST - Documentación de Endpoints
 
 🏥 RESTAURANTES
-
-Verbo
-
-Endpoint
-
-Descripción
-
 GET
 
 /api/restaurante/all
@@ -133,13 +123,6 @@ DELETE
 Eliminar restaurante
 
 🍽️ CARTAS
-
-Verbo
-
-Endpoint
-
-Descripción
-
 POST
 
 /api/carta/subir
@@ -166,11 +149,6 @@ Eliminar carta asociada
 
 📕 RESERVAS
 
-Verbo
-
-Endpoint
-
-Descripción
 
 POST
 
@@ -191,12 +169,6 @@ DELETE
 Eliminar reserva por ID
 
 📄 RESEÑAS
-
-Verbo
-
-Endpoint
-
-Descripción
 
 POST
 
@@ -224,12 +196,6 @@ Eliminar reseña
 
 🔑 AUTENTICACIÓN
 
-Verbo
-
-Endpoint
-
-Descripción
-
 POST
 
 /api/auth/login
@@ -249,12 +215,6 @@ POST
 Registro de restaurante (encargado)
 
 👮 ADMINISTRADOR
-
-Verbo
-
-Endpoint
-
-Descripción
 
 PUT
 
@@ -307,10 +267,8 @@ Respuesta: Bearer <token>
 
 📢 Autor
 
-Desarrollado por Juan Estavillo como parte del trabajo final de la materia.
+Desarrollado por Andres Roma, Ramiro Sacchetta y Juan Estavillo como parte del trabajo final de la materia.
 
 🚧 Licencia
 
 Este proyecto es de uso educativo y libre distribución para fines académicos.
-
-Para cualquier consulta podés contactarme vía GitHub o correo electrónico. 🚀
