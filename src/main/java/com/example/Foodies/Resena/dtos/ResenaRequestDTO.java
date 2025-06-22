@@ -7,16 +7,10 @@ public class ResenaRequestDTO {
     private Long id;
     private String comentario;
     private int calificacion;
-    private ClienteRequestDTO cliente;
-    private RestaurantRequestDTO restaurant;
+    private Long clienteId;
+    private Long restaurantId;
 
-    public ResenaRequestDTO(Long id, String comentario, int calificacion, ClienteRequestDTO cliente, RestaurantRequestDTO restaurant) {
-        this.id = id;
-        this.comentario = comentario;
-        this.calificacion = calificacion;
-        this.cliente = cliente;
-        this.restaurant = restaurant;
-    }
+
 
     public Long getId() {
         return id;
@@ -42,19 +36,19 @@ public class ResenaRequestDTO {
         this.calificacion = calificacion;
     }
 
-    public ClienteRequestDTO getCliente() {
-        return cliente;
+    public Long getClienteId() {
+        return clienteId;
     }
 
-    public void setCliente(ClienteRequestDTO cliente) {
-        this.cliente = cliente;
+    public void setClienteId(Long clienteId) {
+        this.clienteId = clienteId;
     }
 
-    public RestaurantRequestDTO getRestaurant() {
-        return restaurant;
+    public Long getRestaurantId() {
+        return restaurantId;
     }
 
-    public void setRestaurant(RestaurantRequestDTO restaurant) {
-        this.restaurant = restaurant;
+    public void setRestaurantId(Long restaurantId) {
+        this.restaurantId = restaurantId;
     }
 }

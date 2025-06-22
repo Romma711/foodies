@@ -38,6 +38,8 @@ public class Resena {
         this.cliente = cliente;
         this.restaurant = restaurant;
     }
+
+    public Resena (){}
     public Long getId() {return id;}
     public void setId(Long id) {this.id = id;}
     public @NotBlank(message = "No se permite añadir reseña sin comentario") String getComentario() {return comentario;}

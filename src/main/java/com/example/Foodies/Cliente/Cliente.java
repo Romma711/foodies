@@ -3,6 +3,7 @@ package com.example.Foodies.Cliente;
 import com.example.Foodies.Resena.Resena;
 import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Usuario.Usuario;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
@@ -25,6 +26,7 @@ public class Cliente {
     private String apellido;
 
     @OneToOne(orphanRemoval = true, cascade = CascadeType.ALL)
+    @JsonManagedReference
     private Usuario usuario;
 
      @OneToMany(mappedBy = "cliente")

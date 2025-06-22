@@ -3,6 +3,7 @@ package com.example.Foodies.Usuario;
 import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Restaurant.Restaurant;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -34,6 +35,7 @@ public class Usuario {
     private Restaurant restaurant;
 
     @OneToOne(mappedBy = "usuario")
+    @JsonBackReference
     private Cliente cliente;
 
     public Usuario(String email, String password, String telefono, Role rol) {

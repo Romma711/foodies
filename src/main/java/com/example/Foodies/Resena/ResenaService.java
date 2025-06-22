@@ -2,6 +2,7 @@ package com.example.Foodies.Resena;
 
 import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Cliente.ClienteRepository;
+import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Resena.dtos.ResenaDetailDTO;
@@ -25,17 +26,18 @@ public class ResenaService {
 
     @Autowired
     private RestaurantRepository restauranteRepo;
+    @Autowired
+    private  ResenaMapper resenaMapper;
 
     @Transactional
-    public Resena createResena(Resena resena) {
-        Cliente cliente = clienteRepo.findById(resena.getCliente().getId())
+    public ResenaDetailDTO createResena(ResenaRequestDTO resena) {
+        Cliente cliente = clienteRepo.findById(resena.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        Restaurant restaurante = restauranteRepo.findById(resena.getRestaurant().getId())
+        Restaurant restaurante = restauranteRepo.findById(resena.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
-
-        boolean yaExiste = resenaRepo.existsByClienteAndRestaurant(cliente, restaurante);
+        boolean yaExiste = resenaRepo.existsByCliente_IdAndRestaurant_Id(resena.getClienteId(), resena.getRestaurantId());
         if (yaExiste) {
             throw new RuntimeException("El cliente ya realizó una reseña para este restaurante.");
         }
@@ -44,25 +46,22 @@ public class ResenaService {
             throw new RuntimeException("La calificación debe estar entre 1 y 5.");
         }
 
-        Resena resenaNueva = new Resena(
-                null,
-                resena.getComentario(),
-                resena.getCalificacion(),
-                cliente,
-                restaurante
-        );
+        Resena resenaNueva = resenaMapper.toEntity(resena);
+        resenaNueva.setCliente(cliente);
+        resenaNueva.setRestaurant(restaurante);
+
         resenaNueva = resenaRepo.save(resenaNueva);
 
-        return resenaNueva;
+        return resenaMapper.toDto(resenaNueva);
     }
 
-    public List<ResenaListDTO> getAllResenas() {
-        return resenaRepo.findAll().stream()
-                .map(r -> new ResenaListDTO(
-                        r.getId(),
-                        r.getComentario(),
-                        r.getCalificacion()
-                )).toList();
+    public List<ResenaListDTO> getAllResenasByRestaurant(Long id) {
+        List<Resena> resenaList = resenaRepo.findByRestaurant_Id(id);
+        if(resenaList.isEmpty()){
+            throw new ListNoContentException("Este restaurante no tiene resenas");
+        }
+       return resenaMapper.toListDtoList(resenaList);
+
     }
 
     public ResenaDetailDTO getResenaById(Long id) {

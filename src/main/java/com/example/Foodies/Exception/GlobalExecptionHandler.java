@@ -46,7 +46,7 @@ public class GlobalExecptionHandler {
     public ResponseEntity<?> handleListNoContent(ListNoContentException ex) {
         return ResponseEntity
                 .status(HttpStatus.NO_CONTENT)
-                .body(null);
+                .body(Map.of("error","204","mensaje",ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

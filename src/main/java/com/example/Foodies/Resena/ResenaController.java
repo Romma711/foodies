@@ -5,6 +5,7 @@ import com.example.Foodies.Resena.dtos.ResenaListDTO;
 import com.example.Foodies.Resena.dtos.ResenaPatchDTO;
 import com.example.Foodies.Resena.dtos.ResenaRequestDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,13 +19,14 @@ public class ResenaController {
     private ResenaService resenaService;
 
     @PostMapping("/create")
-    public ResponseEntity<Resena> handleCreateResena(@RequestBody Resena resena) {
-        return ResponseEntity.ok(resenaService.createResena(resena));
+    public ResponseEntity<ResenaDetailDTO> handleCreateResena(@RequestBody ResenaRequestDTO resena) {
+        ResenaDetailDTO resenaDetailDTO = resenaService.createResena(resena);
+        return ResponseEntity.status(HttpStatus.CREATED).body(resenaDetailDTO);
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<ResenaListDTO>> handleGetAllResenas() {
-        return ResponseEntity.ok(resenaService.getAllResenas());
+    public ResponseEntity<List<ResenaListDTO>> handleGetAllResenas(@RequestParam Long id) {
+        return ResponseEntity.ok(resenaService.getAllResenasByRestaurant(id));
     }
 
     @GetMapping("/{id}")
@@ -39,7 +41,7 @@ public class ResenaController {
         return ResponseEntity.ok(resenaService.updateResena(id, update));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id}/eliminar")
     public ResponseEntity<Void> handleDeleteById(@PathVariable Long id) {
         resenaService.deleteResena(id);
         return ResponseEntity.noContent().build();

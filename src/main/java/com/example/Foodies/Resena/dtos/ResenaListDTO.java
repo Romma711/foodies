@@ -1,7 +1,7 @@
 package com.example.Foodies.Resena.dtos;
 
 public record ResenaListDTO(
-    Long id,
+    String nombreCliente,
     String comentario,
     int calificacion
 
