@@ -11,7 +11,7 @@ public class UsuarioRequestDTO {
     @NotBlank
     @Size(min = 6, max = 30, message = "La contraseña tiene que tener entre 6 y 30 caracteres")
     private String password;
-    @NotBlank
+
     private String telefono;
 
     public String getTelefono() {

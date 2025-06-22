@@ -31,7 +31,6 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-
                                 "/api/reseñas",
                                 "/api/carta/*/descargar",
                                 "/api/auth/login",
@@ -42,16 +41,19 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/restaurante/all",
                                 "/api/restaurante/especialidad",
-                                "/api/restaurante/{id}"
+                                "/api/restaurante/{id}",
+                                "/error"  // <-- Agregado para permitir acceso a la página de error
                         ).permitAll()
                         .requestMatchers(
                                 "/api/reserva/create",
-                                "/api/cliente/update"
-                        ).hasRole("CLIENTE")
-                        .requestMatchers("/api/carta/**",
-                                "api/carta/*",
+                                "/api/cliente/update",
+                                "/api/resena/**"  // corregí para que tenga la barra inicial
+                        ).hasAnyRole("CLIENTE","ADMIN")
+                        .requestMatchers(
+                                "/api/carta/**",
+                                "/api/carta/*",
                                 "/api/restaurante/actualizar/*"
-                                ).hasAnyRole("ENCARGADO", "ADMIN")
+                        ).hasAnyRole("ENCARGADO", "ADMIN")
                         .requestMatchers("/api/admin/*/aprobar").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
