@@ -68,7 +68,7 @@ public class SecurityConfig {
                                 "/api/carta/*",
                                 "/api/restaurante/actualizar/*"
                         ).hasAnyAuthority("ROLE_ENCARGADO", "ROLE_ADMIN")
-                        .requestMatchers("/api/admin/*/aprobar").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
