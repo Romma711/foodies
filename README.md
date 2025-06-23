@@ -1,252 +1,243 @@
-Foodies - Sistema de Reserva de Restaurantes
+<h1><em> Foodies - Sistema de Reserva de Restaurantes </em></h1>
 
-Foodies es una aplicación web desarrollada en Java con Spring Boot y MySQL, que permite gestionar reservas de restaurantes, subir cartas gastronómicas en formato PDF, y administrar usuarios con autenticación JWT y control de acceso por roles.
+<p>Foodies es una aplicación web desarrollada en Java con Spring Boot y MySQL, que permite gestionar reservas de restaurantes, subir cartas gastronómicas en formato PDF, y administrar usuarios con autenticación JWT y control de acceso por roles.</p>
 
-🌐 Tecnologías utilizadas
+<h2>🌐 Tecnologías utilizadas</h2>
 
-Java 21
+- Java 21
+- Spring Boot 3.4.5
+- Spring Web
+- Spring Data JPA
+- Spring Security
+- Spring Validation
+- MySQL
+- JWT (JSON Web Tokens)
+- MapStruct
+- Maven
+- Postman (para pruebas de API)
 
-Spring Boot 3.4.5
+<h2>🧱 Arquitectura del Proyecto</h2>
 
-Spring Web
+<h4>El sistema sigue el patrón de arquitectura MVC (Model-View-Controller) y está dividido en:</h4>
 
-Spring Data JPA
+- Entidad y Repositorio: Modelo de datos + JpaRepository
 
-Spring Security
+- Servicios: Contienen la lógica de negocio
 
-Spring Validation
+- DTOs: Transporte de datos seguro y eficiente
 
-MySQL
+- Controladores: Exponen la API REST
 
-JWT (JSON Web Tokens)
+- Seguridad: Basada en JWT, roles y filtros personalizados
 
-MapStruct
+- Los usuarios pueden ser CLIENTE, ENCARGADO o ADMIN, y cada uno tiene permisos distintos para acceder a los endpoints.
 
-Maven
+<h2>🔐 Autenticación y Roles</h2>
 
-Postman (para pruebas de API)
+<h4>La seguridad está implementada con:</h4>
 
-🧱 Arquitectura del Proyecto
+- Spring Security
 
-El sistema sigue el patrón de arquitectura MVC (Model-View-Controller) y está dividido en:
+- JWT con filtro personalizado (JwtAuthFilter)
 
-Entidad y Repositorio: Modelo de datos + JpaRepository
+- Codificación de contraseñas con BCrypt
 
-Servicios: Contienen la lógica de negocio
-
-DTOs: Transporte de datos seguro y eficiente
-
-Controladores: Exponen la API REST
-
-Seguridad: Basada en JWT, roles y filtros personalizados
-
-Los usuarios pueden ser CLIENTE, ENCARGADO o ADMIN, y cada uno tiene permisos distintos para acceder a los endpoints.
-
-🔐 Autenticación y Roles
-
-La seguridad está implementada con:
-
-Spring Security
-
-JWT con filtro personalizado (JwtAuthFilter)
-
-Codificación de contraseñas con BCrypt
-
-Usuarios: Cliente, Encargado, Admin
+- Usuarios: Cliente, Encargado, Admin
 @PreAuthorize("hasRole('ADMIN')")
 
-🚀 Instalación y Ejecución
+<h2>🚀 Instalación y Ejecución</h2>
 
-Prerrequisitos
+<h4>Prerrequisitos</h4>
 
-Java 21
+- Java 21
 
-Maven
+- Maven
 
-MySQL
+- MySQL
 
-Pasos
+<h4>Pasos</h4>
 
-Clonar el repositorio:
+- Clonar el repositorio:
 git clone https://github.com/usuario/foodies.git
 
-Crear la base de datos en MySQL:
+- Crear la base de datos en MySQL:
 
-CREATE DATABASE foodies;
+- CREATE DATABASE foodies;
 
-Configurar application.properties:
+- Configurar application.properties:
 
 spring.datasource.url=jdbc:mysql://localhost:3306/foodies
 spring.datasource.username=root
 spring.datasource.password=asd123
 
-Ejecutar el proyecto desde IntelliJ o con:
+- Ejecutar el proyecto desde IntelliJ o con:
 ./mvnw spring-boot:run
 
-🌐 API REST - Documentación de Endpoints
+<h2>🌐 API REST - Documentación de Endpoints</h2>
 
-🏥 RESTAURANTES
-GET
-
+## 🏥 RESTAURANTES
+`GET`
+```
 /api/restaurante/all
 
 Lista todos los restaurantes
-
-GET
-
+```
+`GET`
+```
 /api/restaurante/especialidad?especialidadDeComida=PASTAS
 
-Filtra por especialidad
-
-GET
-
+> Filtra por especialidad
+```
+`GET`
+```
 /api/restaurante/{id}
 
 Buscar restaurante por ID
-
-POST
-
+```
+`POST`
+```
 /api/auth/register/restaurant
 
 Registrar restaurante
-
-PATCH
-
+```
+`PATCH`
+```
 /api/restaurante/actualizar/{id}
 
 Actualizar datos
-
-DELETE
-
+```
+`DELETE`
+```
 /api/restaurante/eliminar/{id}
 
 Eliminar restaurante
-
-🍽️ CARTAS
-POST
-
+```
+## 🍽️ CARTAS
+`POST`
+```
 /api/carta/subir
 
 Subir carta (PDF)
-
-GET
-
+```
+`GET`
+```
 /api/carta/{id}/descargar
 
 Ver o descargar carta
-
-PUT
-
+```
+`PUT`
+```
 /api/carta/actualizar
 
 Actualizar carta PDF
-
-DELETE
-
+```
+`DELETE`
+```
 /api/carta/{id}
 
 Eliminar carta asociada
+```
+## 📕 RESERVAS
 
-📕 RESERVAS
+`POST`
 
-
-POST
-
+```
 /api/reserva/create
 
 Crear nueva reserva
-
-GET
-
+```
+`GET`
+```
 /api/reserva/list
 
 Listar todas las reservas
-
-DELETE
-
+```
+`DELETE`
+```
 /api/reserva/{id}
 
 Eliminar reserva por ID
+```
+## 📄 RESEÑAS
 
-📄 RESEÑAS
-
-POST
-
+`POST`
+```
 /api/resena/create
 
 Crear nueva reseña
-
-GET
-
+```
+`GET`
+```
 /api/resena/list?id={restaurantId}
 
 Listar reseñas por restaurante
-
-PUT
-
+```
+`PUT`
+```
 /api/resena/{id}/actualizar
 
 Actualizar reseña
-
-DELETE
-
+```
+`DELETE`
+```
 /api/resena/{id}/eliminar
 
 Eliminar reseña
+```
+## 🔑 AUTENTICACIÓN
 
-🔑 AUTENTICACIÓN
-
-POST
-
+`POST`
+```
 /api/auth/login
 
 Login y obtención de token JWT
-
-POST
-
+```
+`POST`
+```
 /api/auth/register/cliente
 
 Registro de nuevo cliente
-
-POST
-
+```
+`POST`
+```
 /api/auth/register/restaurant
 
 Registro de restaurante (encargado)
+```
+## 👮 ADMINISTRADOR
 
-👮 ADMINISTRADOR
-
-PUT
-
+`PUT`
+```
 /api/admin/{usuarioId}/aprobar
 
 Aprobar cuenta de encargado
+```
+## 🎡 Roles y Permisos
 
-🎡 Roles y Permisos
+### CLIENTE
 
-CLIENTE
+- Crear reservas
 
-Crear reservas
+- Crear reseñas
 
-Crear reseñas
+### ENCARGADO
 
-ENCARGADO
+- Subir carta PDF
 
-Subir carta PDF
+- Modificar restaurante propio
 
-Modificar restaurante propio
+### ADMIN
 
-ADMIN
+- Aprobar encargados
 
-Aprobar encargados
+- Acceso completo
 
-Acceso completo
-
-📄 Datos de Prueba (Postman)
+<h2>📄 Datos de Prueba (Postman)</h2>
 
 Registro de Cliente
 
-POST /api/auth/register/cliente
+```
+> POST /api/auth/register/cliente
 {
   "nombre": "Juan",
   "apellido": "Pérez",
@@ -254,21 +245,22 @@ POST /api/auth/register/cliente
   "password": "1234",
   "telefono": "11334455"
 }
-
+```
 Login
 
-POST /api/auth/login
+```
+> POST /api/auth/login
 {
   "email": "juan@gmail.com",
   "password": "1234"
 }
-
+```
 Respuesta: Bearer <token>
 
-📢 Autor
+<h3>📢 Autor</h3>
 
 Desarrollado por Andres Roma, Ramiro Sacchetta y Juan Estavillo como parte del trabajo final de la materia.
 
-🚧 Licencia
+<h3>🚧 Licencia</h3>
 
 Este proyecto es de uso educativo y libre distribución para fines académicos.
