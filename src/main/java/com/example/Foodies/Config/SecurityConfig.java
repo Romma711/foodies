@@ -60,7 +60,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(
                                 "/api/reserva/create",
-                                "/api/cliente/update",
+                                "/api/cliente/*",
                                 "/api/resena/**"  // corregí para que tenga la barra inicial
                         ).hasAnyAuthority("ROLE_CLIENTE","ROLE_ADMIN")
                         .requestMatchers(
