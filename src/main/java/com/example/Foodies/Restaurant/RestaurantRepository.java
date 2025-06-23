@@ -13,4 +13,6 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
     List<Restaurant> findByEspecialidad(EspecialidadDeComida especialidadDeComida);
 
+    List<Restaurant> findByAprobadoTrue();
+
 }
