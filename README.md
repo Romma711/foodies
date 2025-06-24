@@ -1,5 +1,8 @@
 <h1><em> Foodies - Sistema de Reserva de Restaurantes </em></h1>
-
+<h3> Integrantes: </h3>
+<h5> Ramiro Sacchetta </h5>
+<h5> Andres Roma </h5>
+<h5> Juan Estavillo </h5>
 <p>Foodies es una aplicación web desarrollada en Java con Spring Boot y MySQL, que permite gestionar reservas de restaurantes, subir cartas gastronómicas en formato PDF, y administrar usuarios con autenticación JWT y control de acceso por roles.</p>
 
 <h2>🌐 Tecnologías utilizadas</h2>
@@ -65,11 +68,11 @@ git clone https://github.com/usuario/foodies.git
 - CREATE DATABASE foodies;
 
 - Configurar application.properties:
-
+```
 spring.datasource.url=jdbc:mysql://localhost:3306/foodies
-spring.datasource.username=root
-spring.datasource.password=asd123
-
+spring.datasource.username=<tu-usuario>
+spring.datasource.password=<tu-contraseña>
+```
 - Ejecutar el proyecto desde IntelliJ o con:
 ./mvnw spring-boot:run
 
@@ -80,7 +83,7 @@ spring.datasource.password=asd123
 ```
 /api/restaurante/all
 
-Lista todos los restaurantes
+>Lista todos los restaurantes
 ```
 `GET`
 ```
@@ -92,50 +95,50 @@ Lista todos los restaurantes
 ```
 /api/restaurante/{id}
 
-Buscar restaurante por ID
+>Buscar restaurante por ID
 ```
 `POST`
 ```
 /api/auth/register/restaurant
 
-Registrar restaurante
+>Registrar restaurante
 ```
 `PATCH`
 ```
 /api/restaurante/actualizar/{id}
 
-Actualizar datos
+>Actualizar datos
 ```
 `DELETE`
 ```
 /api/restaurante/eliminar/{id}
 
-Eliminar restaurante
+>Eliminar restaurante
 ```
 ## 🍽️ CARTAS
 `POST`
 ```
 /api/carta/subir
 
-Subir carta (PDF)
+>Subir carta (PDF)
 ```
 `GET`
 ```
 /api/carta/{id}/descargar
 
-Ver o descargar carta
+>Ver o descargar carta
 ```
 `PUT`
 ```
 /api/carta/actualizar
 
-Actualizar carta PDF
+>Actualizar carta PDF
 ```
 `DELETE`
 ```
 /api/carta/{id}
 
-Eliminar carta asociada
+>Eliminar carta asociada
 ```
 ## 📕 RESERVAS
 
@@ -144,19 +147,19 @@ Eliminar carta asociada
 ```
 /api/reserva/create
 
-Crear nueva reserva
+>Crear nueva reserva
 ```
 `GET`
 ```
 /api/reserva/list
 
-Listar todas las reservas
+>Listar todas las reservas
 ```
 `DELETE`
 ```
 /api/reserva/{id}
 
-Eliminar reserva por ID
+>Eliminar reserva por ID
 ```
 ## 📄 RESEÑAS
 
@@ -164,25 +167,25 @@ Eliminar reserva por ID
 ```
 /api/resena/create
 
-Crear nueva reseña
+>Crear nueva reseña
 ```
 `GET`
 ```
 /api/resena/list?id={restaurantId}
 
-Listar reseñas por restaurante
+>Listar reseñas por restaurante
 ```
 `PUT`
 ```
 /api/resena/{id}/actualizar
 
-Actualizar reseña
+>Actualizar reseña
 ```
 `DELETE`
 ```
 /api/resena/{id}/eliminar
 
-Eliminar reseña
+>Eliminar reseña
 ```
 ## 🔑 AUTENTICACIÓN
 
@@ -190,19 +193,19 @@ Eliminar reseña
 ```
 /api/auth/login
 
-Login y obtención de token JWT
+>Login y obtención de token JWT
 ```
 `POST`
 ```
 /api/auth/register/cliente
 
-Registro de nuevo cliente
+>Registro de nuevo cliente
 ```
 `POST`
 ```
 /api/auth/register/restaurant
 
-Registro de restaurante (encargado)
+>Registro de restaurante (encargado)
 ```
 ## 👮 ADMINISTRADOR
 
@@ -210,7 +213,7 @@ Registro de restaurante (encargado)
 ```
 /api/admin/{usuarioId}/aprobar
 
-Aprobar cuenta de encargado
+>Aprobar cuenta de encargado
 ```
 ## 🎡 Roles y Permisos
 
@@ -255,7 +258,7 @@ Login
   "password": "1234"
 }
 ```
-Respuesta: Bearer <token>
+`Respuesta: Bearer <token>`
 
 <h3>📢 Autor</h3>
 
