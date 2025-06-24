@@ -79,41 +79,45 @@ spring.datasource.password=<tu-contraseña>
 <h2>🌐 API REST - Documentación de Endpoints</h2>
 
 ## 🏥 RESTAURANTES
-`GET`
-`/api/restaurante/all`
-
-- Lista todos los restaurantes
+>`GET`
+>
+>`/api/restaurante/all`
+>- Lista todos los restaurantes
   
-`GET`
-`/api/restaurante/especialidad?especialidadDeComida=PASTAS`
+>`GET`
+>
+>`/api/restaurante/especialidad?especialidadDeComida=PASTAS`
+>- Filtra por especialidad
 
-- Filtra por especialidad
+>`GET`
+>
+>`/api/restaurante/{id}`
+>- Buscar restaurante por ID
 
-`GET`
-`/api/restaurante/{id}`
+>`DELETE`
+>
+>`/api/restaurante/{id}/delete`
 
-- Buscar restaurante por ID
+>`PATCH`
 
-`PATCH`
 ```
 /api/restaurante/actualizar/{id}
 
 > Body
 {
   "nombre": "",
-  "cupoMaximo": 0,
+   "cupoMaximo": 0,
   "ubicacion": "",
   "especialidad": ""
 }
 ```
+>- Actualizar datos
 
-- Actualizar datos
-`DELETE`
-`/api/restaurante/{id}/delete`
+
 
 - Eliminar restaurante
 ## 🍽️ CARTAS
-`POST`
+>`POST`
 ```
 /api/carta/subir
 
@@ -121,29 +125,32 @@ spring.datasource.password=<tu-contraseña>
 archivo type=file (y se sube un archivo pdf)
 id      type=text (id del restaurante)
 ```
-
-- Subir carta (PDF)
-
-`GET`
-`/api/carta/{id}/descargar`
-
-- Ver o descargar carta
-`PUT`
+>- Subir carta (PDF)
+###
+>`GET`
+>
+>`/api/carta/{id}/descargar`
+>
+>- Ver o descargar carta
+###
+>`PUT`
 ```
 /api/carta/actualizar
+
 > form-data
   archivo type=file (y se sube un archivo pdf)
   id      type=text (id del restaurante)
 ```
-
-- Actualizar carta PDF
-`DELETE`
-`/api/carta/{id}`
-
-- Eliminar carta asociada
+>- Actualizar carta PDF
+###
+>`DELETE`
+>
+>`/api/carta/{id}`
+>
+>- Eliminar carta asociada
 ## 📕 RESERVAS
 
-`POST`
+>`POST`
 
 ```
 /api/reserva/create
@@ -159,78 +166,117 @@ id      type=text (id del restaurante)
 }
 ```
 
-> Crear nueva reserva
-`GET`
-`/api/reserva/list`
+>- Crear nueva reserva
+###
+>`GET`
+>
+>`/api/reserva/list`
+>
+>- Listar todas las reservas
+###
+>`DELETE`
+>
+>/api/reserva/{id}
+>
+>- Eliminar reserva por ID
 
-> Listar todas las reservas
-`DELETE`
-```
-/api/reserva/{id}
-
-> Eliminar reserva por ID
-```
 ## 📄 RESEÑAS
 
-`POST`
+>`POST`
 ```
 /api/resena/create
 
-> Crear nueva reseña
-```
-`GET`
-```
-/api/resena/list?id={restaurantId}
+> Body
+{
+  "id": 0,
+  "comentario": "",
+  "calificacion": 0,
+  "clienteId": 0,
+  "restaurantId": 0
+}
 
-> Listar reseñas por restaurante
-```
-`PUT`
-```
-/api/resena/{id}/actualizar
 
+```
+>- Crear nueva reseña
+###
+>`GET`
+>
+>/api/resena/list?id={restaurantId}
+>
+>- Listar reseñas por restaurante
+###
+>`PUT`
+>
+>/api/resena/{id}/actualizar
+>
 > Actualizar reseña
-```
-`DELETE`
-```
-/api/resena/{id}/eliminar
-
+###
+>`DELETE`
+>
+>/api/resena/{id}/eliminar
+>
 > Eliminar reseña
-```
+###
 ## 🔑 AUTENTICACIÓN
 
-`POST`
+>`POST`
 ```
 /api/auth/login
 
-> Login y obtención de token JWT
+> Body
+{
+  "email": "",
+  "password": ""
+}
 ```
-`POST`
+>- Login y obtención de token JWT
+###
+>`POST`
 ```
 /api/auth/register/cliente
+> Body
+{
+  "nombre": "",
+  "apellido": "",
+  "email": "",
+  "password": "",
+  "telefono": ""
+}
 
-> Registro de nuevo cliente
 ```
-`POST`
+>- Registro de nuevo cliente
+###
+>`POST`
 ```
 /api/auth/register/restaurant
 
-> Registro de restaurante (encargado)
+> Body
+{
+  "email": "",
+  "password": "",
+  "nombreRestaurante": "",
+  "direccion": "",
+  "telefono": "",
+  "especialidadDeComida": "",
+  "cupoMaximo": 0
+}
 ```
+>- Registro de restaurante (encargado)
+
 ## 👮 ADMINISTRADOR
 
-`PUT`
-```
-/api/admin/{usuarioId}/aprobar
+>`PUT`
+>
+>/api/admin/{usuarioId}/aprobar
+>
+>- Aprobar cuenta de encargado
+###
 
-> Aprobar cuenta de encargado
-```
-
-`GET`
-```
-/api/admin/allXaprobar
-
-> Lista todos los restaurantes por aprobar
-```
+>`GET`
+>
+>
+>- Lista todos los restaurantes por aprobar
+###
 ## 🎡 Roles y Permisos
 
 ### CLIENTE

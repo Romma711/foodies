@@ -49,9 +49,9 @@ public class ClienteService {
     public List<ClienteListDTO> getAllClientes() {
         return clienteRepo.findAll().stream()
                 .map(v -> new ClienteListDTO(
+                        v.getId(),
                         v.getNombre(),v.getApellido(),
-                        v.getUsuario().getEmail(),
-                        v.getUsuario().getTelefono()
+                        v.getUsuario().getEmail()
                 ))
                 .toList();
     }

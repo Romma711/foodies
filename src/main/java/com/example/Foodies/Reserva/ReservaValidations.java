@@ -31,8 +31,8 @@ public class ReservaValidations {
     }
 
     public static void validateDate(String fecha){
-        if (LocalDate.now().isBefore(LocalDate.parse(fecha))){
-            throw new BusinessException("Fecha no valida: No puede ser antes del dia de hoy");
+        if (LocalDate.now().isAfter(LocalDate.parse(fecha))){
+            throw new BusinessException("Fecha no valida: No puede ser antes del dia de la");
         }
 
     }

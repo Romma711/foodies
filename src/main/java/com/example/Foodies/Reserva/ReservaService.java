@@ -28,7 +28,6 @@ public class ReservaService {
     @Autowired
     private RestaurantRepository restauranteRepo;
 
-    @Transactional
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
         Cliente cliente = clienteRepo.findById(reserva.getIdCliente())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
