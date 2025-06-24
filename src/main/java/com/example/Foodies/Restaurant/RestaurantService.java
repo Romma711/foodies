@@ -81,7 +81,11 @@ public class RestaurantService {
         return restaurantMapper.toListDTO(restaurants);
     }
 
-
+    public void deleteRestaurant(Long id){
+        restaurantRepo.findById(id)
+                .orElseThrow(()-> new EntityNotFoundException("El restaurante no existe"));
+        restaurantRepo.deleteById(id);
+    }
 }
 
 

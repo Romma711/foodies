@@ -41,6 +41,8 @@ public class ReservaService {
         //Esto formatea de string a respectivos tipos de datos de tiempo (tanto la fecha, como la hora)
         LocalTime horaParseada = LocalTime.parse(reserva.getHorarioLlegada());
         DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        //Valida la fecha si es antes o despues de la fecha de hoy
+        ReservaValidations.validateDate(reserva.getFechaReserva());
         Date fecha = null;
         try {
             fecha = formatter.parse(reserva.getFechaReserva());

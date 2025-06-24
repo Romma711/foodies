@@ -6,8 +6,12 @@ import com.example.Foodies.Exception.NotValidCupoException;
 import com.example.Foodies.Restaurant.Restaurant;
 import org.springframework.data.jpa.convert.threeten.Jsr310JpaConverters;
 
+import javax.swing.text.DateFormatter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Date;
+import java.util.logging.SimpleFormatter;
 
 public class ReservaValidations {
 
@@ -24,5 +28,12 @@ public class ReservaValidations {
         if(cantidad < 0){
             throw new NotValidCupoException("Cupo invalido");
         }
+    }
+
+    public static void validateDate(String fecha){
+        if (LocalDate.parse(fecha).isBefore(LocalDate.now())){
+            throw new BusinessException("Fecha no valida: No puede ser antes del dia de hoy");
+        }
+
     }
 }

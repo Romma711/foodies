@@ -44,14 +44,10 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/reseñas",
                                 "/api/carta/*/descargar",
                                 "/api/auth/login",
                                 "/api/auth/register/cliente",
                                 "/api/auth/register/restaurant",
-                                "/api/cliente/create",
-                                "/api/registro/restaurante",
-                                "/api/auth/**",
                                 "/api/restaurante/all",
                                 "/api/restaurante/especialidad",
                                 "/api/restaurante/{id}",
@@ -66,7 +62,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/carta/**",
                                 "/api/carta/*",
-                                "/api/restaurante/actualizar/*"
+                                "/api/restaurante/actualizar/*",
+                                "/api/restaurante/*/delete"
                         ).hasAnyAuthority("ROLE_ENCARGADO", "ROLE_ADMIN")
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
