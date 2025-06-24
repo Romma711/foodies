@@ -83,7 +83,7 @@ spring.datasource.password=<tu-contraseña>
 ```
 /api/restaurante/all
 
->Lista todos los restaurantes
+> Lista todos los restaurantes
 ```
 `GET`
 ```
@@ -95,50 +95,50 @@ spring.datasource.password=<tu-contraseña>
 ```
 /api/restaurante/{id}
 
->Buscar restaurante por ID
+> Buscar restaurante por ID
 ```
 `POST`
 ```
 /api/auth/register/restaurant
 
->Registrar restaurante
+> Registrar restaurante
 ```
 `PATCH`
 ```
 /api/restaurante/actualizar/{id}
 
->Actualizar datos
+> Actualizar datos
 ```
 `DELETE`
 ```
 /api/restaurante/eliminar/{id}
 
->Eliminar restaurante
+> Eliminar restaurante
 ```
 ## 🍽️ CARTAS
 `POST`
 ```
 /api/carta/subir
 
->Subir carta (PDF)
+> Subir carta (PDF)
 ```
 `GET`
 ```
 /api/carta/{id}/descargar
 
->Ver o descargar carta
+> Ver o descargar carta
 ```
 `PUT`
 ```
 /api/carta/actualizar
 
->Actualizar carta PDF
+> Actualizar carta PDF
 ```
 `DELETE`
 ```
 /api/carta/{id}
 
->Eliminar carta asociada
+> Eliminar carta asociada
 ```
 ## 📕 RESERVAS
 
@@ -147,19 +147,19 @@ spring.datasource.password=<tu-contraseña>
 ```
 /api/reserva/create
 
->Crear nueva reserva
+> Crear nueva reserva
 ```
 `GET`
 ```
 /api/reserva/list
 
->Listar todas las reservas
+> Listar todas las reservas
 ```
 `DELETE`
 ```
 /api/reserva/{id}
 
->Eliminar reserva por ID
+> Eliminar reserva por ID
 ```
 ## 📄 RESEÑAS
 
@@ -167,25 +167,25 @@ spring.datasource.password=<tu-contraseña>
 ```
 /api/resena/create
 
->Crear nueva reseña
+> Crear nueva reseña
 ```
 `GET`
 ```
 /api/resena/list?id={restaurantId}
 
->Listar reseñas por restaurante
+> Listar reseñas por restaurante
 ```
 `PUT`
 ```
 /api/resena/{id}/actualizar
 
->Actualizar reseña
+> Actualizar reseña
 ```
 `DELETE`
 ```
 /api/resena/{id}/eliminar
 
->Eliminar reseña
+> Eliminar reseña
 ```
 ## 🔑 AUTENTICACIÓN
 
@@ -193,19 +193,19 @@ spring.datasource.password=<tu-contraseña>
 ```
 /api/auth/login
 
->Login y obtención de token JWT
+> Login y obtención de token JWT
 ```
 `POST`
 ```
 /api/auth/register/cliente
 
->Registro de nuevo cliente
+> Registro de nuevo cliente
 ```
 `POST`
 ```
 /api/auth/register/restaurant
 
->Registro de restaurante (encargado)
+> Registro de restaurante (encargado)
 ```
 ## 👮 ADMINISTRADOR
 
@@ -213,7 +213,14 @@ spring.datasource.password=<tu-contraseña>
 ```
 /api/admin/{usuarioId}/aprobar
 
->Aprobar cuenta de encargado
+> Aprobar cuenta de encargado
+```
+
+`GET`
+```
+/api/admin/allXaprobar
+
+> Lista todos los restaurantes por aprobar
 ```
 ## 🎡 Roles y Permisos
 
@@ -234,6 +241,15 @@ spring.datasource.password=<tu-contraseña>
 - Aprobar encargados
 
 - Acceso completo
+
+```
+> Cuenta de admin
+
+{
+  "email":"admin@foodies.com,
+  "password":"admin123",
+}
+```
 
 <h2>📄 Datos de Prueba (Postman)</h2>
 
