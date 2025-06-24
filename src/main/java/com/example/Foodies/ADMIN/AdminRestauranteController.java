@@ -25,7 +25,7 @@ public class AdminRestauranteController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping("/xaprobar")
+    @GetMapping("/allXaprobar")
     public ResponseEntity<?> getallRestaurantesXAprobar(){
         return ResponseEntity.ok(restaurantService.getallRestaurantXaprobar());
     }
