@@ -80,66 +80,67 @@ spring.datasource.password=<tu-contraseña>
 
 ## 🏥 RESTAURANTES
 `GET`
-```
-/api/restaurante/all
+`/api/restaurante/all`
 
-> Lista todos los restaurantes
-```
+- Lista todos los restaurantes
+  
 `GET`
-```
-/api/restaurante/especialidad?especialidadDeComida=PASTAS
+`/api/restaurante/especialidad?especialidadDeComida=PASTAS`
 
-> Filtra por especialidad
-```
+- Filtra por especialidad
+
 `GET`
-```
-/api/restaurante/{id}
+`/api/restaurante/{id}`
 
-> Buscar restaurante por ID
-```
-`POST`
-```
-/api/auth/register/restaurant
+- Buscar restaurante por ID
 
-> Registrar restaurante
-```
 `PATCH`
 ```
 /api/restaurante/actualizar/{id}
 
-> Actualizar datos
+> Body
+{
+  "nombre": "",
+  "cupoMaximo": 0,
+  "ubicacion": "",
+  "especialidad": ""
+}
 ```
-`DELETE`
-```
-/api/restaurante/eliminar/{id}
 
-> Eliminar restaurante
-```
+- Actualizar datos
+`DELETE`
+`/api/restaurante/{id}/delete`
+
+- Eliminar restaurante
 ## 🍽️ CARTAS
 `POST`
 ```
 /api/carta/subir
 
-> Subir carta (PDF)
+> form-data
+archivo type=file (y se sube un archivo pdf)
+id      type=text (id del restaurante)
 ```
-`GET`
-```
-/api/carta/{id}/descargar
 
-> Ver o descargar carta
-```
+- Subir carta (PDF)
+
+`GET`
+`/api/carta/{id}/descargar`
+
+- Ver o descargar carta
 `PUT`
 ```
 /api/carta/actualizar
-
-> Actualizar carta PDF
+> form-data
+  archivo type=file (y se sube un archivo pdf)
+  id      type=text (id del restaurante)
 ```
+
+- Actualizar carta PDF
 `DELETE`
-```
-/api/carta/{id}
+`/api/carta/{id}`
 
-> Eliminar carta asociada
-```
+- Eliminar carta asociada
 ## 📕 RESERVAS
 
 `POST`
@@ -147,14 +148,22 @@ spring.datasource.password=<tu-contraseña>
 ```
 /api/reserva/create
 
+> Body
+{
+  "cantidad": 0,
+  "estadoReserva": "",
+  "fechaReserva": "",
+  "horarioLlegada": "",
+  "idCliente": 0,
+  "idRestaurant": 0
+}
+```
+
 > Crear nueva reserva
-```
 `GET`
-```
-/api/reserva/list
+`/api/reserva/list`
 
 > Listar todas las reservas
-```
 `DELETE`
 ```
 /api/reserva/{id}
