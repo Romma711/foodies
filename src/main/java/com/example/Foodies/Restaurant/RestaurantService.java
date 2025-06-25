@@ -56,7 +56,7 @@ public class RestaurantService {
    */
 
     public List<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida){
-        List<Restaurant> restaurants = restaurantRepo.findAll();
+        List<Restaurant> restaurants = restaurantRepo.findByEspecialidad(especialidadDeComida);
         if(restaurants.isEmpty()){
             throw new ListNoContentException("No hay restaurantes con esta especialidad");
         }
