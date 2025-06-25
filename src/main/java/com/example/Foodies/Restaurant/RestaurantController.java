@@ -6,6 +6,7 @@ import com.example.Foodies.Restaurant.Dtos.RestaurantListDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantRequestDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,6 +51,12 @@ public class RestaurantController {
     public ResponseEntity<String> handleDeleteRestaurant(@PathVariable Long id){
         restaurantService.deleteRestaurant(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/eliminar/{id}")
+    public ResponseEntity<?> eliminarRestaurante(@PathVariable Long id){
+        restaurantService.eliminarRestaurante(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
 

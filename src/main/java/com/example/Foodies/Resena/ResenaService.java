@@ -109,4 +109,13 @@ public class ResenaService {
         }
         resenaRepo.deleteById(id);
     }
+
+    public List<ResenaListDTO> getallResenaByIdCliente (Long id){
+        List<Resena> resenas = resenaRepo.findByCliente_Id(id);
+        if(resenas.isEmpty()){
+            throw new ListNoContentException("Este cliente no tiene resenas");
+        }
+        return resenaMapper.toListDtoList(resenas);
+
+    }
 }

@@ -34,7 +34,7 @@ public class ResenaController {
         return ResponseEntity.ok(resenaService.getResenaById(id));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id}/actualizar")
     public ResponseEntity<ResenaDetailDTO> handleUpdateById(
             @PathVariable Long id,
             @RequestBody ResenaPatchDTO update) {
@@ -45,5 +45,10 @@ public class ResenaController {
     public ResponseEntity<Void> handleDeleteById(@PathVariable Long id) {
         resenaService.deleteResena(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/allXcliente")
+    public ResponseEntity<?> handlerGetallResenaXcliente (@PathVariable Long id){
+        return ResponseEntity.ok(resenaService.getallResenaByIdCliente(id));
     }
 }
