@@ -100,7 +100,10 @@ public class RestaurantService {
         return restaurantMapper.toDetailDTO(restaurant);
     }
 
-
+    public void eliminarRestaurante(Long id){
+        Restaurant restaurant = restaurantRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("Restaurante no encontrado"));
+        restaurantRepo.delete(restaurant);
+    }
 
 
 }

@@ -78,26 +78,59 @@ spring.datasource.password=<tu-contraseña>
 
 <h2>🌐 API REST - Documentación de Endpoints</h2>
 
+## 👦 CLIENTE
+>`GET`
+>
+>`/api/cliente/all`
+>- Lista todos los clientes
+###
+>`GET`
+>
+>`/api/cliente/{id}`
+>- Lista al cliente solicitado
+###
+>`DELETE`
+>
+>`/api/cliente/{id}`
+>- Elimina al cliente solicitado
+###
+>`PATCH`
+
+```
+/api/cliente/{id}
+
+> Body
+{
+  "nombre": "",
+   "cupoMaximo": 0,
+  "ubicacion": "",
+  "especialidad": ""
+}
+```
+>- Actualizar datos
+###
 ## 🏥 RESTAURANTES
 >`GET`
 >
 >`/api/restaurante/all`
 >- Lista todos los restaurantes
-  
+ ###
 >`GET`
 >
 >`/api/restaurante/especialidad?especialidadDeComida=PASTAS`
 >- Filtra por especialidad
-
+###
 >`GET`
 >
 >`/api/restaurante/{id}`
 >- Buscar restaurante por ID
-
+###
 >`DELETE`
 >
 >`/api/restaurante/{id}/delete`
-
+>
+> - Eliminar restaurante
+###
 >`PATCH`
 
 ```
@@ -112,10 +145,7 @@ spring.datasource.password=<tu-contraseña>
 }
 ```
 >- Actualizar datos
-
-
-
-- Eliminar restaurante
+###
 ## 🍽️ CARTAS
 >`POST`
 ```
@@ -174,6 +204,44 @@ id      type=text (id del restaurante)
 >
 >- Listar todas las reservas
 ###
+
+>`GET`
+>
+>`/api/reserva/list_by_cliente/{id}`
+>
+>- Listar todas las reservas de un cliente
+###
+
+>`GET`
+>
+>`/api/reserva/list_by_restaurant/{id}`
+>
+>- Listar todas las reservas de un restaurant
+###
+
+>`GET`
+>
+>`/api/reserva/{id}`
+>
+>- Listar la reseña indicada
+###
+
+>`PUT`
+
+```
+/api/reserva/{id}/
+
+> Body
+{
+  "id": 0,
+  "comentario": "",
+  "calificacion": 0
+}
+```
+
+>- Crear nueva reserva
+###
+
 >`DELETE`
 >
 >/api/reserva/{id}
@@ -184,7 +252,7 @@ id      type=text (id del restaurante)
 
 >`POST`
 ```
-/api/resena/create
+>>/api/resena/create
 
 > Body
 {
@@ -194,20 +262,30 @@ id      type=text (id del restaurante)
   "clienteId": 0,
   "restaurantId": 0
 }
-
-
 ```
 >- Crear nueva reseña
 ###
 >`GET`
 >
->/api/resena/list?id={restaurantId}
+>`/api/resena/{id}/allXcliente`
 >
->- Listar reseñas por restaurante
+>- Listar todas las reseñas de un usuario
+###
+>`GET`
+>
+>`/api/resena/{id}`
+>
+>- Listar la reseña solicitada
+###
+>`GET`
+>
+>`/api/resena/list`
+>
+>- Listar todas las reseñas
 ###
 >`PUT`
 >
->/api/resena/{id}/actualizar
+>`api/resena/{id}/actualizar`
 >
 > Actualizar reseña
 ###

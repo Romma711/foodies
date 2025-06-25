@@ -3,6 +3,8 @@ package com.example.Foodies.Reserva;
 import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Cliente.ClienteRepository;
 import com.example.Foodies.Exception.BusinessException;
+import com.example.Foodies.Exception.EntityNotFoundException;
+import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Reserva.dtos.*;
@@ -116,8 +118,36 @@ public class ReservaService {
     }
 
     public void deleteReserva(Long id) {
+        Reserva reserva = reservaRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada"));
         reservaRepo.deleteById(id);
     }
 
+    public List<ReservaListDTO> getAllByRestaurant(Long id) {
+        List<ReservaListDTO> reserva = reservaRepo.findAllByRestaurant_Id(id).stream()
+                .map(r -> new ReservaListDTO(
+                        r.getId(),
+                        r.getCantidad(),
+                        r.getHorariollegada(),
+                        r.getEstadoReserva()
+                )).toList();
+        if (reserva.isEmpty()) {
+            throw new ListNoContentException("Este restaurante no tiene reservas");
+        }
+        return reserva;
+    }
+
+    public List<ReservaListDTO> getAllByCliente(Long id) {
+        List<ReservaListDTO> resevas = reservaRepo.findAllByCliente_Id(id).stream()
+                .map(r -> new ReservaListDTO(
+                        r.getId(),
+                        r.getCantidad(),
+                        r.getHorariollegada(),
+                        r.getEstadoReserva()
+                )).toList();
+        if(resevas.isEmpty()){
+            throw  new ListNoContentException("Este cliente no tiene reservas");
+        }
+        return resevas;
+    }
 
 }

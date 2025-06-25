@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/reserva")
+@RequestMapping("/api/reserva")
 public class ReservaController {
 
     @Autowired
@@ -25,6 +25,16 @@ public class ReservaController {
     @GetMapping("/list")
     public ResponseEntity<List<ReservaListDTO>> handleGetAllReservas() {
         return ResponseEntity.ok(reservaService.getAllReservas());
+    }
+
+    @GetMapping("/list_by_cliente/{id}")
+    public ResponseEntity<List<ReservaListDTO>> handleGetAllReservasByCliente(@PathVariable Long id) {
+        return ResponseEntity.ok(reservaService.getAllByCliente(id));
+    }
+
+    @GetMapping("/list_by_restaurant/{id}")
+    public ResponseEntity<List<ReservaListDTO>> handleGetAllReservasByRestaurant(@PathVariable Long id) {
+        return ResponseEntity.ok(reservaService.getAllByRestaurant(id));
     }
 
     @GetMapping("/{id}")
