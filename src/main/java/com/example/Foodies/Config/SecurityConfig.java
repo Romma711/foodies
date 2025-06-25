@@ -55,13 +55,15 @@ public class SecurityConfig {
                                 "/error"  // <-- Agregado para permitir acceso a la página de error
                         ).permitAll()
                         .requestMatchers(
-                                "/api/reserva/create",
+                                "/api/reserva/**",
                                 "/api/cliente/*",
                                 "/api/resena/**"  // corregí para que tenga la barra inicial
                         ).hasAnyAuthority("ROLE_CLIENTE","ROLE_ADMIN")
                         .requestMatchers(
                                 "/api/carta/**",
+                                "/api/reserva/list_by_restaurant/*",
                                 "/api/carta/*",
+                                "/api/reserva/*",
                                 "/api/restaurante/actualizar/*",
                                 "/api/restaurante/*/delete"
                         ).hasAnyAuthority("ROLE_ENCARGADO", "ROLE_ADMIN")
