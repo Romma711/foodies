@@ -105,6 +105,14 @@ public class RestaurantService {
         restaurantRepo.delete(restaurant);
     }
 
+    public List<RestaurantListDTO> getRestaurantNotAprobados(){
+        List<Restaurant> restaurantes = restaurantRepo.findAll().stream()
+                .filter(r -> !r.isAprobado()).toList();
+        if(restaurantes.isEmpty()){
+            throw new ListNoContentException("No hay restaurantes");
+        }
+        return restaurantMapper.toListDTO(restaurantes);
+    }
 
 }
 
