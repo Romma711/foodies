@@ -27,33 +27,6 @@ public class RestaurantService {
 
 
 
-  /*
-    public RestaurantDetailDTO crearRestaurant(RestaurantRequestDTO dto) {
-
-        // Buscar usuario
-        Usuario usuario = usuarioRepo.findById(dto.getUsuarioId())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
-
-        // Validar que no tenga ya un restaurante
-        if (restaurantRepo.existByUsuarioId(usuario.getId())) {
-            throw new BusinessException("Este usuario ya tiene un restaurante");
-        }
-
-        // Buscar especialidad
-        EspecialidadDeComida especialidad = especialidadRepo.findById(dto.getEspecialidadId())
-                .orElseThrow(() -> new EntityNotFoundException("Especialidad no encontrada"));
-
-        // Crear restaurante
-        Restaurant restaurant = restaurantMapper.toEntity(dto);
-        restaurant.setUsuario(usuario);
-        restaurant.setEspecialidad(especialidad.getTipoDeComida());
-
-        Restaurant saved = restaurantRepo.save(restaurant);
-
-        return restaurantMapper.toDetailDTO(saved);
-    }
-
-   */
 
     public List<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida){
         List<Restaurant> restaurants = restaurantRepo.findByEspecialidad(especialidadDeComida);
@@ -64,7 +37,7 @@ public class RestaurantService {
     }
 
     public List<RestaurantListDTO> getAll() {
-        List<Restaurant> restaurantes = restaurantRepo.findAll();
+        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrue();
         if(restaurantes.isEmpty()){
             throw new ListNoContentException("No hay restaurantes");
         }
@@ -106,10 +79,9 @@ public class RestaurantService {
     }
 
     public List<RestaurantListDTO> getRestaurantNotAprobados(){
-        List<Restaurant> restaurantes = restaurantRepo.findAll().stream()
-                .filter(r -> !r.isAprobado()).toList();
+        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoFalse();
         if(restaurantes.isEmpty()){
-            throw new ListNoContentException("No hay restaurantes");
+            throw new ListNoContentException("no hay ningun restaurant para aprobar");
         }
         return restaurantMapper.toListDTO(restaurantes);
     }
