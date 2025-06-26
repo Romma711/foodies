@@ -3,17 +3,23 @@ package com.example.Foodies.Restaurant;
 
 
 import com.example.Foodies.Enums.EspecialidadDeComida;
+import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Dtos.RestaurantDetailDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantListDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
+import com.example.Foodies.Usuario.Usuario;
+import com.example.Foodies.Usuario.UsuarioMapper;
 import com.example.Foodies.Usuario.UsuarioRepository;
+import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
+import com.example.Foodies.Usuario.dtos.UsuarioRestoAAprobarDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class RestaurantService {
@@ -24,6 +30,8 @@ public class RestaurantService {
     private UsuarioRepository usuarioRepo;
     @Autowired
     private RestaurantMapper restaurantMapper;
+    @Autowired
+    private UsuarioMapper usuarioMapper;
 
 
 
@@ -78,12 +86,20 @@ public class RestaurantService {
         restaurantRepo.delete(restaurant);
     }
 
-    public List<RestaurantListDTO> getRestaurantNotAprobados(){
-        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoFalse();
-        if(restaurantes.isEmpty()){
+    public List<UsuarioRestoAAprobarDTO> getRestaurantNotAprobados(){
+        List<UsuarioRestoAAprobarDTO> usuarios = restaurantRepo.findByAprobadoFalse().stream()
+                .map(r -> new UsuarioRestoAAprobarDTO(
+                        r.getUsuario().getId(),
+                        r.getNombre(),
+                        r.getUsuario().getEmail(),
+                        r.getUsuario().getTelefono(),
+                        String.valueOf(r.getUsuario().getRol())
+                ))
+                .toList();
+        if(usuarios.isEmpty()){
             throw new ListNoContentException("no hay ningun restaurant para aprobar");
         }
-        return restaurantMapper.toListDTO(restaurantes);
+        return usuarios;
     }
 
 }

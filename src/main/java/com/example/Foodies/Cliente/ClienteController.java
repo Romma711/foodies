@@ -27,7 +27,7 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.getById(id));
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<ClienteDetailDTO> handleUpdateById(@PathVariable Long id, @RequestBody ClientePatchDTO update){
         return ResponseEntity.ok(clienteService.updateCliente(id, update));
     }
