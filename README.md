@@ -81,7 +81,7 @@ spring.datasource.password=<tu-contraseña>
 ## 👦 CLIENTE
 >`GET`
 >
->`/api/cliente/all`
+>`/api/cliente/list`
 >- Lista todos los clientes
 ###
 >`GET`
@@ -102,9 +102,8 @@ spring.datasource.password=<tu-contraseña>
 > Body
 {
   "nombre": "",
-   "cupoMaximo": 0,
-  "ubicacion": "",
-  "especialidad": ""
+  "apellido": "",
+  "telefono":""
 }
 ```
 >- Actualizar datos
@@ -139,7 +138,7 @@ spring.datasource.password=<tu-contraseña>
 > Body
 {
   "nombre": "",
-   "cupoMaximo": 0,
+  "cupoMaximo": 0,
   "ubicacion": "",
   "especialidad": ""
 }
@@ -233,9 +232,8 @@ id      type=text (id del restaurante)
 
 > Body
 {
-  "id": 0,
-  "comentario": "",
-  "calificacion": 0
+  "cantidad": ,
+  "estadoReserva: ""
 }
 ```
 
@@ -284,9 +282,17 @@ id      type=text (id del restaurante)
 >- Listar todas las reseñas
 ###
 >`PUT`
->
->`api/resena/{id}/actualizar`
->
+```
+>>/api/resena/{id}/actualizar
+
+> Body
+{
+  "id": 0,
+  "comentario": "",
+  "calificacion": 0
+}
+```
+>- Actualizar reseña
 > Actualizar reseña
 ###
 >`DELETE`
