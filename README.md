@@ -81,23 +81,23 @@ spring.datasource.password=<tu-contraseña>
 ## 👦 CLIENTE
 >`GET`
 >
->`/api/cliente/list`
+>`/api/clientes/`
 >- Lista todos los clientes
 ###
 >`GET`
 >
->`/api/cliente/{id}`
+>`/api/clientes/{id}`
 >- Lista al cliente solicitado
 ###
 >`DELETE`
 >
->`/api/cliente/{id}`
+>`/api/clientes/{id}`
 >- Elimina al cliente solicitado
 ###
 >`PATCH`
 
 ```
-/api/cliente/{id}
+/api/clientes/{id}
 
 > Body
 {
@@ -111,29 +111,29 @@ spring.datasource.password=<tu-contraseña>
 ## 🏥 RESTAURANTES
 >`GET`
 >
->`/api/restaurante/all`
+>`/api/restaurantes`
 >- Lista todos los restaurantes
  ###
 >`GET`
 >
->`/api/restaurante/especialidad?especialidadDeComida=PASTAS`
+>`/api/restaurantes/especialidad?especialidadDeComida=PASTAS`
 >- Filtra por especialidad
 ###
 >`GET`
 >
->`/api/restaurante/{id}`
+>`/api/restaurantes/{id}`
 >- Buscar restaurante por ID
 ###
 >`DELETE`
 >
->`/api/restaurante/{id}/delete`
+>`/api/restaurantes/{id}`
 >
 > - Eliminar restaurante
 ###
 >`PATCH`
 
 ```
-/api/restaurante/actualizar/{id}
+/api/restaurantes/{id}
 
 > Body
 {
@@ -148,7 +148,7 @@ spring.datasource.password=<tu-contraseña>
 ## 🍽️ CARTAS
 >`POST`
 ```
-/api/carta/subir
+/api/carta
 
 > form-data
 archivo type=file (y se sube un archivo pdf)
@@ -158,13 +158,13 @@ id      type=text (id del restaurante)
 ###
 >`GET`
 >
->`/api/carta/{id}/descargar`
+>`/api/carta/{id}`
 >
 >- Ver o descargar carta
 ###
 >`PUT`
 ```
-/api/carta/actualizar
+/api/carta
 
 > form-data
   archivo type=file (y se sube un archivo pdf)
@@ -182,7 +182,7 @@ id      type=text (id del restaurante)
 >`POST`
 
 ```
-/api/reserva/create
+/api/reservas
 
 > Body
 {
@@ -199,28 +199,28 @@ id      type=text (id del restaurante)
 ###
 >`GET`
 >
->`/api/reserva/list`
+>`/api/reservas`
 >
 >- Listar todas las reservas
 ###
 
 >`GET`
 >
->`/api/reserva/list_by_cliente/{id}`
+>`/api/reservas/cliente/{id}`
 >
 >- Listar todas las reservas de un cliente
 ###
 
 >`GET`
 >
->`/api/reserva/list_by_restaurant/{id}`
+>`/api/reservas/restaurante/{id}`
 >
 >- Listar todas las reservas de un restaurant
 ###
 
 >`GET`
 >
->`/api/reserva/{id}`
+>`/api/reservas/{id}`
 >
 >- Listar la reseña indicada
 ###
@@ -228,7 +228,7 @@ id      type=text (id del restaurante)
 >`PUT`
 
 ```
-/api/reserva/{id}/
+/api/reservas/{id}/
 
 > Body
 {
@@ -242,7 +242,7 @@ id      type=text (id del restaurante)
 
 >`DELETE`
 >
->/api/reserva/{id}
+>/api/reservas/{id}
 >
 >- Eliminar reserva por ID
 
@@ -250,7 +250,7 @@ id      type=text (id del restaurante)
 
 >`POST`
 ```
->>/api/resena/create
+>>/api/resenas
 
 > Body
 {
@@ -265,25 +265,25 @@ id      type=text (id del restaurante)
 ###
 >`GET`
 >
->`/api/resena/{id}/allXcliente`
+>`/api/resenas/cliente/{id}`
 >
 >- Listar todas las reseñas de un usuario
 ###
 >`GET`
 >
->`/api/resena/{id}`
+>`/api/resenas/{id}`
 >
 >- Listar la reseña solicitada
 ###
 >`GET`
 >
->`/api/resena/list`
+>`/api/resenas`
 >
 >- Listar todas las reseñas
 ###
 >`PUT`
 ```
->>/api/resena/{id}/actualizar
+>>/api/resenas/{id}
 
 > Body
 {
@@ -297,7 +297,7 @@ id      type=text (id del restaurante)
 ###
 >`DELETE`
 >
->/api/resena/{id}/eliminar
+>/api/resenas/{id}
 >
 > Eliminar reseña
 ###
@@ -332,7 +332,7 @@ id      type=text (id del restaurante)
 ###
 >`POST`
 ```
-/api/auth/register/restaurant
+/api/auth/register/restaurante
 
 > Body
 {
@@ -351,13 +351,14 @@ id      type=text (id del restaurante)
 
 >`PUT`
 >
->/api/admin/{usuarioId}/aprobar
+>`/api/admin/approved/{usuarioId}`
 >
 >- Aprobar cuenta de encargado
 ###
 
 >`GET`
 >
+>`/api/admin/requests`
 >
 >- Lista todos los restaurantes por aprobar
 ###
