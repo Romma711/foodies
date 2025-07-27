@@ -16,17 +16,16 @@ import java.util.stream.Collectors;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final List<String> PUBLIC_URLS = List.of(
-            "/api/reseñas",
-            "/api/carta/*/descargar",
-            "/api/auth/test",
+            "/api/resenas",
+            "/api/carta/*",
             "/api/auth/login",
             "/api/auth/register/cliente",
-            "/api/auth/register/restaurant",
-            "/api/cliente/create",
+            "/api/auth/register/restaurante",
+            "/api/clientes",
             "/api/registro/restaurante",
-            "/api/restaurante/all",
-            "/api/restaurante/especialidad",
-            "/api/restaurante/{id}"
+            "/api/restaurantes",
+            "/api/restaurantes/especialidad",
+            "/api/restaurantes/{id}"
     );
 
     @Override

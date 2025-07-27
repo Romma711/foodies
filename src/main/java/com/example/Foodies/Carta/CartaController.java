@@ -12,7 +12,7 @@ public class CartaController {
     @Autowired
     private CartaService cartaService;
 
-    @GetMapping("/{id}/descargar")
+    @GetMapping("/{id}")
     public ResponseEntity<byte[]> descargarCarta(@PathVariable Long id) {
         Carta carta = cartaService.descargarCarta(id);
 
@@ -26,7 +26,7 @@ public class CartaController {
         return new ResponseEntity<>(carta.getContenidoPdf(), headers, HttpStatus.OK);
     }
 
-    @PostMapping("/subir")
+    @PostMapping("/")
     public ResponseEntity<String> subirCarta(
             @RequestParam("archivo") MultipartFile archivo,
             @RequestParam("restaurantId") Long restaurantId
@@ -35,7 +35,7 @@ public class CartaController {
         return ResponseEntity.ok("Carta subida correctamente");
     }
 
-    @PutMapping("/actualizar")
+    @PutMapping("/")
     public ResponseEntity<String> actualizarCarta(
             @RequestParam("archivo") MultipartFile archivo,
             @RequestParam("restaurantId") Long restaurantId

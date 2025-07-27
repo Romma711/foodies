@@ -11,28 +11,28 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reserva")
+@RequestMapping("/api/reservas")
 public class ReservaController {
 
     @Autowired
     private ReservaService reservaService;
 
-    @PostMapping("/create")
+    @PostMapping("/")
     public ResponseEntity<ReservaDetailDTO> handleCreateReserva(@RequestBody ReservaRequesDTO reserva) {
         return ResponseEntity.ok(reservaService.createReserva(reserva));
     }
 
-    @GetMapping("/list")
+    @GetMapping("/")
     public ResponseEntity<List<ReservaListDTO>> handleGetAllReservas() {
         return ResponseEntity.ok(reservaService.getAllReservas());
     }
 
-    @GetMapping("/list_by_cliente/{id}")
+    @GetMapping("/cliente/{id}")
     public ResponseEntity<List<ReservaListDTO>> handleGetAllReservasByCliente(@PathVariable Long id) {
         return ResponseEntity.ok(reservaService.getAllByCliente(id));
     }
 
-    @GetMapping("/list_by_restaurant/{id}")
+    @GetMapping("/restaurante/{id}")
     public ResponseEntity<List<ReservaListDTO>> handleGetAllReservasByRestaurant(@PathVariable Long id) {
         return ResponseEntity.ok(reservaService.getAllByRestaurant(id));
     }

@@ -19,13 +19,13 @@ public class AdminRestauranteController {
     private RestaurantService restaurantService;
 
 
-    @PutMapping("/{usuarioId}/aprobar")
+    @PutMapping("/approved/{usuarioId}")
     public ResponseEntity<UsuarioDetailDTO> aprobarEncargado(@PathVariable Long usuarioId){
         UsuarioDetailDTO dto = usuarioService.aprobarEncargado(usuarioId);
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping("/allXaprobar")
+    @GetMapping("/requests")
     public ResponseEntity<?> getallRestaurantesXAprobar(){
         return ResponseEntity.ok(restaurantService.getRestaurantNotAprobados());
     }

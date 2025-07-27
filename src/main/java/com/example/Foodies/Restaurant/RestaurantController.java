@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/restaurante")
+@RequestMapping("/api/restaurantes")
 public class RestaurantController {
 
     @Autowired
@@ -39,7 +39,7 @@ public class RestaurantController {
         return ResponseEntity.ok(restaurantDetailDTO);
     }
 
-    @PatchMapping("/actualizar/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<?> actualizarRestaurante(@PathVariable Long id, @RequestBody RestaurantPatchDTO restaurantPatchDTO){
        RestaurantDetailDTO restaurantDetailDTO = restaurantService.patchRestaurantFromDTO(restaurantPatchDTO,id);
         return ResponseEntity.ok(restaurantDetailDTO);
@@ -47,7 +47,7 @@ public class RestaurantController {
 
     }
 
-    @DeleteMapping("/{id}/delete")
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarRestaurante(@PathVariable Long id){
         restaurantService.eliminarRestaurante(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();

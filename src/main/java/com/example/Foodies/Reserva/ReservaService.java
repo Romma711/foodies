@@ -2,6 +2,7 @@ package com.example.Foodies.Reserva;
 
 import com.example.Foodies.Cliente.Cliente;
 import com.example.Foodies.Cliente.ClienteRepository;
+import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ListNoContentException;
@@ -59,7 +60,7 @@ public class ReservaService {
                         .sum(),
                 restaurante.getCupoMaximo());
 
-        Reserva reservanueva = reservaRepo.save(new Reserva(reserva.getCantidad(), fecha, horaParseada, reserva.getEstadoReserva(), cliente, restaurante));
+        Reserva reservanueva = reservaRepo.save(new Reserva(reserva.getCantidad(), fecha, horaParseada, EstadoReserva.PENDIENTE, cliente, restaurante));
 
         return new ReservaDetailDTO(
                 reservanueva.getId(),

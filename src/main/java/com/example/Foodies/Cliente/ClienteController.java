@@ -12,12 +12,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/cliente")
+@RequestMapping("/api/clientes")
 public class ClienteController {
     @Autowired
     private ClienteService clienteService;
 
-    @GetMapping("/list")
+    @GetMapping("/")
     public ResponseEntity<List<ClienteListDTO>> handleGetAllClientes(){
         return ResponseEntity.ok(clienteService.getAllClientes());
     }

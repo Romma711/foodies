@@ -38,28 +38,26 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/carta/*/descargar",
+                                "/api/carta/*",
                                 "/api/auth/login",
                                 "/api/auth/register/cliente",
-                                "/api/auth/register/restaurant",
-                                "/api/restaurante/all",
-                                "/api/restaurante/especialidad",
-                                "/api/restaurante/{id}",
-                                "/api/auth/test",
+                                "/api/auth/register/restaurante",
+                                "/api/restaurantes",
+                                "/api/restaurantes/especialidad",
+                                "/api/restaurantes/{id}",
                                 "/error"  // <-- Agregado para permitir acceso a la página de error
                         ).permitAll()
                         .requestMatchers(
-                                "/api/reserva/**",
-                                "/api/cliente/*",
-                                "/api/resena/**"  // corregí para que tenga la barra inicial
+                                "/api/reservas/**",
+                                "/api/clientes/*",
+                                "/api/resenas/**"  // corregí para que tenga la barra inicial
                         ).hasAnyAuthority("ROLE_CLIENTE","ROLE_ADMIN")
                         .requestMatchers(
                                 "/api/carta/**",
-                                "/api/reserva/list_by_restaurant/*",
+                                "/api/reservas/restaurante/*",
                                 "/api/carta/*",
-                                "/api/reserva/*",
-                                "/api/restaurante/actualizar/*",
-                                "/api/restaurante/*/delete"
+                                "/api/reservas/*",
+                                "/api/restaurantes/*"
                         ).hasAnyAuthority("ROLE_ENCARGADO", "ROLE_ADMIN")
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()

@@ -1,6 +1,4 @@
-package com.example.Foodies.Registro;
-
-import com.example.Foodies.Enums.EspecialidadDeComida;
+package com.example.Foodies.Restaurant.Dtos;
 
 public class RegistroRestauranteRequestDTO {
     String email;
