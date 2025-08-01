@@ -17,7 +17,7 @@ public class ClienteController {
     @Autowired
     private ClienteService clienteService;
 
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<List<ClienteListDTO>> handleGetAllClientes(){
         return ResponseEntity.ok(clienteService.getAllClientes());
     }

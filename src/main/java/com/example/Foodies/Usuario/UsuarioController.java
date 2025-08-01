@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -23,10 +25,12 @@ public class UsuarioController {
     private ClienteService clienteService;
 
     @PostMapping("/login")
-    public ResponseEntity<String> handleLogin(@Valid @RequestBody LoginRequestDTO usuario){
+    public ResponseEntity<Map<String, String>> handleLogin(@Valid @RequestBody LoginRequestDTO usuario){
         String token = usuarioService.login(usuario.getEmail(), usuario.getPassword());
         JwtUtil.printTokenInfo(token);
-        return ResponseEntity.ok("Bearer " +token);
+        Map<String, String> devolver = new HashMap<>();
+        devolver.put("Token","Bearer " +token);
+        return ResponseEntity.ok(devolver);
     }
 
     @PostMapping("/register/cliente")

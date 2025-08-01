@@ -17,12 +17,12 @@ public class ReservaController {
     @Autowired
     private ReservaService reservaService;
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<ReservaDetailDTO> handleCreateReserva(@RequestBody ReservaRequesDTO reserva) {
         return ResponseEntity.ok(reservaService.createReserva(reserva));
     }
 
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<List<ReservaListDTO>> handleGetAllReservas() {
         return ResponseEntity.ok(reservaService.getAllReservas());
     }

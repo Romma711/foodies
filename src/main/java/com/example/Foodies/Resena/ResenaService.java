@@ -19,7 +19,7 @@ import java.util.List;
 public class ResenaService {
 
     @Autowired
-    private ResernaRepository resenaRepo;
+    private ResenaRepository resenaRepo;
 
     @Autowired
     private ClienteRepository clienteRepo;

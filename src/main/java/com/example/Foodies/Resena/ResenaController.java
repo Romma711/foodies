@@ -18,13 +18,13 @@ public class ResenaController {
     @Autowired
     private ResenaService resenaService;
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<ResenaDetailDTO> handleCreateResena(@RequestBody ResenaRequestDTO resena) {
         ResenaDetailDTO resenaDetailDTO = resenaService.createResena(resena);
         return ResponseEntity.status(HttpStatus.CREATED).body(resenaDetailDTO);
     }
 
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<List<ResenaListDTO>> handleGetAllResenas(@RequestParam Long id) {
         return ResponseEntity.ok(resenaService.getAllResenasByRestaurant(id));
     }

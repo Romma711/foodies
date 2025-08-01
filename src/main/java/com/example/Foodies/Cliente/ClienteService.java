@@ -6,6 +6,8 @@ import com.example.Foodies.Cliente.dtos.ClientePatchDTO;
 import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Config.PasswordConfig;
 import com.example.Foodies.Enums.Role;
+import com.example.Foodies.Exception.EmailDuplicadoException;
+import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
@@ -29,7 +31,7 @@ public class ClienteService {
     @Transactional
     public ClienteDetailDTO createCliente (ClienteRequestDTO entrante){
         if(usuarioRepo.existsByEmail(entrante.getEmail())){
-            throw new RuntimeException("ERROR: El email ya existe");
+            throw new EmailDuplicadoException("ERROR: El email ya existe");
         }
         Cliente cliente = clienteRepo.save(new Cliente(entrante.getNombre(), entrante.getApellido(),
                 new Usuario(entrante.getEmail(),
@@ -57,7 +59,7 @@ public class ClienteService {
     }
 
     public ClienteDetailDTO getById(Long id){
-        Cliente cliente = clienteRepo.findById(id).orElseThrow(()-> new RuntimeException("El cliente no existe"));
+        Cliente cliente = clienteRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("El cliente no existe"));
         return new ClienteDetailDTO(cliente.getUsuario().getId(),
                 cliente.getId(),
                 cliente.getUsuario().getEmail(),
@@ -67,7 +69,7 @@ public class ClienteService {
     }
 
     public ClienteDetailDTO updateCliente(Long id, ClientePatchDTO update){
-        Cliente existente = clienteRepo.findById(id).orElseThrow(()-> new RuntimeException("ERROR: el cliente  no existe"));
+        Cliente existente = clienteRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("ERROR: el cliente  no existe"));
         existente.setNombre(update.getNombre());
         existente.setApellido(update.getApellido());
         existente.getUsuario().setTelefono(update.getTelefono());

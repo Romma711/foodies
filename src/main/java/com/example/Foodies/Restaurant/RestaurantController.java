@@ -21,7 +21,7 @@ public class RestaurantController {
 
 
 
-    @GetMapping("/all")
+    @GetMapping
     public ResponseEntity<?> getAllRestautantes(){
         List<RestaurantListDTO> restaurantListDTOS = restaurantService.getAll();
         return ResponseEntity.ok(restaurantListDTOS);
@@ -52,7 +52,4 @@ public class RestaurantController {
         restaurantService.eliminarRestaurante(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
-
-
-
 }

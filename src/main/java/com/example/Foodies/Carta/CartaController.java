@@ -26,7 +26,7 @@ public class CartaController {
         return new ResponseEntity<>(carta.getContenidoPdf(), headers, HttpStatus.OK);
     }
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<String> subirCarta(
             @RequestParam("archivo") MultipartFile archivo,
             @RequestParam("restaurantId") Long restaurantId
@@ -35,7 +35,7 @@ public class CartaController {
         return ResponseEntity.ok("Carta subida correctamente");
     }
 
-    @PutMapping("/")
+    @PutMapping
     public ResponseEntity<String> actualizarCarta(
             @RequestParam("archivo") MultipartFile archivo,
             @RequestParam("restaurantId") Long restaurantId

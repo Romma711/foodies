@@ -5,14 +5,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
-public class GlobalExecptionHandler {
+public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException ex) {
@@ -67,14 +66,14 @@ public class GlobalExecptionHandler {
     }
 
     @ExceptionHandler(NotApprovedException.class)
-    public ResponseEntity<?> handlerNotApprovedException(EmailDuplicadoException ex){
+    public ResponseEntity<?> handlerNotApprovedException(NotApprovedException ex){
         return  ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
     }
 
     @ExceptionHandler(NotValidCupoException.class)
-    public ResponseEntity<?> handlerNotValidCupoException(EmailDuplicadoException ex){
+    public ResponseEntity<?> handlerNotValidCupoException(NotValidCupoException ex){
         return  ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
