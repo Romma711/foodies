@@ -1,7 +1,5 @@
 package com.example.Foodies.Resena;
 
-import com.example.Foodies.Cliente.Cliente;
-import com.example.Foodies.Cliente.ClienteRepository;
 import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -9,6 +7,8 @@ import com.example.Foodies.Resena.dtos.ResenaDetailDTO;
 import com.example.Foodies.Resena.dtos.ResenaListDTO;
 import com.example.Foodies.Resena.dtos.ResenaPatchDTO;
 import com.example.Foodies.Resena.dtos.ResenaRequestDTO;
+import com.example.Foodies.Usuario.Usuario;
+import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ public class ResenaService {
     private ResenaRepository resenaRepo;
 
     @Autowired
-    private ClienteRepository clienteRepo;
+    private UsuarioRepository usuarioRepo;
 
     @Autowired
     private RestaurantRepository restauranteRepo;
@@ -31,15 +31,15 @@ public class ResenaService {
 
     @Transactional
     public ResenaDetailDTO createResena(ResenaRequestDTO resena) {
-        Cliente cliente = clienteRepo.findById(resena.getClienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+        Usuario usuario = usuarioRepo.findById(resena.getUsuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Restaurant restaurante = restauranteRepo.findById(resena.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
 
-        boolean yaExiste = resenaRepo.existsByCliente_IdAndRestaurant_Id(resena.getClienteId(), resena.getRestaurantId());
+        boolean yaExiste = resenaRepo.existsByUsuario_IdAndRestaurant_Id(resena.getUsuarioId(), resena.getRestaurantId());
         if (yaExiste) {
-            throw new RuntimeException("El cliente ya realizó una reseña para este restaurante.");
+            throw new RuntimeException("El usuario ya realizó una reseña para este restaurante.");
         }
 
         if (resena.getCalificacion() < 1 || resena.getCalificacion() > 5) {
@@ -47,7 +47,7 @@ public class ResenaService {
         }
 
         Resena resenaNueva = resenaMapper.toEntity(resena);
-        resenaNueva.setCliente(cliente);
+        resenaNueva.setUsuario(usuario);
         resenaNueva.setRestaurant(restaurante);
 
         resenaNueva = resenaRepo.save(resenaNueva);
@@ -72,7 +72,7 @@ public class ResenaService {
                 r.getId(),
                 r.getComentario(),
                 r.getCalificacion(),
-                r.getCliente().getNombre(),
+                r.getUsuario().getNombre(),
                 r.getRestaurant().getNombre()
         );
     }
@@ -98,7 +98,7 @@ public class ResenaService {
                 r.getId(),
                 r.getComentario(),
                 r.getCalificacion(),
-                r.getCliente().getNombre(),
+                r.getUsuario().getNombre(),
                 r.getRestaurant().getNombre()
         );
     }
@@ -110,10 +110,10 @@ public class ResenaService {
         resenaRepo.deleteById(id);
     }
 
-    public List<ResenaListDTO> getallResenaByIdCliente (Long id){
-        List<Resena> resenas = resenaRepo.findByCliente_Id(id);
+    public List<ResenaListDTO> getallResenaByUsuario (Long id){
+        List<Resena> resenas = resenaRepo.findByUsuario_Id(id);
         if(resenas.isEmpty()){
-            throw new ListNoContentException("Este cliente no tiene resenas");
+            throw new ListNoContentException("Este usuario no tiene resenas");
         }
         return resenaMapper.toListDtoList(resenas);
 

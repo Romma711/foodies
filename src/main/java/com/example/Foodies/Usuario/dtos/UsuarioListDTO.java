@@ -1,10 +1,10 @@
 package com.example.Foodies.Usuario.dtos;
 
-public record UsuarioDetailDTO (
+public record UsuarioListDTO(
         Long id,
+        String nombre,
+        String apellido,
         String email,
         String telefono,
-        String rol,
-        String nombre,
-        String apellido
-){ }
+        String rol
+) { }

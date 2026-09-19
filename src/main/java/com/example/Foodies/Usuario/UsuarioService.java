@@ -10,7 +10,10 @@ import com.example.Foodies.Exception.NotApprovedException;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
+import com.example.Foodies.Usuario.dtos.RegistroClienteDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
+import com.example.Foodies.Usuario.dtos.UsuarioListDTO;
+import com.example.Foodies.Usuario.dtos.UsuarioPatchDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
@@ -63,6 +66,47 @@ public class UsuarioService implements UserDetailsService {
     public Usuario getById(Long id){
         return usuarioRepo.findById(id).orElseThrow(() -> new RuntimeException("El usuario no existe"));
     }
+
+    @Transactional
+    public UsuarioDetailDTO registerCliente(RegistroClienteDTO entrante){
+        if(usuarioRepo.existsByEmail(entrante.getEmail())){
+            throw new EmailDuplicadoException("ERROR: El email ya existe");
+        }
+        Usuario usuario = new Usuario();
+        usuario.setNombre(entrante.getNombre());
+        usuario.setApellido(entrante.getApellido());
+        usuario.setEmail(entrante.getEmail());
+        usuario.setPassword(passwordEncoder.encode(entrante.getPassword()));
+        usuario.setTelefono(entrante.getTelefono());
+        usuario.setRol(Role.ROLE_CLIENTE);
+        usuarioRepo.save(usuario);
+        return usuarioMapper.toDTO(usuario);
+    }
+
+    public List<UsuarioListDTO> getAllClientes() {
+        return usuarioMapper.toListDTO(usuarioRepo.findByRol(Role.ROLE_CLIENTE));
+    }
+
+    public UsuarioDetailDTO getClienteById(Long id){
+        Usuario usuario = usuarioRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("El cliente no existe"));
+        return usuarioMapper.toDTO(usuario);
+    }
+
+    public UsuarioDetailDTO updateCliente(Long id, UsuarioPatchDTO update){
+        Usuario existente = usuarioRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("ERROR: el cliente no existe"));
+        existente.setNombre(update.getNombre());
+        existente.setApellido(update.getApellido());
+        existente.setTelefono(update.getTelefono());
+        usuarioRepo.save(existente);
+        return usuarioMapper.toDTO(existente);
+    }
+
+    public void deleteCliente(Long id){
+        usuarioRepo.deleteById(id);
+    }
+
     @Transactional
     public UsuarioDetailDTO peticionRegistroRestaurante(RegistroRestauranteRequestDTO r){
         if(usuarioRepo.existsByEmail(r.getEmail())){

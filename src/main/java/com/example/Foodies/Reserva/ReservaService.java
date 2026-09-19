@@ -1,12 +1,12 @@
 package com.example.Foodies.Reserva;
 
-import com.example.Foodies.Cliente.Cliente;
-import com.example.Foodies.Cliente.ClienteRepository;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.*;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Reserva.dtos.*;
+import com.example.Foodies.Usuario.Usuario;
+import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,14 +26,14 @@ public class ReservaService {
     private ReservaRepository reservaRepo;
 
     @Autowired
-    private ClienteRepository clienteRepo;
+    private UsuarioRepository usuarioRepo;
 
     @Autowired
     private RestaurantRepository restauranteRepo;
 
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
-        Cliente cliente = clienteRepo.findById(reserva.getIdCliente())
-                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado"));
+        Usuario usuario = usuarioRepo.findById(reserva.getIdUsuario())
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
 
         Restaurant restaurante = restauranteRepo.findById(reserva.getIdRestaurant())
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
@@ -73,7 +73,14 @@ public class ReservaService {
         }
 
 
-        Reserva reservanueva = reservaRepo.save(new Reserva(reserva.getCantidad(), fecha, horaParseada, EstadoReserva.PENDIENTE, cliente, restaurante));
+        Reserva reservanueva = new Reserva();
+        reservanueva.setCantidad(reserva.getCantidad());
+        reservanueva.setFechaReserva(fecha);
+        reservanueva.setHorariollegada(horaParseada);
+        reservanueva.setEstadoReserva(EstadoReserva.PENDIENTE);
+        reservanueva.setUsuario(usuario);
+        reservanueva.setRestaurant(restaurante);
+        reservanueva = reservaRepo.save(reservanueva);
 
         return new ReservaDetailDTO(
                 reservanueva.getId(),
@@ -81,7 +88,7 @@ public class ReservaService {
                 reservanueva.getFechaReserva(),
                 reservanueva.getHorariollegada(),
                 reservanueva.getEstadoReserva(),
-                reservanueva.getCliente().getNombre(),
+                reservanueva.getUsuario().getNombre(),
                 reservanueva.getRestaurant().getNombre()
         );
     }
@@ -106,7 +113,7 @@ public class ReservaService {
                 r.getFechaReserva(),
                 r.getHorariollegada(),
                 r.getEstadoReserva(),
-                r.getCliente().getNombre(),
+                r.getUsuario().getNombre(),
                 r.getRestaurant().getNombre()
         );
     }
@@ -126,7 +133,7 @@ public class ReservaService {
                 r.getFechaReserva(),
                 r.getHorariollegada(),
                 r.getEstadoReserva(),
-                r.getCliente().getNombre(),
+                r.getUsuario().getNombre(),
                 r.getRestaurant().getNombre()
         );
     }
@@ -150,8 +157,8 @@ public class ReservaService {
         return reserva;
     }
 
-    public List<ReservaListDTO> getAllByCliente(Long id) {
-        List<ReservaListDTO> resevas = reservaRepo.findAllByCliente_Id(id).stream()
+    public List<ReservaListDTO> getAllByUsuario(Long id) {
+        List<ReservaListDTO> resevas = reservaRepo.findAllByUsuario_Id(id).stream()
                 .map(r -> new ReservaListDTO(
                         r.getId(),
                         r.getCantidad(),
@@ -159,7 +166,7 @@ public class ReservaService {
                         r.getEstadoReserva()
                 )).toList();
         if(resevas.isEmpty()){
-            throw  new ListNoContentException("Este cliente no tiene reservas");
+            throw  new ListNoContentException("Este usuario no tiene reservas");
         }
         return resevas;
     }

@@ -1,11 +1,9 @@
 package com.example.Foodies.Usuario;
 
-import com.example.Foodies.Cliente.ClienteService;
-import com.example.Foodies.Cliente.dtos.ClienteDetailDTO;
-import com.example.Foodies.Cliente.dtos.ClienteRequestDTO;
 import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Usuario.dtos.LoginRequestDTO;
+import com.example.Foodies.Usuario.dtos.RegistroClienteDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +19,6 @@ import java.util.Map;
 public class UsuarioController {
     @Autowired
     private UsuarioService usuarioService;
-    @Autowired
-    private ClienteService clienteService;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> handleLogin(@Valid @RequestBody LoginRequestDTO usuario){
@@ -34,9 +30,9 @@ public class UsuarioController {
     }
 
     @PostMapping("/register/cliente")
-    public ResponseEntity<ClienteDetailDTO> handleRegisterCliente(@Valid @RequestBody ClienteRequestDTO usuario){
-        ClienteDetailDTO devolver = clienteService.createCliente(usuario);
-        return ResponseEntity.created(URI.create("/api/cliente/"+devolver.idCliente())).body(devolver);
+    public ResponseEntity<UsuarioDetailDTO> handleRegisterCliente(@Valid @RequestBody RegistroClienteDTO usuario){
+        UsuarioDetailDTO devolver = usuarioService.registerCliente(usuario);
+        return ResponseEntity.created(URI.create("/api/usuarios/"+devolver.id())).body(devolver);
     }
 
     @PostMapping("/register/restaurante")

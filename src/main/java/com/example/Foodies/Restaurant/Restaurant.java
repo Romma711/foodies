@@ -9,12 +9,18 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Table(name = "Restaurants")
 @Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Restaurant {
 
     @Id
@@ -55,84 +61,4 @@ public class Restaurant {
      @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<Resena> resenas = new ArrayList<>();
 
-
-    public boolean isAprobado() {
-        return aprobado;
-    }
-
-    public void setAprobado(boolean aprobado) {
-        this.aprobado = aprobado;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public Integer getCupoMaximo() {
-        return cupoMaximo;
-    }
-
-    public void setCupoMaximo(Integer cupoMaximo) {
-        this.cupoMaximo = cupoMaximo;
-    }
-
-    public String getUbicacion() {
-        return ubicacion;
-    }
-
-    public void setUbicacion(String ubicacion) {
-        this.ubicacion = ubicacion;
-    }
-
-    public Carta getCarta() {
-        return carta;
-    }
-
-    public void setCarta(Carta carta) {
-        this.carta = carta;
-    }
-
-    public EspecialidadDeComida getEspecialidad() {
-        return especialidad;
-    }
-
-    public void setEspecialidad(EspecialidadDeComida especialidad) {
-        this.especialidad = especialidad;
-    }
-
-    public Usuario getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
-    }
-
-    public List<Reserva> getReserva() {
-        return reserva;
-    }
-
-    public void setReserva(List<Reserva> reserva) {
-        this.reserva = reserva;
-    }
-
-    public List<Resena> getResenas() {
-        return resenas;
-    }
-
-    public void setResenas(List<Resena> resenas) {
-        this.resenas = resenas;
-    }
 }
