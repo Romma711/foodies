@@ -12,6 +12,6 @@ public record ReservaDetailDTO(
     Date fecha,
     LocalTime horariollegada,
     EstadoReserva estadoReserva,
-    String nombreCliente,
+    String nombreUsuario,
     String nombreResto
 ) { }

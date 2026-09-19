@@ -47,8 +47,8 @@ public class ResenaController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/cliente/{id}")
-    public ResponseEntity<?> handlerGetallResenaXcliente (@PathVariable Long id){
-        return ResponseEntity.ok(resenaService.getallResenaByIdCliente(id));
+    @GetMapping("/usuario/{id}")
+    public ResponseEntity<?> handlerGetallResenaXUsuario (@PathVariable Long id){
+        return ResponseEntity.ok(resenaService.getallResenaByUsuario(id));
     }
 }

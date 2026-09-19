@@ -190,7 +190,7 @@ id      type=text (id del restaurante)
   "estadoReserva": "",
   "fechaReserva": "",
   "horarioLlegada": "",
-  "idCliente": 0,
+  "idUsuario": 0,
   "idRestaurant": 0
 }
 ```
@@ -206,9 +206,9 @@ id      type=text (id del restaurante)
 
 >`GET`
 >
->`/api/reservas/cliente/{id}`
+>`/api/reservas/usuario/{id}`
 >
->- Listar todas las reservas de un cliente
+>- Listar todas las reservas de un usuario
 ###
 
 >`GET`
@@ -257,7 +257,7 @@ id      type=text (id del restaurante)
   "id": 0,
   "comentario": "",
   "calificacion": 0,
-  "clienteId": 0,
+  "usuarioId": 0,
   "restaurantId": 0
 }
 ```
@@ -265,7 +265,7 @@ id      type=text (id del restaurante)
 ###
 >`GET`
 >
->`/api/resenas/cliente/{id}`
+>`/api/resenas/usuario/{id}`
 >
 >- Listar todas las reseñas de un usuario
 ###

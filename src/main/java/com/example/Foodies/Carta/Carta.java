@@ -3,9 +3,15 @@ package com.example.Foodies.Carta;
 import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "Cartas")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Carta {
 
     @Id
@@ -25,36 +31,4 @@ public class Carta {
     @JoinColumn(name = "restaurant_id", nullable = false, unique = true)
     private Restaurant restaurant;
 
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNombreArchivo() {
-        return nombreArchivo;
-    }
-
-    public void setNombreArchivo(String nombreArchivo) {
-        this.nombreArchivo = nombreArchivo;
-    }
-
-    public byte[] getContenidoPdf() {
-        return contenidoPdf;
-    }
-
-    public void setContenidoPdf(byte[] contenidoPdf) {
-        this.contenidoPdf = contenidoPdf;
-    }
-
-    public Restaurant getRestaurant() {
-        return restaurant;
-    }
-
-    public void setRestaurant(Restaurant restaurant) {
-        this.restaurant = restaurant;
-    }
 }

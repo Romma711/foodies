@@ -8,7 +8,7 @@ import java.util.List;
 public interface ReservaRepository extends JpaRepository<Reserva,Long> {
     List<Reserva> findAllByFechaReserva(Date fechaReserva);
 
-    List<Reserva> findAllByCliente_Id(Long clienteId);
+    List<Reserva> findAllByUsuario_Id(Long usuarioId);
 
     List<Reserva> findAllByRestaurant_Id(Long restaurantId);
 }
