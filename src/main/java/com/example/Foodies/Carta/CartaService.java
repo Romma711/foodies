@@ -1,12 +1,17 @@
 package com.example.Foodies.Carta;
 
-import com.example.Foodies.Carta.Dtos.CartaDetailDTO;
+import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
+import com.example.Foodies.Usuario.Usuario;
+import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,7 +28,7 @@ public class CartaService {
     private RestaurantRepository restaurantRepository;
 
     @Autowired
-    private CartaMapper cartaMapper;
+    private UsuarioRepository usuarioRepository;
 
     public void guardarCarta(MultipartFile archivo, Long restaurantId) {
         if (archivo.isEmpty() || !archivo.getContentType().equals("application/pdf")) {
@@ -32,6 +37,8 @@ public class CartaService {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
+
+        verificarAccesoRestaurante(restaurant);
 
         // Verificamos si ya tiene una carta asociada
         if (cartaRepository.existsByRestaurantId(restaurantId)) {
@@ -50,20 +57,12 @@ public class CartaService {
         }
     }
 
-    public CartaDetailDTO getCartaByRestaurantId(Long restaurantId) {
+    public Carta descargarCarta(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
-        Carta carta = cartaRepository.findByRestaurant(restaurant)
+        return cartaRepository.findByRestaurant(restaurant)
                 .orElseThrow(() -> new EntityNotFoundException("Carta no encontrada"));
-
-        return cartaMapper.toDTO(carta);
-    }
-
-    public Carta descargarCarta(Long cartaId) {
-        Carta carta = cartaRepository.findById(cartaId)
-                .orElseThrow(() -> new EntityNotFoundException("Carta no encontrada"));
-        return carta;
     }
 
     public void actualizarCarta(MultipartFile nuevoArchivo, Long restaurantId) {
@@ -73,6 +72,8 @@ public class CartaService {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
+
+        verificarAccesoRestaurante(restaurant);
 
         Carta carta = cartaRepository.findByRestaurant(restaurant)
                 .orElseThrow(() -> new EntityNotFoundException("La carta para este restaurante no existe"));
@@ -91,7 +92,33 @@ public class CartaService {
         Carta carta = cartaRepository.findById(cartaId)
                 .orElseThrow(() -> new EntityNotFoundException("Carta no encontrada"));
 
+        verificarAccesoRestaurante(carta.getRestaurant());
+
         cartaRepository.delete(carta);
+    }
+
+    private void verificarAccesoRestaurante(Restaurant restaurant) {
+        Usuario usuarioActual = usuarioActual();
+        if (isAdmin(usuarioActual)) {
+            return;
+        }
+        if (restaurant == null || restaurant.getUsuario() == null
+                || !restaurant.getUsuario().getId().equals(usuarioActual.getId())) {
+            throw new AccessDeniedException("No podés operar sobre este restaurante");
+        }
+    }
+
+    private Usuario usuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof String email) || email.isBlank()) {
+            throw new AccessDeniedException("No autenticado");
+        }
+        return usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+    }
+
+    private boolean isAdmin(Usuario usuario) {
+        return usuario.getRol() == Role.ROLE_ADMIN;
     }
 
 

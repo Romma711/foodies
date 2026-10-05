@@ -12,14 +12,15 @@ import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioMapper;
 import com.example.Foodies.Usuario.UsuarioRepository;
-import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioRestoAAprobarDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class RestaurantService {
@@ -63,6 +64,8 @@ public class RestaurantService {
         Restaurant restaurant = restaurantRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
+        verificarAccesoRestaurante(restaurant);
+
         if (patchDTO.getNombre() != null) {
             restaurant.setNombre(patchDTO.getNombre());
         }
@@ -83,6 +86,7 @@ public class RestaurantService {
 
     public void eliminarRestaurante(Long id){
         Restaurant restaurant = restaurantRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("Restaurante no encontrado"));
+        verificarAccesoRestaurante(restaurant);
         restaurantRepo.delete(restaurant);
     }
 
@@ -100,6 +104,29 @@ public class RestaurantService {
             throw new ListNoContentException("no hay ningun restaurant para aprobar");
         }
         return usuarios;
+    }
+
+    private void verificarAccesoRestaurante(Restaurant restaurant) {
+        Usuario usuarioActual = usuarioActual();
+        if (isAdmin(usuarioActual)) {
+            return;
+        }
+        if (restaurant.getUsuario() == null || !restaurant.getUsuario().getId().equals(usuarioActual.getId())) {
+            throw new AccessDeniedException("No podés modificar un restaurante ajeno");
+        }
+    }
+
+    private Usuario usuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof String email) || email.isBlank()) {
+            throw new AccessDeniedException("No autenticado");
+        }
+        return usuarioRepo.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+    }
+
+    private boolean isAdmin(Usuario usuario) {
+        return usuario.getRol() == Role.ROLE_ADMIN;
     }
 
 }

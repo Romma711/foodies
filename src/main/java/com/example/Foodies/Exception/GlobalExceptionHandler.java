@@ -2,6 +2,7 @@ package com.example.Foodies.Exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -31,6 +32,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleEntityNotFound(EntityNotFoundException ex){
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error","entidad no encontrada","mensaje",ex.getMessage()));
     }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex){
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "sin permisos", "mensaje", ex.getMessage()));
+    }
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<?> handleBusinessException(BusinessException ex) {
         return ResponseEntity
@@ -43,9 +51,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ListNoContentException.class)
     public ResponseEntity<?> handleListNoContent(ListNoContentException ex) {
-        return ResponseEntity
-                .status(HttpStatus.NO_CONTENT)
-                .body(Map.of("error","204","mensaje",ex.getMessage()));
+        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler(Exception.class)

@@ -104,7 +104,9 @@ public class UsuarioService implements UserDetailsService {
     }
 
     public void deleteCliente(Long id){
-        usuarioRepo.deleteById(id);
+        Usuario usuario = usuarioRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("El cliente no existe"));
+        usuarioRepo.delete(usuario);
     }
 
     @Transactional
@@ -122,10 +124,11 @@ public class UsuarioService implements UserDetailsService {
         rest.setNombre(r.getNombreRestaurante());
         rest.setUbicacion(r.getDireccion());
         rest.setAprobado(false);
-        rest.setEspecialidad(EspecialidadDeComida.valueOf(r.getEspecialidadDeComida()));
+        rest.setEspecialidad(parsearEspecialidad(r.getEspecialidadDeComida()));
         rest.setCupoMaximo(r.getCupoMaximo());
 
         rest.setUsuario(usuario);
+        usuario.setRestaurant(rest);
         restaurantRepo.save(rest);
 
 
@@ -149,6 +152,17 @@ public class UsuarioService implements UserDetailsService {
 
     public void lanzarError(String mensaje){
         throw new BusinessException(mensaje);
+    }
+
+    private EspecialidadDeComida parsearEspecialidad(String valor) {
+        if (valor == null || valor.isBlank()) {
+            throw new BusinessException("La especialidad de comida es obligatoria");
+        }
+        try {
+            return EspecialidadDeComida.valueOf(valor.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException("Especialidad inválida: " + valor);
+        }
     }
 
 

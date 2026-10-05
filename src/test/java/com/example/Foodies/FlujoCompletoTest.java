@@ -112,7 +112,7 @@ class FlujoCompletoTest {
                     HttpMethod.POST,
                     reservaReq,
                     ReservaDetailDTO.class);
-            assertThat(reservaResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(reservaResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
             assertThat(reservaResp.getBody().cantidad()).isEqualTo(1);
             assertThat(reservaResp.getBody().nombreUsuario()).isEqualTo("Nombre" + i);
             assertThat(reservaResp.getBody().estadoReserva().name()).isEqualTo("PENDIENTE");

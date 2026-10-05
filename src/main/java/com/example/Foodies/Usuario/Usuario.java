@@ -25,7 +25,7 @@ public class Usuario {
 
     @NotBlank
     @Email(message = "El email debe ser valido")
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @NotBlank

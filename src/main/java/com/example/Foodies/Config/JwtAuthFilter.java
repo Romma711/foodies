@@ -15,32 +15,11 @@ import java.util.stream.Collectors;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private static final List<String> PUBLIC_URLS = List.of(
-            "/api/resenas",
-            "/api/carta/*",
-            "/api/auth/login",
-            "/api/auth/register/cliente",
-            "/api/auth/register/restaurante",
-            "/api/clientes",
-            "/api/registro/restaurante",
-            "/api/restaurantes",
-            "/api/restaurantes/especialidad",
-            "/api/restaurantes/{id}"
-    );
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain)
             throws ServletException, IOException {
-
-        String path = request.getServletPath();
-
-        // ⛔ Ignorar rutas públicas
-        if (PUBLIC_URLS.contains(path)) {
-            chain.doFilter(request, response);
-            return;
-        }
 
         String header = request.getHeader("Authorization");
 

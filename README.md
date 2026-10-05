@@ -151,32 +151,32 @@ spring.datasource.password=<tu-contraseña>
 /api/carta
 
 > form-data
-archivo type=file (y se sube un archivo pdf)
-id      type=text (id del restaurante)
+archivo       type=file (se sube un archivo pdf)
+restaurantId  type=text (id del restaurante)
 ```
->- Subir carta (PDF)
-###
+>- Subir carta (PDF) — solo ENCARGADO del restaurante o ADMIN
+### 
 >`GET`
 >
->`/api/carta/{id}`
+>`/api/carta/{restaurantId}`
 >
->- Ver o descargar carta
+>- Ver o descargar la carta del restaurante (id = id del restaurante)
 ###
 >`PUT`
 ```
 /api/carta
 
 > form-data
-  archivo type=file (y se sube un archivo pdf)
-  id      type=text (id del restaurante)
+  archivo       type=file (se sube un archivo pdf)
+  restaurantId  type=text (id del restaurante)
 ```
->- Actualizar carta PDF
+>- Actualizar carta PDF — solo ENCARGADO del restaurante o ADMIN
 ###
 >`DELETE`
 >
 >`/api/carta/{id}`
 >
->- Eliminar carta asociada
+>- Eliminar carta asociada — solo ENCARGADO del restaurante o ADMIN
 ## 📕 RESERVAS
 
 >`POST`
@@ -237,7 +237,7 @@ id      type=text (id del restaurante)
 }
 ```
 
->- Crear nueva reserva
+>- Actualizar reserva (cantidad: solo el dueño de la reserva o admin, revalida cupo/fecha; estadoReserva: solo el encargado del restaurante o admin)
 ###
 
 >`DELETE`

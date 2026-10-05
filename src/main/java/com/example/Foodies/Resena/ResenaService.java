@@ -1,5 +1,7 @@
 package com.example.Foodies.Resena;
 
+import com.example.Foodies.Exception.BusinessException;
+import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -32,18 +34,18 @@ public class ResenaService {
     @Transactional
     public ResenaDetailDTO createResena(ResenaRequestDTO resena) {
         Usuario usuario = usuarioRepo.findById(resena.getUsuarioId())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
 
         Restaurant restaurante = restauranteRepo.findById(resena.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurante no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
         boolean yaExiste = resenaRepo.existsByUsuario_IdAndRestaurant_Id(resena.getUsuarioId(), resena.getRestaurantId());
         if (yaExiste) {
-            throw new RuntimeException("El usuario ya realizó una reseña para este restaurante.");
+            throw new BusinessException("El usuario ya realizó una reseña para este restaurante.");
         }
 
         if (resena.getCalificacion() < 1 || resena.getCalificacion() > 5) {
-            throw new RuntimeException("La calificación debe estar entre 1 y 5.");
+            throw new BusinessException("La calificación debe estar entre 1 y 5.");
         }
 
         Resena resenaNueva = resenaMapper.toEntity(resena);
@@ -66,7 +68,7 @@ public class ResenaService {
 
     public ResenaDetailDTO getResenaById(Long id) {
         Resena r = resenaRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Reseña no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Reseña no encontrada"));
 
         return new ResenaDetailDTO(
                 r.getId(),
@@ -79,7 +81,7 @@ public class ResenaService {
 
     public ResenaDetailDTO updateResena(Long id, ResenaPatchDTO dto) {
         Resena r = resenaRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Reseña no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Reseña no encontrada"));
 
         if (dto.getComentario() != null) {
             r.setComentario(dto.getComentario());
@@ -87,7 +89,7 @@ public class ResenaService {
         if (dto.getCalificacion() != null) {
             int calificacion = dto.getCalificacion();
             if (calificacion < 1 || calificacion > 5) {
-                throw new RuntimeException("La calificación debe estar entre 1 y 5.");
+                throw new BusinessException("La calificación debe estar entre 1 y 5.");
             }
             r.setCalificacion(calificacion);
         }
@@ -105,7 +107,7 @@ public class ResenaService {
 
     public void deleteResena(Long id) {
         if (!resenaRepo.existsById(id)) {
-            throw new RuntimeException("La reseña no existe.");
+            throw new EntityNotFoundException("La reseña no existe.");
         }
         resenaRepo.deleteById(id);
     }
