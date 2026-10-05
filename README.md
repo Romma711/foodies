@@ -112,7 +112,9 @@ Especialidades: `PESCADOS`, `PARRILLA`, `PASTAS`, `ASIATICA`, `MINUTAS`, `CAFE`.
 | `POST` | `/api/carta` | Sube la carta (`multipart`: `archivo` + `restaurantId`) |
 | `PUT` | `/api/carta` | Reemplaza la carta (`multipart`: `archivo` + `restaurantId`) |
 | `GET` | `/api/carta/{restaurantId}` | Ver / descargar el PDF (público) |
-| `DELETE` | `/api/carta/{id}` | Borrar la carta |
+| `DELETE` | `/api/carta/{restaurantId}` | Borrar la carta |
+
+> Todos los endpoints de carta usan el **restaurantId**, no el id de la carta.
 
 ### Reservas
 
