@@ -1,425 +1,189 @@
-<h1><em> Foodies - Sistema de Reserva de Restaurantes </em></h1>
-<h3> Integrantes: </h3>
-<h5> Ramiro Sacchetta </h5>
-<h5> Andres Roma </h5>
-<h5> Juan Estavillo </h5>
-<p>Foodies es una aplicación web desarrollada en Java con Spring Boot y MySQL, que permite gestionar reservas de restaurantes, subir cartas gastronómicas en formato PDF, y administrar usuarios con autenticación JWT y control de acceso por roles.</p>
+# 🍽️ Foodies — Sistema de reservas de restaurantes
 
-<h2>🌐 Tecnologías utilizadas</h2>
+API REST para gestionar restaurantes, cartas en PDF, reservas y reseñas, con
+autenticación JWT y permisos por rol.
 
-- Java 21
-- Spring Boot 3.4.5
-- Spring Web
-- Spring Data JPA
-- Spring Security
-- Spring Validation
-- MySQL
-- JWT (JSON Web Tokens)
-- MapStruct
-- Maven
-- Postman (para pruebas de API)
+**Integrantes:** Ramiro Sacchetta · Andres Roma · Juan Estavillo · **Gonzalo Leonel Lopez**
 
-<h2>🧱 Arquitectura del Proyecto</h2>
+---
 
-<h4>El sistema sigue el patrón de arquitectura MVC (Model-View-Controller) y está dividido en:</h4>
+## 🧰 Stack
 
-- Entidad y Repositorio: Modelo de datos + JpaRepository
+Java 21 · Spring Boot 3.4 · Spring Web · Spring Data JPA · Spring Security ·
+Spring Validation · MapStruct · Lombok · MySQL · JWT · Maven
 
-- Servicios: Contienen la lógica de negocio
+---
 
-- DTOs: Transporte de datos seguro y eficiente
+## 🚀 Cómo correrlo
 
-- Controladores: Exponen la API REST
+**Necesitás:** Java 21, Maven y MySQL.
 
-- Seguridad: Basada en JWT, roles y filtros personalizados
+**1. Crear la base**
 
-- Los usuarios pueden ser CLIENTE, ENCARGADO o ADMIN, y cada uno tiene permisos distintos para acceder a los endpoints.
-
-<h2>🔐 Autenticación y Roles</h2>
-
-<h4>La seguridad está implementada con:</h4>
-
-- Spring Security
-
-- JWT con filtro personalizado (JwtAuthFilter)
-
-- Codificación de contraseñas con BCrypt
-
-- Usuarios: Cliente, Encargado, Admin
-@PreAuthorize("hasRole('ADMIN')")
-
-<h2>🚀 Instalación y Ejecución</h2>
-
-<h4>Prerrequisitos</h4>
-
-- Java 21
-
-- Maven
-
-- MySQL
-
-<h4>Pasos</h4>
-
-- Clonar el repositorio:
-git clone https://github.com/usuario/foodies.git
-
-- Crear la base de datos en MySQL:
-
-- CREATE DATABASE foodies;
-
-- Configurar application.properties:
+```sql
+CREATE DATABASE foodies;
 ```
-spring.datasource.url=jdbc:mysql://localhost:3306/foodies
-spring.datasource.username=<tu-usuario>
-spring.datasource.password=<tu-contraseña>
+
+**2. Configurar las variables de entorno**
+
+La app no tiene secretos en el código: todo sale de variables de entorno.
+
+| Variable | Para qué es |
+|---|---|
+| `DB_HOST`, `DB_PORT`, `DB_NAME` | Servidor, puerto y nombre de la base |
+| `DB_USER`, `DB_PASS` | Credenciales de MySQL |
+| `ADMIN_PASSWORD` | Contraseña de la cuenta admin que se crea al arrancar (mín. 8 caracteres) |
+| `JWT_SECRET` | Clave de firma de los tokens (mín. 32 bytes) |
+
+```bash
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_NAME=foodies
+export DB_USER=root
+export DB_PASS=tu-clave
+export ADMIN_PASSWORD=admin123
+export JWT_SECRET=una-clave-larga-de-32-bytes-o-mas
 ```
-- Ejecutar el proyecto desde IntelliJ o con:
+
+> En la rama `fix/flujo-principal` la app **no arranca** si faltan `JWT_SECRET` o
+> `ADMIN_PASSWORD`: la configuración falla rápido en el startup.
+
+**3. Correr**
+
+```bash
 ./mvnw spring-boot:run
+```
 
-<h2>🌐 API REST - Documentación de Endpoints</h2>
+Queda disponible en `http://localhost:8080`.
 
-## 👦 CLIENTE
->`GET`
->
->`/api/clientes/`
->- Lista todos los clientes
-###
->`GET`
->
->`/api/clientes/{id}`
->- Lista al cliente solicitado
-###
->`DELETE`
->
->`/api/clientes/{id}`
->- Elimina al cliente solicitado
-###
->`PATCH`
+Al arrancar se crea la cuenta admin `admin@foodies.com` con la contraseña de
+`ADMIN_PASSWORD` (en `master` está fija en `admin123`).
+
+---
+
+## 🔑 Autenticación
+
+Login → se devuelve un token JWT → se manda en `Authorization: Bearer <token>`.
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"juan@gmail.com","password":"1234"}'
+```
 
 ```
-/api/clientes/{id}
+{ "Token": "Bearer eyJhbGciOi..." }
+```
 
-> Body
+| Rol | Qué puede hacer |
+|---|---|
+| `CLIENTE` | Reservar, reseñar, ver su perfil y sus reservas |
+| `ENCARGADO` | Lo anterior + manage su restaurante y subir la carta PDF |
+| `ADMIN` | Todo: aprueba encargados, ve y edita cualquier recurso |
+
+---
+
+## 📡 Endpoints
+
+### Autenticación
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `POST` | `/api/auth/register/cliente` | Registro de cliente |
+| `POST` | `/api/auth/register/restaurante` | Registro de restaurante (queda `PENDIENTE` hasta que el admin lo apruebe) |
+| `POST` | `/api/auth/login` | Login, devuelve el token |
+
+### Restaurantes
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/restaurantes` | Restaurantes aprobados |
+| `GET` | `/api/restaurantes/{id}` | Detalle (los no aprobados solo los ve su dueño o el admin) |
+| `GET` | `/api/restaurantes/especialidad?especialidadDeComida=PASTAS` | Filtro por especialidad |
+| `PATCH` | `/api/restaurantes/{id}` | Editar (encargado del local o admin) |
+| `DELETE` | `/api/restaurantes/{id}` | Borrar (409 si tiene reservas o reseñas) |
+
+Especialidades: `PESCADOS`, `PARRILLA`, `PASTAS`, `ASIATICA`, `MINUTAS`, `CAFE`.
+
+### Cartas (PDF)
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `POST` | `/api/carta` | Sube la carta (`multipart`: `archivo` + `restaurantId`) |
+| `PUT` | `/api/carta` | Reemplaza la carta (`multipart`: `archivo` + `restaurantId`) |
+| `GET` | `/api/carta/{restaurantId}` | Ver / descargar el PDF (público) |
+| `DELETE` | `/api/carta/{id}` | Borrar la carta |
+
+### Reservas
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `POST` | `/api/reservas` | Crear reserva |
+| `GET` | `/api/reservas` | Todas las reservas (admin) |
+| `GET` | `/api/reservas/usuario/{id}` | Reservas de un cliente (él mismo o admin) |
+| `GET` | `/api/reservas/restaurante/{id}` | Reservas de un restaurante (encargado o admin) |
+| `GET` | `/api/reservas/{id}` | Detalle |
+| `PUT` | `/api/reservas/{id}` | Editar cantidad (dueño) o estado (encargado/admin) |
+| `DELETE` | `/api/reservas/{id}` | Borrar |
+
+```json
+// POST /api/reservas
 {
-  "nombre": "",
-  "apellido": "",
-  "telefono":""
-}
-```
->- Actualizar datos
-###
-## 🏥 RESTAURANTES
->`GET`
->
->`/api/restaurantes`
->- Lista todos los restaurantes
- ###
->`GET`
->
->`/api/restaurantes/especialidad?especialidadDeComida=PASTAS`
->- Filtra por especialidad
-###
->`GET`
->
->`/api/restaurantes/{id}`
->- Buscar restaurante por ID
-###
->`DELETE`
->
->`/api/restaurantes/{id}`
->
-> - Eliminar restaurante
-###
->`PATCH`
-
-```
-/api/restaurantes/{id}
-
-> Body
-{
-  "nombre": "",
-  "cupoMaximo": 0,
-  "ubicacion": "",
-  "especialidad": ""
-}
-```
->- Actualizar datos
-###
-## 🍽️ CARTAS
->`POST`
-```
-/api/carta
-
-> form-data
-archivo type=file (y se sube un archivo pdf)
-id      type=text (id del restaurante)
-```
->- Subir carta (PDF)
-###
->`GET`
->
->`/api/carta/{id}`
->
->- Ver o descargar carta
-###
->`PUT`
-```
-/api/carta
-
-> form-data
-  archivo type=file (y se sube un archivo pdf)
-  id      type=text (id del restaurante)
-```
->- Actualizar carta PDF
-###
->`DELETE`
->
->`/api/carta/{id}`
->
->- Eliminar carta asociada
-## 📕 RESERVAS
-
->`POST`
-
-```
-/api/reservas
-
-> Body
-{
-  "cantidad": 0,
-  "estadoReserva": "",
-  "fechaReserva": "",
-  "horarioLlegada": "",
-  "idUsuario": 0,
-  "idRestaurant": 0
+  "cantidad": 2,
+  "fechaReserva": "2026-12-25",
+  "horarioLlegada": "19:30",
+  "idUsuario": 1,
+  "idRestaurant": 1
 }
 ```
 
->- Crear nueva reserva
-###
->`GET`
->
->`/api/reservas`
->
->- Listar todas las reservas
-###
+Reglas: la fecha va como `yyyy-MM-dd`, no puede ser anterior a hoy ni estar a
+más de 3 meses, y el cupo se descuenta **por restaurante y por día**.
+Estados: `PENDIENTE`, `ACEPTADA`, `CANCELADA`.
 
->`GET`
->
->`/api/reservas/usuario/{id}`
->
->- Listar todas las reservas de un usuario
-###
+### Reseñas
 
->`GET`
->
->`/api/reservas/restaurante/{id}`
->
->- Listar todas las reservas de un restaurant
-###
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `POST` | `/api/resenas` | Crear reseña (el autor sale del token) |
+| `GET` | `/api/resenas?id={restaurantId}` | Reseñas de un restaurante |
+| `GET` | `/api/resenas/usuario/{id}` | Reseñas de un usuario |
+| `GET` | `/api/resenas/{id}` | Detalle |
+| `PUT` | `/api/resenas/{id}` | Editar (solo el autor) |
+| `DELETE` | `/api/resenas/{id}` | Borrar (autor o admin) |
 
->`GET`
->
->`/api/reservas/{id}`
->
->- Listar la reseña indicada
-###
+Calificación de `1` a `5`, una reseña por usuario y restaurante.
 
->`PUT`
+### Clientes
 
-```
-/api/reservas/{id}/
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/clientes` | Listar clientes (solo admin) |
+| `GET` | `/api/clientes/{id}` | Ver cliente (él mismo o admin) |
+| `PATCH` | `/api/clientes/{id}` | Editar datos |
+| `DELETE` | `/api/clientes/{id}` | Borrar (409 si tiene reservas o reseñas) |
 
-> Body
-{
-  "cantidad": ,
-  "estadoReserva: ""
-}
-```
+### Admin
 
->- Crear nueva reserva
-###
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/admin/requests` | Encargados pendientes de aprobar |
+| `PUT` | `/api/admin/approved/{usuarioId}` | Aprobar el encargado |
 
->`DELETE`
->
->/api/reservas/{id}
->
->- Eliminar reserva por ID
+---
 
-## 📄 RESEÑAS
+## 🧪 Tests
 
->`POST`
-```
->>/api/resenas
-
-> Body
-{
-  "id": 0,
-  "comentario": "",
-  "calificacion": 0,
-  "usuarioId": 0,
-  "restaurantId": 0
-}
-```
->- Crear nueva reseña
-###
->`GET`
->
->`/api/resenas/usuario/{id}`
->
->- Listar todas las reseñas de un usuario
-###
->`GET`
->
->`/api/resenas/{id}`
->
->- Listar la reseña solicitada
-###
->`GET`
->
->`/api/resenas`
->
->- Listar todas las reseñas
-###
->`PUT`
-```
->>/api/resenas/{id}
-
-> Body
-{
-  "id": 0,
-  "comentario": "",
-  "calificacion": 0
-}
-```
->- Actualizar reseña
-> Actualizar reseña
-###
->`DELETE`
->
->/api/resenas/{id}
->
-> Eliminar reseña
-###
-## 🔑 AUTENTICACIÓN
-
->`POST`
-```
-/api/auth/login
-
-> Body
-{
-  "email": "",
-  "password": ""
-}
-```
->- Login y obtención de token JWT
-###
->`POST`
-```
-/api/auth/register/cliente
-> Body
-{
-  "nombre": "",
-  "apellido": "",
-  "email": "",
-  "password": "",
-  "telefono": ""
-}
-
-```
->- Registro de nuevo cliente
-###
->`POST`
-```
-/api/auth/register/restaurante
-
-> Body
-{
-  "email": "",
-  "password": "",
-  "nombreRestaurante": "",
-  "direccion": "",
-  "telefono": "",
-  "especialidadDeComida": "",
-  "cupoMaximo": 0
-}
-```
->- Registro de restaurante (encargado)
-
-## 👮 ADMINISTRADOR
-
->`PUT`
->
->`/api/admin/approved/{usuarioId}`
->
->- Aprobar cuenta de encargado
-###
-
->`GET`
->
->`/api/admin/requests`
->
->- Lista todos los restaurantes por aprobar
-###
-## 🎡 Roles y Permisos
-
-### CLIENTE
-
-- Crear reservas
-
-- Crear reseñas
-
-### ENCARGADO
-
-- Subir carta PDF
-
-- Modificar restaurante propio
-
-### ADMIN
-
-- Aprobar encargados
-
-- Acceso completo
-
-```
-> Cuenta de admin
-
-{
-  "email":"admin@foodies.com,
-  "password":"admin123",
-}
+```bash
+./mvnw test
 ```
 
-<h2>📄 Datos de Prueba (Postman)</h2>
+Levantan la app contra una base H2 en memoria y cubren el flujo completo: registro y
+login, aprobación de restaurantes, permisos por rol, reservas (incluidos los
+casos inválidos), reseñas, clientes y cartas.
 
-Registro de Cliente
+---
 
-```
-> POST /api/auth/register/cliente
-{
-  "nombre": "Juan",
-  "apellido": "Pérez",
-  "email": "juan@gmail.com",
-  "password": "1234",
-  "telefono": "11334455"
-}
-```
-Login
+## 📄 Licencia
 
-```
-> POST /api/auth/login
-{
-  "email": "juan@gmail.com",
-  "password": "1234"
-}
-```
-`Respuesta: Bearer <token>`
-
-<h3>📢 Autor</h3>
-
-Desarrollado por Andres Roma, Ramiro Sacchetta y Juan Estavillo como parte del trabajo final de la materia.
-
-<h3>🚧 Licencia</h3>
-
-Este proyecto es de uso educativo y libre distribución para fines académicos.
+Proyecto educativo, de libre distribución para fines académicos.
