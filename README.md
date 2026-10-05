@@ -88,6 +88,10 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 ## 📡 Endpoints
 
+Todos los listados son **paginados**: aceptan `?page=0&size=20&sort=campo,asc` y
+responden con `{"content": [...], "totalElements": n, "totalPages": n, ...}`.
+Un resultado vacío es un 200 con `content` vacío (no un 204).
+
 ### Autenticación
 
 | Método | Ruta | Qué hace |
@@ -100,9 +104,9 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `GET` | `/api/restaurantes` | Restaurantes aprobados |
+| `GET` | `/api/restaurantes` | Restaurantes aprobados (paginado) |
 | `GET` | `/api/restaurantes/{id}` | Detalle (los no aprobados solo los ve su dueño o el admin) |
-| `GET` | `/api/restaurantes/especialidad?especialidadDeComida=PASTAS` | Filtro por especialidad |
+| `GET` | `/api/restaurantes/especialidad?especialidadDeComida=PASTAS` | Filtro por especialidad (paginado, `PASTAS` en mayúsculas) |
 | `PATCH` | `/api/restaurantes/{id}` | Editar (encargado del local o admin) |
 | `DELETE` | `/api/restaurantes/{id}` | Borrar (409 si tiene reservas o reseñas) |
 
@@ -124,9 +128,9 @@ Especialidades: `PESCADOS`, `PARRILLA`, `PASTAS`, `ASIATICA`, `MINUTAS`, `CAFE`.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | `POST` | `/api/reservas` | Crear reserva |
-| `GET` | `/api/reservas` | Todas las reservas (admin) |
-| `GET` | `/api/reservas/usuario/{id}` | Reservas de un cliente (él mismo o admin) |
-| `GET` | `/api/reservas/restaurante/{id}` | Reservas de un restaurante (encargado o admin) |
+| `GET` | `/api/reservas` | Todas las reservas (admin, paginado) |
+| `GET` | `/api/reservas/usuario/{id}` | Reservas de un cliente (él mismo o admin, paginado) |
+| `GET` | `/api/reservas/restaurante/{id}` | Reservas de un restaurante (encargado o admin, paginado) |
 | `GET` | `/api/reservas/{id}` | Detalle |
 | `PUT` | `/api/reservas/{id}` | Editar cantidad (dueño) o estado (encargado/admin) |
 | `DELETE` | `/api/reservas/{id}` | Borrar |
@@ -144,6 +148,8 @@ Especialidades: `PESCADOS`, `PARRILLA`, `PASTAS`, `ASIATICA`, `MINUTAS`, `CAFE`.
 
 Reglas: la fecha va como `yyyy-MM-dd`, no puede ser anterior a hoy ni estar a
 más de 3 meses, y el cupo se descuenta **por restaurante y por día**.
+Un usuario no puede tener dos reservas para el mismo restaurante en la misma
+fecha (si cancela la anterior, sí puede volver a reservar ese día).
 Estados: `PENDIENTE`, `ACEPTADA`, `CANCELADA`.
 
 ### Reseñas
@@ -151,8 +157,8 @@ Estados: `PENDIENTE`, `ACEPTADA`, `CANCELADA`.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | `POST` | `/api/resenas` | Crear reseña (el autor sale del token) |
-| `GET` | `/api/resenas?id={restaurantId}` | Reseñas de un restaurante |
-| `GET` | `/api/resenas/usuario/{id}` | Reseñas de un usuario |
+| `GET` | `/api/resenas?id={restaurantId}` | Reseñas de un restaurante (paginado) |
+| `GET` | `/api/resenas/usuario/{id}` | Reseñas de un usuario (paginado) |
 | `GET` | `/api/resenas/{id}` | Detalle |
 | `PUT` | `/api/resenas/{id}` | Editar (solo el autor) |
 | `DELETE` | `/api/resenas/{id}` | Borrar (autor o admin) |
@@ -163,7 +169,7 @@ Calificación de `1` a `5`, una reseña por usuario y restaurante.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `GET` | `/api/clientes` | Listar clientes (solo admin) |
+| `GET` | `/api/clientes` | Listar clientes (solo admin, paginado) |
 | `GET` | `/api/clientes/{id}` | Ver cliente (él mismo o admin) |
 | `PATCH` | `/api/clientes/{id}` | Editar datos |
 | `DELETE` | `/api/clientes/{id}` | Borrar (409 si tiene reservas o reseñas) |
@@ -172,7 +178,7 @@ Calificación de `1` a `5`, una reseña por usuario y restaurante.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `GET` | `/api/admin/requests` | Encargados pendientes de aprobar |
+| `GET` | `/api/admin/requests` | Encargados pendientes de aprobar (paginado) |
 | `PUT` | `/api/admin/approved/{usuarioId}` | Aprobar el encargado |
 
 ---
