@@ -8,13 +8,17 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "resena")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"usuario", "restaurant"})
+@EqualsAndHashCode(exclude = {"usuario", "restaurant"})
 public class Resena {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

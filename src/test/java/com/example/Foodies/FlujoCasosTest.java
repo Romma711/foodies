@@ -78,12 +78,21 @@ class FlujoCasosTest extends ApiTestSupport {
         cupoNegativo.put("cupoMaximo", -5);
         assertThat(registrarRestaurante(cupoNegativo).getBody()).contains("El cupo máximo debe ser 1 o más");
 
-        // especialidad que no existe
+        // especialidad que no existe: mensaje limpio con el campo y los valores validos
         Map<String, Object> especialidadFalsa = restauranteValido();
         especialidadFalsa.put("especialidadDeComida", "PIZZA");
         ResponseEntity<String> rEspecialidad = registrarRestaurante(especialidadFalsa);
         assertThat(rEspecialidad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(rEspecialidad.getBody()).contains("especialidadDeComida");
+        assertThat(rEspecialidad.getBody()).contains("CAFE");
+        assertThat(rEspecialidad.getBody()).doesNotContain("REDACTED");
+
+        // la especialidad no distingue mayusculas (antes el servicio hacia toUpperCase)
+        Map<String, Object> especialidadMinuscula = restauranteValido();
+        especialidadMinuscula.put("email", "casos-esp-min@test.com");
+        especialidadMinuscula.put("especialidadDeComida", "cafe");
+        assertThat(registrarRestaurante(especialidadMinuscula).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
 
         // nombre vacio
         Map<String, Object> sinNombre = restauranteValido();

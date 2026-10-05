@@ -1,5 +1,6 @@
 package com.example.Foodies.Exception;
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -55,15 +57,31 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<?> handleNotReadable(HttpMessageNotReadableException ex) {
-        String causa = ex.getMostSpecificCause().getMessage();
-        String campo = causa != null && causa.contains("\"")
-                ? causa.substring(causa.indexOf('"') + 1, causa.lastIndexOf('"'))
-                : null;
+        Throwable causa = ex.getMostSpecificCause();
+
+        // Enum con valor invalido: se dice el campo y los valores permitidos, sin
+        // arrastrar el mensaje interno de Jackson ("Source: REDACTED", traces, etc).
+        if (causa instanceof InvalidFormatException ife && ife.getTargetType() != null
+                && ife.getTargetType().isEnum()) {
+            String valores = Arrays.stream(ife.getTargetType().getEnumConstants())
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", "));
+            String campo = "el body";
+            if (ife.getPath() != null && !ife.getPath().isEmpty()
+                    && ife.getPath().get(0).getFieldName() != null) {
+                campo = ife.getPath().get(0).getFieldName();
+            }
+            String valor = ife.getValue() != null ? ife.getValue().toString() : "?";
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "valor invalido",
+                    "campo", campo,
+                    "mensaje", "El valor '" + valor + "' no es valido para '" + campo
+                            + "'. Valores permitidos: [" + valores + "]"));
+        }
+
         return ResponseEntity.badRequest().body(Map.of(
                 "error", "json invalido",
-                "mensaje", campo != null
-                        ? "El valor de '" + campo + "' no es válido. Revisá los campos permitidos."
-                        : "El cuerpo de la petición no es válido"));
+                "mensaje", "El cuerpo de la peticion no es valido"));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)

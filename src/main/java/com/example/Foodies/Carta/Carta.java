@@ -5,13 +5,17 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "Cartas")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"restaurant"})
+@EqualsAndHashCode(exclude = {"restaurant"})
 public class Carta {
 
     @Id

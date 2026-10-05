@@ -7,7 +7,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -17,6 +19,8 @@ import java.time.LocalTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"usuario", "restaurant"})
+@EqualsAndHashCode(exclude = {"usuario", "restaurant"})
 public class Reserva {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

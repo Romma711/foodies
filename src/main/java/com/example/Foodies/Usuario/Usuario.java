@@ -7,13 +7,17 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "usuario")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"restaurant", "password"})
+@EqualsAndHashCode(exclude = {"restaurant", "password"})
 public class Usuario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
