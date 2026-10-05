@@ -52,6 +52,69 @@ class FlujoCasosTest extends ApiTestSupport {
     }
 
     @Test
+    void registroDeRestauranteValidaLosDatos() {
+        // body vacio: antes devolvia 500 (ConstraintViolationException al guardar)
+        ResponseEntity<String> vacio = registrarRestaurante(new HashMap<>());
+        assertThat(vacio.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(vacio.getBody()).contains("El email es obligatorio");
+
+        // email invalido
+        Map<String, Object> emailMalo = restauranteValido();
+        emailMalo.put("email", "no-es-un-mail");
+        assertThat(registrarRestaurante(emailMalo).getBody()).contains("El email debe ser valido");
+
+        // password corta
+        Map<String, Object> passCorta = restauranteValido();
+        passCorta.put("password", "123");
+        assertThat(registrarRestaurante(passCorta).getBody())
+                .contains("La contraseña debe tener entre 6 y 30 caracteres");
+
+        // cupo 0 o negativo
+        Map<String, Object> cupoCero = restauranteValido();
+        cupoCero.put("cupoMaximo", 0);
+        assertThat(registrarRestaurante(cupoCero).getBody()).contains("El cupo máximo debe ser 1 o más");
+
+        Map<String, Object> cupoNegativo = restauranteValido();
+        cupoNegativo.put("cupoMaximo", -5);
+        assertThat(registrarRestaurante(cupoNegativo).getBody()).contains("El cupo máximo debe ser 1 o más");
+
+        // especialidad que no existe
+        Map<String, Object> especialidadFalsa = restauranteValido();
+        especialidadFalsa.put("especialidadDeComida", "PIZZA");
+        ResponseEntity<String> rEspecialidad = registrarRestaurante(especialidadFalsa);
+        assertThat(rEspecialidad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(rEspecialidad.getBody()).contains("especialidadDeComida");
+
+        // nombre vacio
+        Map<String, Object> sinNombre = restauranteValido();
+        sinNombre.put("nombreRestaurante", "  ");
+        assertThat(registrarRestaurante(sinNombre).getBody())
+                .contains("El nombre del restaurante es obligatorio");
+
+        // y el caso valido sigue funcionando
+        Map<String, Object> ok = restauranteValido();
+        ok.put("email", "casos-registro-resto@test.com");
+        assertThat(registrarRestaurante(ok).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    private Map<String, Object> restauranteValido() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("email", "casos-resto-valido@test.com");
+        body.put("password", "secret1");
+        body.put("nombreRestaurante", "Resto Valido");
+        body.put("direccion", "Calle 123");
+        body.put("telefono", "222");
+        body.put("especialidadDeComida", "CAFE");
+        body.put("cupoMaximo", 10);
+        return body;
+    }
+
+    private ResponseEntity<String> registrarRestaurante(Map<String, Object> body) {
+        return rest.postForEntity("/api/auth/register/restaurante",
+                new HttpEntity<>(body, auth(null, true)), String.class);
+    }
+
+    @Test
     void registroDuplicadoResponde409() {
         registrarCliente("casos-duplicado@test.com", "Ana");
 

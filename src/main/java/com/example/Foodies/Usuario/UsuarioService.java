@@ -1,7 +1,6 @@
 package com.example.Foodies.Usuario;
 
 import com.example.Foodies.Config.JwtUtil;
-import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.CredencialesInvalidasException;
@@ -186,7 +185,7 @@ public class UsuarioService implements UserDetailsService {
         rest.setNombre(r.getNombreRestaurante());
         rest.setUbicacion(r.getDireccion());
         rest.setAprobado(false);
-        rest.setEspecialidad(parsearEspecialidad(r.getEspecialidadDeComida()));
+        rest.setEspecialidad(r.getEspecialidadDeComida());
         rest.setCupoMaximo(r.getCupoMaximo());
 
         rest.setUsuario(usuario);
@@ -216,16 +215,6 @@ public class UsuarioService implements UserDetailsService {
         throw new BusinessException(mensaje);
     }
 
-    private EspecialidadDeComida parsearEspecialidad(String valor) {
-        if (valor == null || valor.isBlank()) {
-            throw new BusinessException("La especialidad de comida es obligatoria");
-        }
-        try {
-            return EspecialidadDeComida.valueOf(valor.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException("Especialidad inválida: " + valor);
-        }
-    }
 
 
 }

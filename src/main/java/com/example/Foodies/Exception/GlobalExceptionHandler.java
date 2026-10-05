@@ -1,7 +1,10 @@
 package com.example.Foodies.Exception;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -26,6 +29,41 @@ public class GlobalExceptionHandler {
                 ));
 
         return ResponseEntity.badRequest().body(errores);
+    }
+
+    /**
+     * Violaciones que se detectan al guardar la entidad (no al validar el DTO).
+     * Sin este handler salian como 500.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<?> handleConstraintViolation(ConstraintViolationException ex) {
+        Map<String, String> errores = ex.getConstraintViolations().stream()
+                .collect(Collectors.toMap(
+                        v -> v.getPropertyPath().toString(),
+                        ConstraintViolation::getMessage,
+                        (msg1, msg2) -> msg1
+                ));
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", "datos invalidos",
+                "errores", errores,
+                "mensaje", "Revisá los campos enviados"));
+    }
+
+    /**
+     * Body que ni siquiera se puede convertir (enums inexistentes, tipos raros, JSON roto).
+     * Sin esto Spring devuelve su propia respuesta vacía.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleNotReadable(HttpMessageNotReadableException ex) {
+        String causa = ex.getMostSpecificCause().getMessage();
+        String campo = causa != null && causa.contains("\"")
+                ? causa.substring(causa.indexOf('"') + 1, causa.lastIndexOf('"'))
+                : null;
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", "json invalido",
+                "mensaje", campo != null
+                        ? "El valor de '" + campo + "' no es válido. Revisá los campos permitidos."
+                        : "El cuerpo de la petición no es válido"));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)

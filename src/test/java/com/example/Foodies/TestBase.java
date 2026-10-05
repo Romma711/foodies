@@ -13,5 +13,6 @@ abstract class TestBase {
     static {
         System.setProperty("JWT_SECRET", "clave-de-test-foodies-0123456789-0123456789");
         System.setProperty("ADMIN_PASSWORD", "admin123");
+        System.setProperty("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173");
     }
 }
