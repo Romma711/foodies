@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -452,6 +453,97 @@ class FlujoCasosTest extends ApiTestSupport {
         assertThat(deletePropia.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(get(tokenB, "/api/reservas/{id}", reservaB).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // ------------------------------------------------------ duplicados
+
+    @Test
+    void reservasDuplicadasNoSePermiten() {
+        Long resto = registrarResto("dup-resto@test.com", "RestoDup", 10, "PASTAS", true);
+        Long otroResto = registrarResto("dup-resto-2@test.com", "RestoDup2", 10, "CAFE", true);
+        registrarCliente("dup-cli@test.com", "Dani");
+        String token = login("dup-cli@test.com", "secret1");
+        Long id = idUsuario("dup-cli@test.com");
+        String dia = fecha(25);
+
+        ResponseEntity<String> primera = crearReserva(token, id, resto, 2, dia, "19:30");
+        assertThat(primera.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        Long reservaId = idDe(bodyDe(primera));
+
+        // mismo restaurante, mismo día -> 400
+        ResponseEntity<String> duplicada = crearReserva(token, id, resto, 1, dia, "21:00");
+        assertThat(duplicada.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(duplicada.getBody()).contains("Ya tenés una reserva para ese restaurante en esa fecha");
+
+        // otro día en el mismo restaurante -> sí
+        assertThat(crearReserva(token, id, resto, 1, fecha(26), "19:30").getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+
+        // otro restaurante el mismo día -> sí
+        assertThat(crearReserva(token, id, otroResto, 1, dia, "19:30").getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+
+        // si cancela, vuelve a poder reservar ese día
+        String encargado = login("dup-resto@test.com", "secret1");
+        assertThat(rest.exchange("/api/reservas/{id}", HttpMethod.PUT,
+                new HttpEntity<>(Map.of("estadoReserva", "CANCELADA"), auth(encargado, true)),
+                String.class, reservaId).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        assertThat(crearReserva(token, id, resto, 1, dia, "23:00").getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+    }
+
+    private Map<String, Object> bodyDe(ResponseEntity<String> respuesta) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(respuesta.getBody(), new com.fasterxml.jackson.core.type.TypeReference<>() {
+                    });
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudo parsear la respuesta: " + respuesta.getBody(), e);
+        }
+    }
+
+    // ------------------------------------------------------- paginación
+
+    @Test
+    void losListadosSePagan() {
+        String admin = adminToken();
+        registrarCliente("pag-cli-1@test.com", "PagUno");
+        registrarCliente("pag-cli-2@test.com", "PagDos");
+        registrarCliente("pag-cli-3@test.com", "PagTres");
+
+        // ?page=0&size=2
+        Map<String, Object> pagina = getPage(admin, "/api/clientes?page=0&size=2");
+        assertThat((List<?>) pagina.get("content")).hasSize(2);
+        assertThat(pagina.get("size")).isEqualTo(2);
+        assertThat(pagina.get("number")).isEqualTo(0);
+        assertThat((Integer) pagina.get("totalElements")).isGreaterThanOrEqualTo(3);
+        assertThat((Integer) pagina.get("totalPages")).isGreaterThanOrEqualTo(2);
+
+        // la segunda página trae los siguientes (no repetidos)
+        Map<String, Object> pagina1 = getPage(admin, "/api/clientes?page=1&size=2");
+        assertThat(pagina1.get("number")).isEqualTo(1);
+        List<?> contenido0 = (List<?>) pagina.get("content");
+        List<?> contenido1 = (List<?>) pagina1.get("content");
+        assertThat(contenido0).isNotEqualTo(contenido1);
+
+        // ?sort funciona
+        Map<String, Object> ordenado = getPage(admin, "/api/clientes?size=100&sort=nombre,asc");
+        List<Map<String, Object>> todos = (List<Map<String, Object>>) ordenado.get("content");
+        String primero = String.valueOf(todos.get(0).get("nombre"));
+        String ultimo = String.valueOf(todos.get(todos.size() - 1).get("nombre"));
+        assertThat(primero.compareTo(ultimo)).isLessThanOrEqualTo(0);
+
+        // los listados paginados también en el resto de los recursos
+        assertThat(getPage(null, "/api/restaurantes?page=0&size=5").get("content")).isNotNull();
+        assertThat(getPage(admin, "/api/reservas?page=0&size=5").get("content")).isNotNull();
+
+        // una página vacía devuelve 200 con content vacío (ya no 204)
+        registrarCliente("pag-sin-reservas@test.com", "SinReservas");
+        Map<String, Object> vacio = getPage(login("pag-sin-reservas@test.com", "secret1"),
+                "/api/reservas/usuario/{id}", idUsuario("pag-sin-reservas@test.com"));
+        assertThat((List<?>) vacio.get("content")).isEmpty();
+        assertThat(vacio.get("totalElements")).isEqualTo(0);
     }
 
     // ------------------------------------------------------------ reseñas

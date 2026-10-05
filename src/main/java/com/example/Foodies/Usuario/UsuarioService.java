@@ -28,6 +28,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -92,8 +94,10 @@ public class UsuarioService implements UserDetailsService {
         return usuarioMapper.toDTO(usuario);
     }
 
-    public List<UsuarioListDTO> getAllClientes() {
-        return usuarioMapper.toListDTO(usuarioRepo.findByRol(Role.ROLE_CLIENTE));
+    /** Listado paginado de clientes (solo admin). */
+    public Page<UsuarioListDTO> getAllClientes(Pageable pageable) {
+        return usuarioRepo.findByRol(Role.ROLE_CLIENTE, pageable)
+                .map(usuarioMapper::toListDTO);
     }
 
     public UsuarioDetailDTO getClienteById(Long id){

@@ -118,14 +118,16 @@ class FlujoCompletoTest extends TestBase {
             assertThat(reservaResp.getBody().estadoReserva().name()).isEqualTo("PENDIENTE");
 
             // 6. Listar reservas del usuario
-            ResponseEntity<List> reservasDelUsuario = rest.exchange(
+            // desde la paginacion, el listado viene como Page: {"content": [...], "totalElements": n}
+            ResponseEntity<Map> reservasDelUsuario = rest.exchange(
                     "/api/reservas/usuario/{id}",
                     HttpMethod.GET,
                     new HttpEntity<>(clientHeaders),
-                    List.class,
+                    Map.class,
                     clienteId);
             assertThat(reservasDelUsuario.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(reservasDelUsuario.getBody()).hasSize(1);
+            assertThat((List<?>) reservasDelUsuario.getBody().get("content")).hasSize(1);
+            assertThat(reservasDelUsuario.getBody().get("totalElements")).isEqualTo(1);
         }
     }
 }

@@ -17,6 +17,9 @@ public interface RestaurantMapper {
 
     RestaurantDetailDTO toDetailDTO(Restaurant restaurant);
 
+    /** Versión de una sola entidad, para poder mapear páginas (Page.map) */
+    RestaurantListDTO toListDTO(Restaurant restaurante);
+
     List<RestaurantListDTO> toListDTO(List<Restaurant> restaurantes);
 
 

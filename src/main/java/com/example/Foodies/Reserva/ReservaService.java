@@ -13,11 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.List;
 
 @Service
 public class ReservaService {
@@ -54,6 +55,13 @@ public class ReservaService {
         //Valida la fecha si es antes o despues de la fecha de hoy y la deja parseada
         LocalDate fecha = ReservaValidations.validateDate(reserva.getFechaReserva());
 
+        //Un usuario no puede tener dos reservas para el mismo restaurante en la misma fecha
+        if (reservaRepo.existsByUsuario_IdAndRestaurant_IdAndFechaReservaAndEstadoReservaNot(
+                usuario.getId(), restaurante.getId(), fecha, EstadoReserva.CANCELADA)) {
+            throw new BusinessException("Ya tenés una reserva para ese restaurante en esa fecha. "
+                    + "Si querés cambiar la cantidad o cancelarla, usá la reserva existente.");
+        }
+
         //Aca valida si el cupo del dia no esta lleno (cupo por restaurante, no global)
         try{
             ReservaValidations.validateCupo(
@@ -88,14 +96,18 @@ public class ReservaService {
         );
     }
 
-    public List<ReservaListDTO> getAllReservas() {
-        return reservaRepo.findAll().stream()
-                .map(r -> new ReservaListDTO(
-                        r.getId(),
-                        r.getCantidad(),
-                        r.getHorariollegada(),
-                        r.getEstadoReserva()
-                )).toList();
+    /** Todas las reservas, paginadas (solo admin). */
+    public Page<ReservaListDTO> getAllReservas(Pageable pageable) {
+        return reservaRepo.findAll(pageable).map(this::toReservaListDTO);
+    }
+
+    private ReservaListDTO toReservaListDTO(Reserva r) {
+        return new ReservaListDTO(
+                r.getId(),
+                r.getCantidad(),
+                r.getHorariollegada(),
+                r.getEstadoReserva()
+        );
     }
 
     public ReservaDetailDTO getReservaById(Long id) {
@@ -156,41 +168,23 @@ public class ReservaService {
         reservaRepo.deleteById(id);
     }
 
-    public List<ReservaListDTO> getAllByRestaurant(Long id) {
+    /** Reservas de un restaurante, paginadas (encargado del local o admin). */
+    public Page<ReservaListDTO> getAllByRestaurant(Long id, Pageable pageable) {
         Restaurant restaurante = restauranteRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
         verificarAccesoRestaurante(restaurante);
 
-        List<ReservaListDTO> reserva = reservaRepo.findAllByRestaurant_Id(id).stream()
-                .map(r -> new ReservaListDTO(
-                        r.getId(),
-                        r.getCantidad(),
-                        r.getHorariollegada(),
-                        r.getEstadoReserva()
-                )).toList();
-        if (reserva.isEmpty()) {
-            throw new ListNoContentException("Este restaurante no tiene reservas");
-        }
-        return reserva;
+        return reservaRepo.findByRestaurant_Id(id, pageable).map(this::toReservaListDTO);
     }
 
-    public List<ReservaListDTO> getAllByUsuario(Long id) {
+    /** Reservas de un cliente, paginadas (el propio cliente o admin). */
+    public Page<ReservaListDTO> getAllByUsuario(Long id, Pageable pageable) {
         Usuario usuarioActual = getCurrentUser();
         if (!isAdmin(usuarioActual) && !id.equals(usuarioActual.getId())) {
             throw new AccessDeniedException("No podés ver las reservas de otro usuario");
         }
 
-        List<ReservaListDTO> resevas = reservaRepo.findAllByUsuario_Id(id).stream()
-                .map(r -> new ReservaListDTO(
-                        r.getId(),
-                        r.getCantidad(),
-                        r.getHorariollegada(),
-                        r.getEstadoReserva()
-                )).toList();
-        if(resevas.isEmpty()){
-            throw  new ListNoContentException("Este usuario no tiene reservas");
-        }
-        return resevas;
+        return reservaRepo.findByUsuario_Id(id, pageable).map(this::toReservaListDTO);
     }
 
     private void validarEntradaReserva(ReservaRequesDTO reserva) {

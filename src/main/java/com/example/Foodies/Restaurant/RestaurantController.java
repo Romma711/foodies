@@ -5,12 +5,13 @@ import com.example.Foodies.Restaurant.Dtos.RestaurantDetailDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantListDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/restaurantes")
@@ -21,16 +22,16 @@ public class RestaurantController {
 
 
 
+    /** ?page=0&size=20&sort=nombre,asc */
     @GetMapping
-    public ResponseEntity<?> getAllRestautantes(){
-        List<RestaurantListDTO> restaurantListDTOS = restaurantService.getAll();
-        return ResponseEntity.ok(restaurantListDTOS);
+    public ResponseEntity<Page<RestaurantListDTO>> getAllRestautantes(Pageable pageable){
+        return ResponseEntity.ok(restaurantService.getAll(pageable));
     }
 
     @GetMapping("/especialidad")
-    public ResponseEntity<?> getEspecialidadRestaurante(@RequestParam EspecialidadDeComida especialidadDeComida){
-        List<RestaurantListDTO> restaurantListDTOS = restaurantService.getByEspecialidad(especialidadDeComida);
-        return ResponseEntity.ok(restaurantListDTOS);
+    public ResponseEntity<Page<RestaurantListDTO>> getEspecialidadRestaurante(
+            @RequestParam EspecialidadDeComida especialidadDeComida, Pageable pageable){
+        return ResponseEntity.ok(restaurantService.getByEspecialidad(especialidadDeComida, pageable));
     }
 
     @GetMapping("/{id}")

@@ -2,7 +2,6 @@ package com.example.Foodies.Resena;
 
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
-import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -17,9 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 
 @Service
 public class ResenaService {
@@ -69,15 +69,11 @@ public class ResenaService {
         return resenaMapper.toDto(resenaNueva);
     }
 
-    public List<ResenaListDTO> getAllResenasByRestaurant(Long id) {
+    /** Reseñas de un restaurante, paginadas. */
+    public Page<ResenaListDTO> getAllResenasByRestaurant(Long id, Pageable pageable) {
         verificarAccesoAlRestaurante(id);
 
-        List<Resena> resenaList = resenaRepo.findByRestaurant_Id(id);
-        if(resenaList.isEmpty()){
-            throw new ListNoContentException("Este restaurante no tiene resenas");
-        }
-       return resenaMapper.toListDtoList(resenaList);
-
+        return resenaRepo.findByRestaurant_Id(id, pageable).map(resenaMapper::toListDto);
     }
 
     public ResenaDetailDTO getResenaById(Long id) {
@@ -139,13 +135,9 @@ public class ResenaService {
         resenaRepo.delete(r);
     }
 
-    public List<ResenaListDTO> getallResenaByUsuario (Long id){
-        List<Resena> resenas = resenaRepo.findByUsuario_Id(id);
-        if(resenas.isEmpty()){
-            throw new ListNoContentException("Este usuario no tiene resenas");
-        }
-        return resenaMapper.toListDtoList(resenas);
-
+    /** Reseñas de un usuario, paginadas. */
+    public Page<ResenaListDTO> getallResenaByUsuario (Long id, Pageable pageable){
+        return resenaRepo.findByUsuario_Id(id, pageable).map(resenaMapper::toListDto);
     }
 
     private void verificarPropietario(Resena resena) {

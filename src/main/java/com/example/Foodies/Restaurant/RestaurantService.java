@@ -6,7 +6,6 @@ import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.HistorialAsociadoException;
-import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Resena.ResenaRepository;
 import com.example.Foodies.Reserva.ReservaRepository;
 import com.example.Foodies.Restaurant.Dtos.RestaurantDetailDTO;
@@ -18,12 +17,13 @@ import com.example.Foodies.Usuario.UsuarioRepository;
 import com.example.Foodies.Usuario.dtos.UsuarioRestoAAprobarDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 
 @Service
 public class RestaurantService {
@@ -44,24 +44,20 @@ public class RestaurantService {
 
 
 
-    public List<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida){
-        // Solo se listan restaurantes aprobados (los pendientes solo los ve el dueño o el admin)
-        List<Restaurant> restaurants = restaurantRepo.findByEspecialidad(especialidadDeComida).stream()
-                .filter(Restaurant::isAprobado)
-                .toList();
-        if(restaurants.isEmpty()){
-            throw new ListNoContentException("No hay restaurantes con esta especialidad");
-        }
-        return restaurantMapper.toListDTO(restaurants);
+    /**
+     * Listado paginado de restaurantes por especialidad.
+     * Solo los aprobados: los pendientes los ve su dueño o el admin (por id).
+     * Un resultado vacío devuelve 200 con content vacío, no 204.
+     */
+    public Page<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida, Pageable pageable){
+        return restaurantRepo.findByEspecialidadAndAprobadoTrue(especialidadDeComida, pageable)
+                .map(restaurantMapper::toListDTO);
     }
 
-    public List<RestaurantListDTO> getAll() {
-        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrue();
-        if(restaurantes.isEmpty()){
-            throw new ListNoContentException("No hay restaurantes");
-        }
-
-        return restaurantMapper.toListDTO(restaurantes);
+    /** Listado paginado de restaurantes aprobados (page, size y sort por query). */
+    public Page<RestaurantListDTO> getAll(Pageable pageable) {
+        return restaurantRepo.findByAprobadoTrue(pageable)
+                .map(restaurantMapper::toListDTO);
     }
 
     public RestaurantDetailDTO getRestaurantById(Long restaurantId){
@@ -128,20 +124,16 @@ public class RestaurantService {
         restaurantRepo.delete(restaurant);
     }
 
-    public List<UsuarioRestoAAprobarDTO> getRestaurantNotAprobados(){
-        List<UsuarioRestoAAprobarDTO> usuarios = restaurantRepo.findByAprobadoFalse().stream()
+    /** Encargados pendientes de aprobar, paginados. */
+    public Page<UsuarioRestoAAprobarDTO> getRestaurantNotAprobados(Pageable pageable){
+        return restaurantRepo.findByAprobadoFalse(pageable)
                 .map(r -> new UsuarioRestoAAprobarDTO(
                         r.getUsuario().getId(),
                         r.getNombre(),
                         r.getUsuario().getEmail(),
                         r.getUsuario().getTelefono(),
                         String.valueOf(r.getUsuario().getRol())
-                ))
-                .toList();
-        if(usuarios.isEmpty()){
-            throw new ListNoContentException("no hay ningun restaurant para aprobar");
-        }
-        return usuarios;
+                ));
     }
 
     private void verificarAccesoRestaurante(Restaurant restaurant) {

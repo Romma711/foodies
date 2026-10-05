@@ -285,20 +285,26 @@ class PermisosYFlujoTest extends TestBase {
 
         Long cliente = registrarCliente("reg-cupo@test.com", "Fede");
         String token = login("reg-cupo@test.com", "secret1");
+        // segundo cliente: un mismo usuario no puede tener dos reservas para el mismo
+        // restaurante en la misma fecha (ver reservasDuplicadasNoSePermiten)
+        Long cliente2 = registrarCliente("reg-cupo-2@test.com", "Ana");
+        String token2 = login("reg-cupo-2@test.com", "secret1");
         String dia = fecha(31);
 
         assertThat(crearReserva(token, cliente, restoA, 2, dia, "19:30").getStatusCode())
                 .isEqualTo(HttpStatus.CREATED);
 
         // cupo completo en A
-        ResponseEntity<String> excedida = crearReserva(token, cliente, restoA, 1, dia, "20:00");
+        ResponseEntity<String> excedida = crearReserva(token2, cliente2, restoA, 1, dia, "20:00");
         assertThat(excedida.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(excedida.getBody()).contains("El cupo maximo es: 2");
 
         // B de la misma fecha no debería estar afectada por lo reservado en A
-        assertThat(crearReserva(token, cliente, restoB, 2, dia, "19:30").getStatusCode())
+        assertThat(crearReserva(token2, cliente2, restoB, 2, dia, "19:30").getStatusCode())
                 .isEqualTo(HttpStatus.CREATED);
-        ResponseEntity<String> excedidaB = crearReserva(token, cliente, restoB, 1, dia, "21:00");
+        Long cliente3 = registrarCliente("reg-cupo-3@test.com", "Leo");
+        ResponseEntity<String> excedidaB = crearReserva(login("reg-cupo-3@test.com", "secret1"),
+                cliente3, restoB, 1, dia, "21:00");
         assertThat(excedidaB.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 

@@ -1,16 +1,16 @@
 package com.example.Foodies.Resena;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.List;
 
 public interface ResenaRepository extends JpaRepository<Resena,Long> {
     boolean existsByUsuario_IdAndRestaurant_Id(Long usuarioId, Long restaurantId);
 
-    List<Resena> findByRestaurant_Id(Long restaurantId);
+    Page<Resena> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
 
-    List<Resena> findByUsuario_Id(Long usuarioId);
+    Page<Resena> findByUsuario_Id(Long usuarioId, Pageable pageable);
 
     boolean existsByUsuario_Id(Long usuarioId);
 

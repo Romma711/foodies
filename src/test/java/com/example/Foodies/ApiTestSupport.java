@@ -137,4 +137,15 @@ abstract class ApiTestSupport extends TestBase {
     protected ResponseEntity<String> get(String token, String url, Object... uriVars) {
         return rest.exchange(url, HttpMethod.GET, new HttpEntity<>(auth(token, false)), String.class, uriVars);
     }
+
+    /** GET que devuelve una Page ya parseada: {"content": [...], "totalElements": n, ...} */
+    protected Map<String, Object> getPage(String token, String url, Object... uriVars) {
+        ResponseEntity<Map> resp = rest.exchange(url, HttpMethod.GET,
+                new HttpEntity<>(auth(token, false)), Map.class, uriVars);
+        return resp.getBody();
+    }
+
+    protected Long idDe(Map<String, Object> body) {
+        return Long.valueOf(body.get("id").toString());
+    }
 }

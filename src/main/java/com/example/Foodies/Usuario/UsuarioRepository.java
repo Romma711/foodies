@@ -1,9 +1,10 @@
 package com.example.Foodies.Usuario;
 
 import com.example.Foodies.Enums.Role;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
@@ -12,5 +13,5 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Boolean existsByEmail(String email);
     Boolean existsByEmailAndPassword(String email, String password);
 
-    List<Usuario> findByRol(Role rol);
+    Page<Usuario> findByRol(Role rol, Pageable pageable);
 }
