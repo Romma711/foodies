@@ -82,7 +82,11 @@ public class CartaService {
 
         verificarAccesoRestaurante(carta.getRestaurant());
 
-        cartaRepository.delete(carta);
+        // JPQL y no em.remove()/deleteById(): con el remove de Hibernate la fila
+        // sobrevivia al flush (la API respondia 204 sin borrar nada).
+        if (cartaRepository.borrarPorId(cartaId) == 0) {
+            throw new EntityNotFoundException("Carta no encontrada");
+        }
     }
 
     /**

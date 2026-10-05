@@ -1,7 +1,6 @@
 package com.example.Foodies;
 
 import com.example.Foodies.Carta.CartaRepository;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -92,13 +91,7 @@ class CartaCasosTest extends ApiTestSupport {
 
     }
 
-    /**
-     * Bug encontrado auditando el flujo: el DELETE responde 204 pero la fila de la
-     * carta sigue en la base (verificado por JDBC crudo). Queda documentado aca
-     * hasta que se arregle.
-     */
     @Test
-    @Disabled("bug: DELETE /api/carta/{id} responde 204 pero no borra la carta")
     void eliminarLaCartaLaBorraDeLaBase() throws Exception {
         Long resto = registrarResto("carta-borrado@test.com", "RestoCartaBorrado", 10, "MINUTAS", true);
         String token = login("carta-borrado@test.com", "secret1");

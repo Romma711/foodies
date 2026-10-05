@@ -243,6 +243,10 @@ class PermisosYFlujoTest extends TestBase {
         ResponseEntity<String> deleteAdmin = rest.exchange("/api/resenas/{id}", HttpMethod.DELETE,
                 new HttpEntity<>(auth(admin, false)), String.class, resenaId);
         assertThat(deleteAdmin.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        // el 204 tiene que venir con la fila borrada de verdad
+        assertThat(rest.exchange("/api/resenas/{id}", HttpMethod.GET,
+                new HttpEntity<>(auth(admin, false)), String.class, resenaId).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
