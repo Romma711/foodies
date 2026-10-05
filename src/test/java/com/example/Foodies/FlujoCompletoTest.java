@@ -18,7 +18,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class FlujoCompletoTest {
+class FlujoCompletoTest extends TestBase {
 
     @Autowired
     private TestRestTemplate rest;

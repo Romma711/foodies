@@ -3,6 +3,7 @@ package com.example.Foodies.Resena;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ListNoContentException;
+import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Resena.dtos.ResenaDetailDTO;
@@ -13,6 +14,9 @@ import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,13 +37,21 @@ public class ResenaService {
 
     @Transactional
     public ResenaDetailDTO createResena(ResenaRequestDTO resena) {
-        Usuario usuario = usuarioRepo.findById(resena.getUsuarioId())
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        // Primero lo que viene del request: si falta algo, 400 antes de tocar la base
+        if (resena == null || resena.getRestaurantId() == null) {
+            throw new BusinessException("El restaurante es obligatorio");
+        }
+        if (resena.getComentario() == null || resena.getComentario().isBlank()) {
+            throw new BusinessException("El comentario es obligatorio");
+        }
+
+        // El autor siempre es el usuario del token: no se acepta reseñar en nombre de otro
+        Usuario usuario = usuarioActual();
 
         Restaurant restaurante = restauranteRepo.findById(resena.getRestaurantId())
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
-        boolean yaExiste = resenaRepo.existsByUsuario_IdAndRestaurant_Id(resena.getUsuarioId(), resena.getRestaurantId());
+        boolean yaExiste = resenaRepo.existsByUsuario_IdAndRestaurant_Id(usuario.getId(), restaurante.getId());
         if (yaExiste) {
             throw new BusinessException("El usuario ya realizó una reseña para este restaurante.");
         }
@@ -58,6 +70,8 @@ public class ResenaService {
     }
 
     public List<ResenaListDTO> getAllResenasByRestaurant(Long id) {
+        verificarAccesoAlRestaurante(id);
+
         List<Resena> resenaList = resenaRepo.findByRestaurant_Id(id);
         if(resenaList.isEmpty()){
             throw new ListNoContentException("Este restaurante no tiene resenas");
@@ -69,6 +83,10 @@ public class ResenaService {
     public ResenaDetailDTO getResenaById(Long id) {
         Resena r = resenaRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reseña no encontrada"));
+
+        if (esEncargado(usuarioActual())) {
+            verificarQueSeaSuRestaurante(r.getRestaurant());
+        }
 
         return new ResenaDetailDTO(
                 r.getId(),
@@ -82,6 +100,8 @@ public class ResenaService {
     public ResenaDetailDTO updateResena(Long id, ResenaPatchDTO dto) {
         Resena r = resenaRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reseña no encontrada"));
+
+        verificarPropietario(r);
 
         if (dto.getComentario() != null) {
             r.setComentario(dto.getComentario());
@@ -106,10 +126,17 @@ public class ResenaService {
     }
 
     public void deleteResena(Long id) {
-        if (!resenaRepo.existsById(id)) {
-            throw new EntityNotFoundException("La reseña no existe.");
+        Resena r = resenaRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("La reseña no existe."));
+
+        // Solo el dueño de la reseña o un admin pueden eliminarla
+        Usuario usuarioActual = usuarioActual();
+        if (!esAdmin(usuarioActual)
+                && (r.getUsuario() == null || !r.getUsuario().getId().equals(usuarioActual.getId()))) {
+            throw new AccessDeniedException("No podés eliminar una reseña que no es tuya");
         }
-        resenaRepo.deleteById(id);
+
+        resenaRepo.delete(r);
     }
 
     public List<ResenaListDTO> getallResenaByUsuario (Long id){
@@ -119,5 +146,54 @@ public class ResenaService {
         }
         return resenaMapper.toListDtoList(resenas);
 
+    }
+
+    private void verificarPropietario(Resena resena) {
+        Usuario usuarioActual = usuarioActual();
+        if (esAdmin(usuarioActual)) {
+            return;
+        }
+        if (resena.getUsuario() == null || !resena.getUsuario().getId().equals(usuarioActual.getId())) {
+            throw new AccessDeniedException("No podés editar una reseña que no es tuya");
+        }
+    }
+
+    private Usuario usuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof String email) || email.isBlank()) {
+            throw new AccessDeniedException("No autenticado");
+        }
+        return usuarioRepo.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+    }
+
+    private boolean esAdmin(Usuario usuario) {
+        return usuario.getRol() == Role.ROLE_ADMIN;
+    }
+
+    private boolean esEncargado(Usuario usuario) {
+        return usuario.getRol() == Role.ROLE_ENCARGADO;
+    }
+
+    /** El encargado solo puede leer las reseñas de SU restaurante; el cliente lee las que quiera */
+    private void verificarAccesoAlRestaurante(Long restauranteId) {
+        Usuario actual = usuarioActual();
+        if (!esEncargado(actual)) {
+            return;
+        }
+        Restaurant restaurante = restauranteRepo.findById(restauranteId)
+                .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
+        verificarQueSeaSuRestaurante(restaurante);
+    }
+
+    private void verificarQueSeaSuRestaurante(Restaurant restaurante) {
+        Usuario actual = usuarioActual();
+        if (esAdmin(actual)) {
+            return;
+        }
+        if (restaurante == null || restaurante.getUsuario() == null
+                || !restaurante.getUsuario().getId().equals(actual.getId())) {
+            throw new AccessDeniedException("No podés ver las reseñas de un restaurante que no es tuyo");
+        }
     }
 }

@@ -17,7 +17,7 @@ public class ClienteController {
     @Autowired
     private UsuarioService usuarioService;
 
-    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UsuarioListDTO>> handleGetAllClientes(){
         return ResponseEntity.ok(usuarioService.getAllClientes());

@@ -64,6 +64,20 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ResponseEntity<?> handlerCredencialesInvalidas(CredencialesInvalidasException ex){
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error","no autorizado","mensaje",ex.getMessage()));
+    }
+
+    @ExceptionHandler(HistorialAsociadoException.class)
+    public ResponseEntity<?> handlerHistorialAsociado(HistorialAsociadoException ex){
+        return  ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
+    }
+
     @ExceptionHandler(EmailDuplicadoException.class)
     public ResponseEntity<?> handlerEmailDuplicadoException(EmailDuplicadoException ex){
         return  ResponseEntity

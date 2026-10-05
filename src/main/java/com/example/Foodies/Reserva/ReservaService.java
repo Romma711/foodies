@@ -8,18 +8,15 @@ import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Reserva.dtos.*;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.lang.Exception;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Date;
 import java.util.List;
 
 @Service
@@ -34,38 +31,34 @@ public class ReservaService {
     @Autowired
     private RestaurantRepository restauranteRepo;
 
+    /**
+     * Transaccional y con la fila del restaurante bloqueada: sin el lock, dos requests
+     * simultaneas podian leer el mismo cupo libre y ambas reservar la ultima plaza.
+     */
+    @Transactional
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
+        // Primero lo que viene del request: si falta algo, 400 sin llegar a la base
+        validarEntradaReserva(reserva);
+
         Usuario usuario = resolverUsuarioParaReserva(reserva.getIdUsuario());
 
-        Restaurant restaurante = restauranteRepo.findById(reserva.getIdRestaurant())
+        Restaurant restaurante = restauranteRepo.findByIdForUpdate(reserva.getIdRestaurant())
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
         //Esto verifica si el restaurant esta activo
         ReservaValidations.validateRestaurantIsActive(restaurante);
 
-        ReservaValidations.validateTime(reserva.getHorarioLlegada());
-
         //Esto formatea de string a respectivos tipos de datos de tiempo (tanto la fecha, como la hora)
         LocalTime horaParseada = LocalTime.parse(reserva.getHorarioLlegada());
-        DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
-        //Valida la fecha si es antes o despues de la fecha de hoy
-        ReservaValidations.validateDate(reserva.getFechaReserva());
+        //Valida la fecha si es antes o despues de la fecha de hoy y la deja parseada
+        LocalDate fecha = ReservaValidations.validateDate(reserva.getFechaReserva());
 
-        Date fecha = null;
-        try {
-            fecha = formatter.parse(reserva.getFechaReserva());
-        }catch (ParseException e) {
-            throw new BusinessException("Fecha no valida, Tiene que ser yyyy-MM-dd. Ejemplo: 2022-01-01.");
-        }catch (Exception e) {
-            // Captura cualquier otra excepción relacionada con fechas
-            throw new BusinessException("Error al procesar la fecha. Verifique el formato yyyy-MM-dd");
-        }
-        //Aca valida si el cupo del dia no esta lleno
+        //Aca valida si el cupo del dia no esta lleno (cupo por restaurante, no global)
         try{
             ReservaValidations.validateCupo(
                     reserva.getCantidad(),
-                    reservaRepo.findAllByFechaReserva(fecha)
+                    reservaRepo.findAllByFechaReservaAndRestaurant_Id(fecha, restaurante.getId())
                             .stream()
                             .mapToInt(Reserva::getCantidad)
                             .sum(),
@@ -122,6 +115,7 @@ public class ReservaService {
         );
     }
 
+    @Transactional
     public ReservaDetailDTO updateReserva(Long id, ReservaPatchDTO dto) {
         Reserva r = reservaRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada"));
@@ -130,6 +124,8 @@ public class ReservaService {
 
         if (dto.getCantidad() != null) {
             verificarAccesoReserva(r);
+            // Mismo lock que en la creacion: la revalidacion del cupo tambien es critica
+            restauranteRepo.findByIdForUpdate(r.getRestaurant().getId());
             validarCupoActualizado(r, dto.getCantidad());
             r.setCantidad(dto.getCantidad());
         }
@@ -197,6 +193,25 @@ public class ReservaService {
         return resevas;
     }
 
+    private void validarEntradaReserva(ReservaRequesDTO reserva) {
+        if (reserva == null) {
+            throw new BusinessException("La reserva es obligatoria");
+        }
+        if (reserva.getIdRestaurant() == null) {
+            throw new BusinessException("El restaurante es obligatorio");
+        }
+        if (reserva.getCantidad() == null) {
+            throw new BusinessException("La cantidad es obligatoria");
+        }
+        if (reserva.getCantidad() < 0) {
+            throw new BusinessException("La cantidad no puede ser negativa");
+        }
+        if (reserva.getFechaReserva() == null || reserva.getFechaReserva().isBlank()) {
+            throw new BusinessException("La fecha es obligatoria. Debe ser yyyy-MM-dd (ejemplo: 2024-12-25)");
+        }
+        ReservaValidations.validateTime(reserva.getHorarioLlegada());
+    }
+
     private Usuario resolverUsuarioParaReserva(Long idSolicitado) {
         Usuario usuarioActual = getCurrentUser();
         if (isAdmin(usuarioActual)) {
@@ -222,7 +237,7 @@ public class ReservaService {
         if (nuevaCantidad < 0) {
             throw new NotValidCupoException("Cupo invalido");
         }
-        int sinEsta = reservaRepo.findAllByFechaReserva(r.getFechaReserva()).stream()
+        int sinEsta = reservaRepo.findAllByFechaReservaAndRestaurant_Id(r.getFechaReserva(), r.getRestaurant().getId()).stream()
                 .filter(x -> !x.getId().equals(r.getId()))
                 .mapToInt(Reserva::getCantidad)
                 .sum();

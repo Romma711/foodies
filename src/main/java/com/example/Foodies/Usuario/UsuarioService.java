@@ -4,9 +4,12 @@ import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
+import com.example.Foodies.Exception.CredencialesInvalidasException;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
-import com.example.Foodies.Exception.NotApprovedException;
+import com.example.Foodies.Exception.HistorialAsociadoException;
+import com.example.Foodies.Resena.ResenaRepository;
+import com.example.Foodies.Reserva.ReservaRepository;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -16,8 +19,11 @@ import com.example.Foodies.Usuario.dtos.UsuarioListDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioPatchDTO;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -33,6 +39,10 @@ public class UsuarioService implements UserDetailsService {
     private UsuarioRepository usuarioRepo;
     @Autowired
     private RestaurantRepository restaurantRepo;
+    @Autowired
+    private ReservaRepository reservaRepo;
+    @Autowired
+    private ResenaRepository resenaRepo;
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
@@ -51,11 +61,11 @@ public class UsuarioService implements UserDetailsService {
     }
     @Transactional
     public String login (String email, String password){
-        Usuario usuario = usuarioRepo.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        // Mismo mensaje y mismo status exista o no el email: no se filtra que emails estan registrados
+        Usuario usuario = usuarioRepo.findByEmail(email).orElse(null);
 
-        if(!passwordEncoder.matches(password,usuario.getPassword())){
-            throw new NotApprovedException("Email o contraseña incorrectos, intente nuevamente");
+        if (usuario == null || !passwordEncoder.matches(password, usuario.getPassword())){
+            throw new CredencialesInvalidasException("Email o contraseña incorrectos");
         }
 
         UserDetails userDetails = loadUserByUsername(email);
@@ -88,25 +98,77 @@ public class UsuarioService implements UserDetailsService {
     }
 
     public UsuarioDetailDTO getClienteById(Long id){
+        verificarAccesoCliente(id);
         Usuario usuario = usuarioRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("El cliente no existe"));
         return usuarioMapper.toDTO(usuario);
     }
 
     public UsuarioDetailDTO updateCliente(Long id, UsuarioPatchDTO update){
+        verificarAccesoCliente(id);
         Usuario existente = usuarioRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("ERROR: el cliente no existe"));
-        existente.setNombre(update.getNombre());
-        existente.setApellido(update.getApellido());
-        existente.setTelefono(update.getTelefono());
+
+        // PATCH: solo se actualizan los campos enviados (los null no pisan lo existente)
+        if (update.getNombre() != null) {
+            existente.setNombre(update.getNombre());
+        }
+        if (update.getApellido() != null) {
+            existente.setApellido(update.getApellido());
+        }
+        if (update.getTelefono() != null) {
+            existente.setTelefono(update.getTelefono());
+        }
         usuarioRepo.save(existente);
         return usuarioMapper.toDTO(existente);
     }
 
     public void deleteCliente(Long id){
+        verificarAccesoCliente(id);
         Usuario usuario = usuarioRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("El cliente no existe"));
+
+        Restaurant restaurante = usuario.getRestaurant();
+
+        if (restaurante != null) {
+            // Una cuenta con restaurante (encargado/pendiente) solo la da de baja el admin
+            if (usuarioActual().getRol() != Role.ROLE_ADMIN) {
+                throw new AccessDeniedException("Solo un admin puede eliminar una cuenta con restaurante");
+            }
+            if (reservaRepo.existsByRestaurant_Id(restaurante.getId())
+                    || resenaRepo.existsByRestaurant_Id(restaurante.getId())) {
+                throw new HistorialAsociadoException("El restaurante tiene reservas o reseñas asociadas, no se puede eliminar");
+            }
+            // Restaurant es el lado dueño de la FK y tiene CascadeType.ALL:
+            // al borrarlo tambien se borra la cuenta del encargado
+            restaurantRepo.delete(restaurante);
+            return;
+        }
+
+        if (reservaRepo.existsByUsuario_Id(id) || resenaRepo.existsByUsuario_Id(id)) {
+            throw new HistorialAsociadoException("El cliente tiene reservas o reseñas asociadas, no se puede eliminar");
+        }
+
         usuarioRepo.delete(usuario);
+    }
+
+    private void verificarAccesoCliente(Long id) {
+        Usuario usuarioActual = usuarioActual();
+        if (usuarioActual.getRol() == Role.ROLE_ADMIN) {
+            return;
+        }
+        if (!id.equals(usuarioActual.getId())) {
+            throw new AccessDeniedException("No podés acceder a un cliente que no sos vos");
+        }
+    }
+
+    private Usuario usuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof String email) || email.isBlank()) {
+            throw new AccessDeniedException("No autenticado");
+        }
+        return usuarioRepo.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
     }
 
     @Transactional
@@ -141,7 +203,7 @@ public class UsuarioService implements UserDetailsService {
         Usuario usuario = usuarioRepo.findById(usuarioId)
                 .orElseThrow(()-> new EntityNotFoundException("Usuario no encontrado"));
         if(usuario.getRestaurant()== null){
-            throw new IllegalStateException("Este usuario no tiene restaurante asociado");
+            throw new BusinessException("El usuario no tiene restaurante asociado");
         }
 
         usuario.setRol(Role.ROLE_ENCARGADO);

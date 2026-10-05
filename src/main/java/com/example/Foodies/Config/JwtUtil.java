@@ -11,13 +11,38 @@ import java.util.List;
 import java.util.Map;
 
 public class JwtUtil {
-    private static final String SECRET = System.getenv("JWT_SECRET") != null
-            ? System.getenv("JWT_SECRET")
-            : "clave-ultra-secreta-andy-deja-el-lol-necesitamos-una-clave-mas-larga-para-cumplir-con-256-bits";
+    /**
+     * La clave de firma NUNCA se hardcodea: viene del entorno.
+     * Si falta, la app no arranca (ver JwtSecretConfig).
+     */
+    private static final String SECRET = cargarSecret();
 
     private static final long EXPIRATION =18000000L; // 5 horas |  3600000L 1 hora
 
     private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+
+    private static String cargarSecret() {
+        String secret = System.getProperty("JWT_SECRET");
+        if (secret == null || secret.isBlank()) {
+            secret = System.getenv("JWT_SECRET");
+        }
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "Falta la variable de entorno JWT_SECRET: definala antes de arrancar la aplicacion "
+                            + "(ej: JWT_SECRET=<clave-de-32-bytes-o-mas> ./mvnw spring-boot:run)");
+        }
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT_SECRET debe tener al menos 32 bytes (256 bits)");
+        }
+        return secret;
+    }
+
+    /** Llamado al arrancar para fallar rapido si la clave no esta configurada. */
+    public static void verificarConfiguracion() {
+        if (KEY == null || SECRET == null || SECRET.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET no esta configurado");
+        }
+    }
 
 
     public static String createToken(String username, List<String> roles) {

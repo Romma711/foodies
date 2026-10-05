@@ -11,4 +11,8 @@ public interface ResenaRepository extends JpaRepository<Resena,Long> {
 
 
     List<Resena> findByUsuario_Id(Long usuarioId);
+
+    boolean existsByUsuario_Id(Long usuarioId);
+
+    boolean existsByRestaurant_Id(Long restaurantId);
 }

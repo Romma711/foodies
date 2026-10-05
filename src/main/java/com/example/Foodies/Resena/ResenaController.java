@@ -19,20 +19,20 @@ public class ResenaController {
     @Autowired
     private ResenaService resenaService;
 
-    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMIN')")
+    @PreAuthorize("hasRole('CLIENTE')")
     @PostMapping
     public ResponseEntity<ResenaDetailDTO> handleCreateResena(@RequestBody ResenaRequestDTO resena) {
         ResenaDetailDTO resenaDetailDTO = resenaService.createResena(resena);
         return ResponseEntity.status(HttpStatus.CREATED).body(resenaDetailDTO);
     }
 
-    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ENCARGADO', 'ADMIN')")
     @GetMapping
     public ResponseEntity<List<ResenaListDTO>> handleGetAllResenas(@RequestParam Long id) {
         return ResponseEntity.ok(resenaService.getAllResenasByRestaurant(id));
     }
 
-    @PreAuthorize("hasAnyRole('CLIENTE', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'ENCARGADO', 'ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<ResenaDetailDTO> handleGetById(@PathVariable Long id) {
         return ResponseEntity.ok(resenaService.getResenaById(id));

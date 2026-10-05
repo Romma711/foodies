@@ -31,9 +31,7 @@ public class CartaService {
     private UsuarioRepository usuarioRepository;
 
     public void guardarCarta(MultipartFile archivo, Long restaurantId) {
-        if (archivo.isEmpty() || !archivo.getContentType().equals("application/pdf")) {
-            throw new BusinessException("Debe subir un archivo PDF válido");
-        }
+        byte[] contenido = leerPdf(archivo, "Debe subir un archivo PDF válido");
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
@@ -45,16 +43,12 @@ public class CartaService {
             throw new BusinessException("Este restaurante ya tiene una carta");
         }
 
-        try {
-            Carta carta = new Carta();
-            carta.setNombreArchivo(archivo.getOriginalFilename());
-            carta.setContenidoPdf(archivo.getBytes());
-            carta.setRestaurant(restaurant);
+        Carta carta = new Carta();
+        carta.setNombreArchivo(archivo.getOriginalFilename());
+        carta.setContenidoPdf(contenido);
+        carta.setRestaurant(restaurant);
 
-            cartaRepository.save(carta);
-        } catch (IOException e) {
-            throw new BusinessException("Error al procesar el archivo PDF");
-        }
+        cartaRepository.save(carta);
     }
 
     public Carta descargarCarta(Long restaurantId) {
@@ -66,9 +60,7 @@ public class CartaService {
     }
 
     public void actualizarCarta(MultipartFile nuevoArchivo, Long restaurantId) {
-        if (!nuevoArchivo.getContentType().equals("application/pdf")) {
-            throw new BusinessException("Solo se permiten archivos PDF");
-        }
+        byte[] contenido = leerPdf(nuevoArchivo, "Solo se permiten archivos PDF");
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
@@ -78,13 +70,9 @@ public class CartaService {
         Carta carta = cartaRepository.findByRestaurant(restaurant)
                 .orElseThrow(() -> new EntityNotFoundException("La carta para este restaurante no existe"));
 
-        try {
-            carta.setNombreArchivo(nuevoArchivo.getOriginalFilename());
-            carta.setContenidoPdf(nuevoArchivo.getBytes());
-            cartaRepository.save(carta);
-        } catch (IOException e) {
-            throw new BusinessException("Error al leer el archivo PDF");
-        }
+        carta.setNombreArchivo(nuevoArchivo.getOriginalFilename());
+        carta.setContenidoPdf(contenido);
+        cartaRepository.save(carta);
     }
 
     @Transactional
@@ -95,6 +83,33 @@ public class CartaService {
         verificarAccesoRestaurante(carta.getRestaurant());
 
         cartaRepository.delete(carta);
+    }
+
+    /**
+     * Valida que el archivo sea un PDF de verdad y devuelve su contenido.
+     * Mira el Content-Type (getContentType() puede venir null si el request no
+     * manda Content-Type en la parte) y ademas la firma del archivo "%PDF-",
+     * asi un .txt renombrado no entra. Se lee una sola vez para no consumir el stream.
+     */
+    private byte[] leerPdf(MultipartFile archivo, String mensajeError) {
+        if (archivo == null || archivo.isEmpty() || !"application/pdf".equals(archivo.getContentType())) {
+            throw new BusinessException(mensajeError);
+        }
+
+        byte[] contenido;
+        try {
+            contenido = archivo.getBytes();
+        } catch (IOException e) {
+            throw new BusinessException(mensajeError);
+        }
+
+        if (contenido.length < 5
+                || contenido[0] != '%' || contenido[1] != 'P'
+                || contenido[2] != 'D' || contenido[3] != 'F' || contenido[4] != '-') {
+            throw new BusinessException(mensajeError);
+        }
+
+        return contenido;
     }
 
     private void verificarAccesoRestaurante(Restaurant restaurant) {

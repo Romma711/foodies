@@ -25,9 +25,17 @@ public class ReservaValidations {
         }
     }
 
-    public static void validateDate(String fecha){
+    /**
+     * Valida la fecha del request y la devuelve ya parseada.
+     * Lanza BusinessException (400) si falta, viene mal o no cumple las reglas.
+     */
+    public static LocalDate validateDate(String fecha){
+        if (fecha == null || fecha.trim().isEmpty()) {
+            throw new BusinessException("La fecha es obligatoria. Debe ser yyyy-MM-dd (ejemplo: 2024-12-25)");
+        }
+
         try {
-            LocalDate fechaReserva = LocalDate.parse(fecha);
+            LocalDate fechaReserva = LocalDate.parse(fecha.trim());
             LocalDate hoy = LocalDate.now();
 
             if (hoy.isAfter(fechaReserva)){
@@ -38,6 +46,8 @@ public class ReservaValidations {
             if (fechaReserva.isAfter(maxFecha)) {
                 throw new BusinessException("No se pueden hacer reservas con más de 3 meses de anticipación");
             }
+
+            return fechaReserva;
 
         } catch (DateTimeParseException e) {
             throw new BusinessException("Formato de fecha inválido. Debe ser yyyy-MM-dd (ejemplo: 2024-12-25)");
