@@ -47,10 +47,14 @@ public class CartaController {
         return ResponseEntity.ok("Carta actualizada correctamente");
     }
 
+    /**
+     * Borra la carta del restaurante. Usa el restaurantId (igual que el GET) y no el
+     * id de la carta, para no tener dos ids distintos en la misma ruta.
+     */
     @PreAuthorize("hasAnyRole('ENCARGADO', 'ADMIN')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarCarta(@PathVariable Long id) {
-        cartaService.eliminarCarta(id);
+    @DeleteMapping("/{restaurantId}")
+    public ResponseEntity<Void> eliminarCarta(@PathVariable Long restaurantId) {
+        cartaService.eliminarCarta(restaurantId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -75,16 +75,20 @@ public class CartaService {
         cartaRepository.save(carta);
     }
 
+    /**
+     * Borra la carta de un restaurante. Recibe el restaurantId (igual que
+     * descargarCarta) para que todos los endpoints de carta usen el mismo id.
+     */
     @Transactional
-    public void eliminarCarta(Long cartaId) {
-        Carta carta = cartaRepository.findById(cartaId)
-                .orElseThrow(() -> new EntityNotFoundException("Carta no encontrada"));
+    public void eliminarCarta(Long restaurantId) {
+        Carta carta = cartaRepository.findByRestaurantId(restaurantId)
+                .orElseThrow(() -> new EntityNotFoundException("La carta para este restaurante no existe"));
 
         verificarAccesoRestaurante(carta.getRestaurant());
 
         // JPQL y no em.remove()/deleteById(): con el remove de Hibernate la fila
         // sobrevivia al flush (la API respondia 204 sin borrar nada).
-        if (cartaRepository.borrarPorId(cartaId) == 0) {
+        if (cartaRepository.borrarPorId(carta.getId()) == 0) {
             throw new EntityNotFoundException("Carta no encontrada");
         }
     }

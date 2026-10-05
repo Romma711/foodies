@@ -1,6 +1,5 @@
 package com.example.Foodies;
 
-import com.example.Foodies.Carta.CartaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -33,9 +32,6 @@ class CartaCasosTest extends ApiTestSupport {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private CartaRepository cartaRepository;
 
     private static final byte[] PDF_DE_VERDAD = "%PDF-1.4\n% contenido de prueba\n%%EOF".getBytes();
     private static final byte[] PDF_ACTUALIZADO = "%PDF-1.7\n% carta nueva\n%%EOF".getBytes();
@@ -99,11 +95,8 @@ class CartaCasosTest extends ApiTestSupport {
         subir(token, archivo("application/pdf", PDF_DE_VERDAD), resto)
                 .andExpect(status().isOk());
 
-        Long cartaId = cartaRepository.findByRestaurant(restaurantRepo.findById(resto).orElseThrow())
-                .orElseThrow().getId();
-
         ResponseEntity<String> borrada = rest.exchange("/api/carta/{id}", HttpMethod.DELETE,
-                new HttpEntity<>(auth(token, false)), String.class, cartaId);
+                new HttpEntity<>(auth(token, false)), String.class, resto);
         assertThat(borrada.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         mockMvc.perform(MockMvcRequestBuilders.get("/api/carta/{id}", resto))
@@ -179,21 +172,24 @@ class CartaCasosTest extends ApiTestSupport {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/carta/{id}", restoA))
                 .andExpect(status().isOk());
 
-        // pero borrarla solo puede el dueño o el admin
-        Long cartaA = cartaRepository.findByRestaurant(restaurantRepo.findById(restoA).orElseThrow())
-                .orElseThrow().getId();
+        // pero borrarla solo puede el dueño o el admin (y va por restaurantId)
         ResponseEntity<String> borrarAjena = rest.exchange("/api/carta/{id}", HttpMethod.DELETE,
-                new HttpEntity<>(auth(tokenB, false)), String.class, cartaA);
+                new HttpEntity<>(auth(tokenB, false)), String.class, restoA);
         assertThat(borrarAjena.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
         ResponseEntity<String> borrarAdmin = rest.exchange("/api/carta/{id}", HttpMethod.DELETE,
-                new HttpEntity<>(auth(adminToken(), false)), String.class, cartaA);
+                new HttpEntity<>(auth(adminToken(), false)), String.class, restoA);
         assertThat(borrarAdmin.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        // carta inexistente -> 404
+        // restaurante inexistente -> 404
         ResponseEntity<String> borrarInexistente = rest.exchange("/api/carta/{id}", HttpMethod.DELETE,
                 new HttpEntity<>(auth(tokenA, false)), String.class, 999999L);
         assertThat(borrarInexistente.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // restaurante sin carta -> 404 tambien
+        ResponseEntity<String> borrarSinCarta = rest.exchange("/api/carta/{id}", HttpMethod.DELETE,
+                new HttpEntity<>(auth(tokenB, false)), String.class, restoB);
+        assertThat(borrarSinCarta.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
         // restaurante sin carta -> 404
         mockMvc.perform(MockMvcRequestBuilders.get("/api/carta/{id}", restoB))
