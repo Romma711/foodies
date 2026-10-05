@@ -34,6 +34,7 @@ La app no tiene secretos en el código: todo sale de variables de entorno.
 | `DB_USER`, `DB_PASS` | Credenciales de MySQL |
 | `ADMIN_PASSWORD` | Contraseña de la cuenta admin que se crea al arrancar (mín. 8 caracteres) |
 | `JWT_SECRET` | Clave de firma de los tokens (mín. 32 bytes) |
+| `CORS_ALLOWED_ORIGINS` | Orígenes desde los que se puede llamar a la API, separados por coma. Si no se define, la API no habilita CORS |
 
 ```bash
 export DB_HOST=localhost
@@ -43,6 +44,8 @@ export DB_USER=root
 export DB_PASS=tu-clave
 export ADMIN_PASSWORD=admin123
 export JWT_SECRET=una-clave-larga-de-32-bytes-o-mas
+# opcional, solo si hay un frontend en otro origen
+export CORS_ALLOWED_ORIGINS=http://localhost:3000,https://foodies.com
 ```
 
 > En la rama `fix/flujo-principal` la app **no arranca** si faltan `JWT_SECRET` o
