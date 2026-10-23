@@ -26,7 +26,11 @@ public class LocalFilesController {
 
     @GetMapping(PREFIX + "**")
     public ResponseEntity<Resource> serve(HttpServletRequest request) {
-        String key = request.getRequestURI().substring(request.getContextPath().length() + PREFIX.length());
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        if (!path.startsWith(PREFIX) || path.length() == PREFIX.length()) {
+            return ResponseEntity.notFound().build();
+        }
+        String key = path.substring(PREFIX.length());
         try {
             return storage.find(key)
                     .<ResponseEntity<Resource>>map(file -> ResponseEntity.ok()

@@ -121,6 +121,9 @@ class RestaurantePanelTest {
         assertThat(download.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(download.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PDF);
         assertThat(download.getBody()).isEqualTo(PDF);
+        // The panel previews the PDF in an iframe served from the same origin.
+        assertThat(download.getHeaders().getFirst("X-Frame-Options")).isEqualTo("SAMEORIGIN");
+        assertThat(rest.getForEntity("/api/files", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
         ResponseEntity<Map> replaced = uploadCarta(encargado.token(), "menu-2.pdf", PDF);
         assertThat(replaced.getStatusCode()).isEqualTo(HttpStatus.OK);
