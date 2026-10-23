@@ -3,6 +3,7 @@ package com.example.Foodies.Config;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -47,6 +48,7 @@ public class SecurityConfig {
                                 "/api/restaurantes/{id}",
                                 "/error"  // <-- Agregado para permitir acceso a la página de error
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/resenas").permitAll()
                         .requestMatchers(
                                 "/api/reservas/**",
                                 "/api/clientes/*",

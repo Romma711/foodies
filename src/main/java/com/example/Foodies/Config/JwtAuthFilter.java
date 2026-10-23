@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final List<String> PUBLIC_URLS = List.of(
-            "/api/resenas",
             "/api/carta/*",
             "/api/auth/login",
             "/api/auth/register/cliente",
