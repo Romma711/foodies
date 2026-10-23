@@ -34,3 +34,6 @@ build/
 
 ### Local file storage ###
 uploads/
+
+### Local secrets ###
+.env.r2
