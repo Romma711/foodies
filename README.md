@@ -128,9 +128,9 @@ spring.datasource.password=<tu-contraseña>
 >
 >`/api/restaurantes/{id}`
 >
-> - Eliminar restaurante
+> - Eliminar restaurante (solo `ROLE_ADMIN`; también borra el PDF de su carta)
 ###
->`PATCH`
+>`PATCH` (solo `ROLE_ADMIN`; el encargado usa `PATCH /api/restaurantes/me`)
 
 ```
 /api/restaurantes/{id}
@@ -145,38 +145,66 @@ spring.datasource.password=<tu-contraseña>
 ```
 >- Actualizar datos
 ###
+## 🧑‍🍳 PANEL DEL ENCARGADO (`ROLE_ENCARGADO`)
+Todos los endpoints trabajan sobre el restaurante del usuario logueado (se resuelve por el email del token), así un encargado nunca puede tocar el restaurante de otro.
+
+>`GET` `/api/restaurantes/me`
+>- Datos del restaurante y su carta (`carta` es `null` si no subió ninguna)
+###
+>`PATCH` `/api/restaurantes/me`
+```
+> Body (solo se cambian los campos enviados)
+{
+  "nombre": "",
+  "cupoMaximo": 1,
+  "ubicacion": "",
+  "especialidad": "PARRILLA"
+}
+```
+###
+>`PUT` `/api/restaurantes/me/carta`
+```
+> form-data
+archivo type=file (PDF, máximo 10 MB)
+```
+>- Sube o reemplaza la carta. Se valida que el contenido sea un PDF real. Al reemplazar, el archivo anterior se borra.
+###
+>`DELETE` `/api/restaurantes/me/carta`
+>- Elimina la carta y su archivo
+###
+>`GET` `/api/restaurantes/me/reservas`
+>- Reservas del restaurante ordenadas por fecha y hora (`[]` si no hay)
+###
+>`PATCH` `/api/reservas/{id}/estado`
+```
+> Body
+{ "estado": "ACEPTADA" }   // o "CANCELADA"
+```
+>- Solo para reservas del propio restaurante (si no, `403`)
+###
 ## 🍽️ CARTAS
->`POST`
-```
-/api/carta
+Los PDF ya no se guardan en la base de datos: se guardan en un almacenamiento de archivos (Cloudflare R2 en producción, disco local en desarrollo) y la tabla `cartas` solo guarda la clave del archivo.
 
-> form-data
-archivo type=file (y se sube un archivo pdf)
-id      type=text (id del restaurante)
-```
->- Subir carta (PDF)
+>`GET` `/api/restaurantes/{id}/carta` (público)
+>- Devuelve `{ id, nombreArchivo, url, tamanioBytes, actualizadaEn }`
 ###
->`GET`
->
->`/api/carta/{id}`
->
->- Ver o descargar carta
+>`GET` `/api/carta/{id}` (público)
+>- Redirige (`302`) a la URL del PDF. Se mantiene por compatibilidad.
 ###
->`PUT`
-```
-/api/carta
+>`DELETE` `/api/carta/{id}` (solo `ROLE_ADMIN`)
+>- Elimina la carta y su archivo
 
-> form-data
-  archivo type=file (y se sube un archivo pdf)
-  id      type=text (id del restaurante)
-```
->- Actualizar carta PDF
-###
->`DELETE`
->
->`/api/carta/{id}`
->
->- Eliminar carta asociada
+### Almacenamiento de cartas
+| Variable | Para qué |
+|---|---|
+| `STORAGE_PROVIDER` | `local` (por defecto) o `r2` |
+| `STORAGE_LOCAL_DIR` | Carpeta para `local` (por defecto `uploads/`, ignorada por git). Los archivos se sirven en `/api/files/...` |
+| `R2_ACCOUNT_ID` | Account ID de Cloudflare |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | Token de API de R2 con permiso de lectura y escritura sobre el bucket |
+| `R2_BUCKET` | Nombre del bucket |
+| `R2_PUBLIC_BASE_URL` | URL pública del bucket (`https://pub-xxxx.r2.dev` o un dominio propio), sin `/` final |
+
+Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error dice cuáles faltan.
 ## 📕 RESERVAS
 
 >`POST`
