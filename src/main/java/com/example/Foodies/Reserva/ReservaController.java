@@ -1,6 +1,9 @@
 package com.example.Foodies.Reserva;
 
 import com.example.Foodies.Reserva.dtos.ReservaDetailDTO;
+import com.example.Foodies.Reserva.dtos.ReservaEstadoDTO;
+import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
+import com.example.Foodies.Restaurant.RestaurantePanelService;
 import com.example.Foodies.Reserva.dtos.ReservaListDTO;
 import com.example.Foodies.Reserva.dtos.ReservaPatchDTO;
 import com.example.Foodies.Reserva.dtos.ReservaRequesDTO;
@@ -16,6 +19,8 @@ public class ReservaController {
 
     @Autowired
     private ReservaService reservaService;
+    @Autowired
+    private RestaurantePanelService panelService;
 
     @PostMapping
     public ResponseEntity<ReservaDetailDTO> handleCreateReserva(@RequestBody ReservaRequesDTO reserva) {
@@ -47,6 +52,14 @@ public class ReservaController {
             @PathVariable Long id,
             @RequestBody ReservaPatchDTO update) {
         return ResponseEntity.ok(reservaService.updateReserva(id, update));
+    }
+
+    /** Restaurant manager accepts or cancels a reservation of their own restaurant. */
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<ReservaPanelDTO> handleCambiarEstado(
+            @PathVariable Long id,
+            @RequestBody ReservaEstadoDTO body) {
+        return ResponseEntity.ok(panelService.cambiarEstadoReserva(id, body == null ? null : body.estado()));
     }
 
     @DeleteMapping("/{id}")
