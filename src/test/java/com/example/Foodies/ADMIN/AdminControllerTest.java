@@ -74,4 +74,33 @@ class AdminControllerTest {
     void sinTokenRecibe401() {
         assertThat(get(null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    @Test
+    void elAdminObtieneLasResenasRecientes() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(login("admin@foodies.com", "admin123"));
+
+        ResponseEntity<java.util.List> resp = rest.exchange(
+                "/api/admin/resenas?limite=5", HttpMethod.GET, new HttpEntity<>(headers), java.util.List.class);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(resp.getBody()).isNotNull();
+    }
+
+    @Test
+    void unClienteNoPuedeVerLaModeracion() {
+        rest.postForEntity("/api/auth/register/cliente", Map.of(
+                "nombre", "Moderacion",
+                "apellido", "Cliente",
+                "email", "moderacion.cliente@test.com",
+                "password", "secret1",
+                "telefono", "1155551111"), Map.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(login("moderacion.cliente@test.com", "secret1"));
+
+        ResponseEntity<String> resp = rest.exchange(
+                "/api/admin/resenas", HttpMethod.GET, new HttpEntity<>(headers), String.class);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
 }

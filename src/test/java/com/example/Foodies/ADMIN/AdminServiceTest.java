@@ -1,6 +1,7 @@
 package com.example.Foodies.ADMIN;
 
 import com.example.Foodies.ADMIN.dtos.MetricasAdminDTO;
+import com.example.Foodies.ADMIN.dtos.ResenaModeracionDTO;
 import com.example.Foodies.ADMIN.dtos.RestauranteCalificacionDTO;
 import com.example.Foodies.ADMIN.dtos.RestauranteReservasDTO;
 import com.example.Foodies.ADMIN.dtos.UsuarioResenasDTO;
@@ -25,10 +26,11 @@ class AdminServiceTest {
     private static final PageRequest TOP_5 = PageRequest.of(0, 5);
 
     private final AdminMetricasRepository repo = mock(AdminMetricasRepository.class);
+    private final AdminModeracionRepository moderacionRepo = mock(AdminModeracionRepository.class);
 
     private AdminService servicioEn(int anio, int mes, int dia) {
         Clock clock = Clock.fixed(ZonedDateTime.of(anio, mes, dia, 10, 0, 0, 0, ZONA).toInstant(), ZONA);
-        return new AdminService(repo, clock);
+        return new AdminService(repo, moderacionRepo, clock);
     }
 
     @Test
@@ -59,5 +61,25 @@ class AdminServiceTest {
         verify(repo).contarUsuariosRegistradosEntre(
                 LocalDateTime.of(2026, 12, 1, 0, 0),
                 LocalDateTime.of(2027, 1, 1, 0, 0));
+    }
+
+    @Test
+    void resenasRecientesUsaElLimitePedido() {
+        List<ResenaModeracionDTO> recientes =
+                List.of(new ResenaModeracionDTO(9L, "Muy rico", 5, "Ana Gómez", 5L, "Ochiwan"));
+        when(moderacionRepo.resenasRecientes(PageRequest.of(0, 10))).thenReturn(recientes);
+
+        assertThat(servicioEn(2026, 10, 26).resenasRecientes(10)).isEqualTo(recientes);
+    }
+
+    @Test
+    void resenasRecientesAcotaElLimiteEntreUnoYCincuenta() {
+        AdminService servicio = servicioEn(2026, 10, 26);
+
+        servicio.resenasRecientes(0);
+        servicio.resenasRecientes(500);
+
+        verify(moderacionRepo).resenasRecientes(PageRequest.of(0, 1));
+        verify(moderacionRepo).resenasRecientes(PageRequest.of(0, 50));
     }
 }

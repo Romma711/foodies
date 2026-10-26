@@ -1,6 +1,7 @@
 package com.example.Foodies.ADMIN;
 
 import com.example.Foodies.ADMIN.dtos.MetricasAdminDTO;
+import com.example.Foodies.ADMIN.dtos.ResenaModeracionDTO;
 import com.example.Foodies.Enums.EstadoReserva;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -12,12 +13,14 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.List;
 
 /**
- * Reúne las métricas del panel de administración.
+ * Lógica de lectura del panel de administración: métricas del dashboard y reseñas para moderar.
  * <p>
- * Solo lee datos: delega cada cálculo en {@link AdminMetricasRepository} y arma un único
- * {@link MetricasAdminDTO} para que el frontend resuelva el dashboard con una sola llamada.
+ * Solo lee datos: delega las métricas en {@link AdminMetricasRepository} (y las arma en un único
+ * {@link MetricasAdminDTO} para que el frontend resuelva el dashboard con una sola llamada) y la
+ * moderación en {@link AdminModeracionRepository}.
  */
 @Service
 public class AdminService {
@@ -28,17 +31,23 @@ public class AdminService {
     /** Tamaño de cada ranking del panel. */
     private static final Pageable TOP_5 = PageRequest.of(0, 5);
 
+    /** Límites de filas para la tabla de moderación, para no traer toda la tabla de reseñas. */
+    static final int LIMITE_MINIMO = 1;
+    static final int LIMITE_MAXIMO = 50;
+
     private final AdminMetricasRepository metricasRepo;
+    private final AdminModeracionRepository moderacionRepo;
     private final Clock clock;
 
     @Autowired
-    public AdminService(AdminMetricasRepository metricasRepo) {
-        this(metricasRepo, Clock.system(ZONA_NEGOCIO));
+    public AdminService(AdminMetricasRepository metricasRepo, AdminModeracionRepository moderacionRepo) {
+        this(metricasRepo, moderacionRepo, Clock.system(ZONA_NEGOCIO));
     }
 
     /** Permite fijar la fecha actual en los tests. */
-    AdminService(AdminMetricasRepository metricasRepo, Clock clock) {
+    AdminService(AdminMetricasRepository metricasRepo, AdminModeracionRepository moderacionRepo, Clock clock) {
         this.metricasRepo = metricasRepo;
+        this.moderacionRepo = moderacionRepo;
         this.clock = clock;
     }
 
@@ -65,5 +74,20 @@ public class AdminService {
                 metricasRepo.topRestaurantesConMasReservas(EstadoReserva.CANCELADA, TOP_5),
                 metricasRepo.topUsuariosConMasResenas(TOP_5),
                 metricasRepo.contarUsuariosRegistradosEntre(inicioMes, inicioMesSiguiente));
+    }
+
+    /**
+     * Reseñas más recientes de la plataforma para la tabla de moderación.
+     * <p>
+     * El límite se acota entre {@value #LIMITE_MINIMO} y {@value #LIMITE_MAXIMO}: un valor fuera de
+     * rango no da error, se ajusta al extremo más cercano.
+     *
+     * @param limite cantidad de reseñas pedida por el panel
+     * @return reseñas de la más nueva a la más vieja
+     */
+    @Transactional(readOnly = true)
+    public List<ResenaModeracionDTO> resenasRecientes(int limite) {
+        int acotado = Math.clamp(limite, LIMITE_MINIMO, LIMITE_MAXIMO);
+        return moderacionRepo.resenasRecientes(PageRequest.of(0, acotado));
     }
 }
