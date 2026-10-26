@@ -46,7 +46,11 @@ public class SecurityConfig {
                                 "/api/restaurantes",
                                 "/api/restaurantes/especialidad",
                                 "/api/restaurantes/{id}",
-                                "/error"  // <-- Agregado para permitir acceso a la página de error
+                                "/error",  // <-- Agregado para permitir acceso a la página de error
+                                // Documentación interactiva de la API (Swagger UI + OpenAPI JSON)
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/resenas").permitAll()
                         .requestMatchers(

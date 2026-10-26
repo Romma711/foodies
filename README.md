@@ -78,6 +78,15 @@ spring.datasource.password=<tu-contraseña>
 
 <h2>🌐 API REST - Documentación de Endpoints</h2>
 
+<h4>📘 Documentación interactiva (Swagger)</h4>
+
+Con el backend levantado:
+
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- Especificación OpenAPI (JSON): http://localhost:8080/v3/api-docs
+
+Para probar endpoints protegidos, hacé login en `POST /api/auth/login`, copiá el token y pegalo en el botón **Authorize** (sin el prefijo `Bearer`).
+
 ## 👦 CLIENTE
 >`GET`
 >
