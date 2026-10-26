@@ -451,6 +451,11 @@ Login
 ```
 `Respuesta: Bearer <token>`
 
+<h2>🗄️ Base de datos local y datos de demo</h2>
+
+- `docs/db/crear-usuario-local.sql`: crea la base `foodies` y el usuario `foodies_app` (correr una vez como root).
+- `docs/db/seed-demo.mjs`: con el backend levantado, `node docs/db/seed-demo.mjs` carga 6 restaurantes aprobados, 8 clientes, reseñas y reservas (algunas canceladas) para ver el dashboard del admin. Todas las cuentas de demo usan la contraseña `demo1234`.
+
 <h3>📢 Autor</h3>
 
 Desarrollado por Andres Roma, Ramiro Sacchetta y Juan Estavillo como parte del trabajo final de la materia.
