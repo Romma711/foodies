@@ -362,6 +362,32 @@ id      type=text (id del restaurante)
 >
 >- Lista todos los restaurantes por aprobar
 ###
+
+>`GET`
+>
+>`/api/admin/metricas`
+>
+>- Métricas del dashboard: top 5 restaurantes mejor calificados (solo aprobados), top 5 con más reservas (sin canceladas), top 5 usuarios con más reseñas y usuarios registrados en el mes en curso
+```json
+{
+  "periodo": "2026-10",
+  "topRestaurantesMejorCalificados": [{ "id": 5, "nombre": "Ochiwan", "promedio": 4.5, "cantidadResenas": 2 }],
+  "topRestaurantesConMasReservas": [{ "id": 5, "nombre": "Ochiwan", "cantidadReservas": 7 }],
+  "topUsuariosConMasResenas": [{ "id": 3, "nombre": "Ana", "apellido": "Gómez", "cantidadResenas": 4 }],
+  "usuariosRegistradosEsteMes": 12
+}
+```
+###
+
+>`GET`
+>
+>`/api/admin/resenas?limite=20`
+>
+>- Reseñas más recientes de todos los restaurantes para moderar (límite entre 1 y 50, por defecto 20). Para eliminar se usa `DELETE /api/resenas/{id}`
+```json
+[{ "id": 9, "comentario": "Muy rico", "calificacion": 5, "nombreUsuario": "Ana Gómez", "restauranteId": 5, "nombreRestaurante": "Ochiwan" }]
+```
+###
 ## 🎡 Roles y Permisos
 
 ### CLIENTE
