@@ -22,6 +22,9 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
+                // SAMEORIGIN (instead of the default DENY) lets the panel preview menu PDFs in an iframe
+                // while still blocking other sites from framing the app.
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -37,30 +40,33 @@ public class SecurityConfig {
                             response.getWriter().write("{\"error\": \"No estás autenticado\"}");
                         })
                 )
+                // Rules are evaluated in order: the first matching rule wins, so specific paths go first.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/carta/*",
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers(HttpMethod.POST,
                                 "/api/auth/login",
                                 "/api/auth/register/cliente",
-                                "/api/auth/register/restaurante",
+                                "/api/auth/register/restaurante"
+                        ).permitAll()
+                        // Restaurant manager panel: always scoped to the caller's own restaurant.
+                        .requestMatchers("/api/restaurantes/me", "/api/restaurantes/me/**").hasAuthority("ROLE_ENCARGADO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/reservas/*/estado").hasAuthority("ROLE_ENCARGADO")
+                        // Public catalog: read-only.
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/restaurantes",
                                 "/api/restaurantes/especialidad",
-                                "/api/restaurantes/{id}",
-                                "/error"  // <-- Agregado para permitir acceso a la página de error
+                                "/api/restaurantes/*",
+                                "/api/restaurantes/*/carta",
+                                "/api/carta/*",
+                                "/api/files/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/resenas").permitAll()
+                        // Writes by id are not ownership-checked, so only admins may use them.
+                        .requestMatchers("/api/restaurantes/*", "/api/carta/**", "/api/reservas/restaurante/*").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(
                                 "/api/reservas/**",
                                 "/api/clientes/*",
-                                "/api/resenas/**"  // corregí para que tenga la barra inicial
+                                "/api/resenas/**"
                         ).hasAnyAuthority("ROLE_CLIENTE","ROLE_ADMIN")
-                        .requestMatchers(
-                                "/api/carta/**",
-                                "/api/reservas/restaurante/*",
-                                "/api/carta/*",
-                                "/api/reservas/*",
-                                "/api/restaurantes/*"
-                        ).hasAnyAuthority("ROLE_ENCARGADO", "ROLE_ADMIN")
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )

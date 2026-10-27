@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local file storage ###
+uploads/
+
+### Local secrets ###
+.env.r2
