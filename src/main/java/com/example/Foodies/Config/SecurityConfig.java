@@ -58,8 +58,14 @@ public class SecurityConfig {
                                 "/api/restaurantes/*",
                                 "/api/restaurantes/*/carta",
                                 "/api/carta/*",
-                                "/api/files/**"
+                                "/api/files/**",
+                                // Interactive API docs (Swagger UI + OpenAPI JSON)
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
+                        // Public review list shown on each restaurant page.
+                        .requestMatchers(HttpMethod.GET, "/api/resenas").permitAll()
                         // Writes by id are not ownership-checked, so only admins may use them.
                         .requestMatchers("/api/restaurantes/*", "/api/carta/**", "/api/reservas/restaurante/*").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(

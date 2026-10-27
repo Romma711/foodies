@@ -59,7 +59,7 @@ public class UsuarioService implements UserDetailsService {
         }
 
         UserDetails userDetails = loadUserByUsername(email);
-        return JwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList());
+        return JwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList(), usuario.getId());
     }
 
 

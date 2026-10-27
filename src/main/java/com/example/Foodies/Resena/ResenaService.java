@@ -2,6 +2,7 @@ package com.example.Foodies.Resena;
 
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
+import com.example.Foodies.Exception.ForbiddenException;
 import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -28,20 +29,24 @@ public class ResenaService {
 
     @Autowired
     private RestaurantRepository restauranteRepo;
+
     @Autowired
-    private  ResenaMapper resenaMapper;
+    private ResenaMapper resenaMapper;
 
     @Transactional
-    public ResenaDetailDTO createResena(ResenaRequestDTO resena) {
-        Usuario usuario = usuarioRepo.findById(resena.getUsuarioId())
+    public ResenaDetailDTO createResena(ResenaRequestDTO resena, String email) {
+        Usuario usuario = usuarioRepo.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
 
         Restaurant restaurante = restauranteRepo.findById(resena.getRestaurantId())
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
-        boolean yaExiste = resenaRepo.existsByUsuario_IdAndRestaurant_Id(resena.getUsuarioId(), resena.getRestaurantId());
+        boolean yaExiste = resenaRepo.existsByUsuario_IdAndRestaurant_Id(
+                usuario.getId(),
+                restaurante.getId()
+        );
         if (yaExiste) {
-            throw new BusinessException("El usuario ya realizó una reseña para este restaurante.");
+            throw new BusinessException("Ya realizaste una reseña para este restaurante.");
         }
 
         if (resena.getCalificacion() < 1 || resena.getCalificacion() > 5) {
@@ -59,65 +64,78 @@ public class ResenaService {
 
     public List<ResenaListDTO> getAllResenasByRestaurant(Long id) {
         List<Resena> resenaList = resenaRepo.findByRestaurant_Id(id);
-        if(resenaList.isEmpty()){
-            throw new ListNoContentException("Este restaurante no tiene resenas");
+        if (resenaList.isEmpty()) {
+            throw new ListNoContentException("Este restaurante no tiene reseñas");
         }
-       return resenaMapper.toListDtoList(resenaList);
-
+        return resenaMapper.toListDtoList(resenaList);
     }
 
     public ResenaDetailDTO getResenaById(Long id) {
-        Resena r = resenaRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reseña no encontrada"));
+        Resena resena = buscarResena(id);
 
         return new ResenaDetailDTO(
-                r.getId(),
-                r.getComentario(),
-                r.getCalificacion(),
-                r.getUsuario().getNombre(),
-                r.getRestaurant().getNombre()
+                resena.getId(),
+                resena.getComentario(),
+                resena.getCalificacion(),
+                resena.getUsuario().getNombre(),
+                resena.getRestaurant().getNombre()
         );
     }
 
-    public ResenaDetailDTO updateResena(Long id, ResenaPatchDTO dto) {
-        Resena r = resenaRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reseña no encontrada"));
+    @Transactional
+    public ResenaDetailDTO updateResena(Long id, ResenaPatchDTO dto, String email, boolean admin) {
+        Resena resena = buscarResena(id);
+        verificarPropietario(resena, email, admin);
 
         if (dto.getComentario() != null) {
-            r.setComentario(dto.getComentario());
+            resena.setComentario(dto.getComentario());
         }
         if (dto.getCalificacion() != null) {
             int calificacion = dto.getCalificacion();
             if (calificacion < 1 || calificacion > 5) {
                 throw new BusinessException("La calificación debe estar entre 1 y 5.");
             }
-            r.setCalificacion(calificacion);
+            resena.setCalificacion(calificacion);
         }
 
-        r = resenaRepo.save(r);
+        resena = resenaRepo.save(resena);
 
         return new ResenaDetailDTO(
-                r.getId(),
-                r.getComentario(),
-                r.getCalificacion(),
-                r.getUsuario().getNombre(),
-                r.getRestaurant().getNombre()
+                resena.getId(),
+                resena.getComentario(),
+                resena.getCalificacion(),
+                resena.getUsuario().getNombre(),
+                resena.getRestaurant().getNombre()
         );
     }
 
-    public void deleteResena(Long id) {
-        if (!resenaRepo.existsById(id)) {
-            throw new EntityNotFoundException("La reseña no existe.");
-        }
-        resenaRepo.deleteById(id);
+    @Transactional
+    public void deleteResena(Long id, String email, boolean admin) {
+        Resena resena = buscarResena(id);
+        verificarPropietario(resena, email, admin);
+        resenaRepo.delete(resena);
     }
 
-    public List<ResenaListDTO> getallResenaByUsuario (Long id){
+    public List<ResenaListDTO> getallResenaByUsuario(Long id) {
         List<Resena> resenas = resenaRepo.findByUsuario_Id(id);
-        if(resenas.isEmpty()){
-            throw new ListNoContentException("Este usuario no tiene resenas");
+        if (resenas.isEmpty()) {
+            throw new ListNoContentException("Este usuario no tiene reseñas");
         }
         return resenaMapper.toListDtoList(resenas);
+    }
 
+    private Resena buscarResena(Long id) {
+        return resenaRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Reseña no encontrada"));
+    }
+
+    private void verificarPropietario(Resena resena, String email, boolean admin) {
+        if (admin) {
+            return;
+        }
+        Usuario autor = resena.getUsuario();
+        if (autor == null || autor.getEmail() == null || !autor.getEmail().equalsIgnoreCase(email)) {
+            throw new ForbiddenException("No podés modificar una reseña de otro usuario.");
+        }
     }
 }
