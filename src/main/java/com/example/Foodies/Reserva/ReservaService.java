@@ -98,8 +98,10 @@ public class ReservaService {
                 .map(r -> new ReservaListDTO(
                         r.getId(),
                         r.getCantidad(),
+                        r.getFechaReserva(),
                         r.getHorariollegada(),
-                        r.getEstadoReserva()
+                        r.getEstadoReserva(),
+                        r.getRestaurant().getNombre()
                 )).toList();
     }
 
@@ -148,8 +150,10 @@ public class ReservaService {
                 .map(r -> new ReservaListDTO(
                         r.getId(),
                         r.getCantidad(),
+                        r.getFechaReserva(),
                         r.getHorariollegada(),
-                        r.getEstadoReserva()
+                        r.getEstadoReserva(),
+                        r.getRestaurant().getNombre()
                 )).toList();
         if (reserva.isEmpty()) {
             throw new ListNoContentException("Este restaurante no tiene reservas");
@@ -162,8 +166,10 @@ public class ReservaService {
                 .map(r -> new ReservaListDTO(
                         r.getId(),
                         r.getCantidad(),
+                        r.getFechaReserva(),
                         r.getHorariollegada(),
-                        r.getEstadoReserva()
+                        r.getEstadoReserva(),
+                        r.getRestaurant().getNombre()
                 )).toList();
         if(resevas.isEmpty()){
             throw  new ListNoContentException("Este usuario no tiene reservas");
