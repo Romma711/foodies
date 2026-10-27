@@ -1,58 +1,35 @@
 package com.example.Foodies.Carta;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
+
+/**
+ * Legacy carta routes kept for existing links. Managers upload their menu through
+ * `PUT /api/restaurantes/me/carta`; the public read is `GET /api/restaurantes/{id}/carta`.
+ */
 @RestController
 @RequestMapping("api/carta")
 public class CartaController {
 
-    @Autowired
-    private CartaService cartaService;
+    private final CartaService cartaService;
 
+    public CartaController(CartaService cartaService) {
+        this.cartaService = cartaService;
+    }
+
+    /** Redirects to where the PDF is actually stored. */
     @GetMapping("/{id}")
-    public ResponseEntity<byte[]> descargarCarta(@PathVariable Long id) {
-        Carta carta = cartaService.descargarCarta(id);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDisposition(ContentDisposition
-                .inline()  // o .attachment()
-                .filename(carta.getNombreArchivo())
-                .build());
-
-        return new ResponseEntity<>(carta.getContenidoPdf(), headers, HttpStatus.OK);
+    public ResponseEntity<Void> descargarCarta(@PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(cartaService.urlPorId(id))).build();
     }
 
-    @PostMapping
-    public ResponseEntity<String> subirCarta(
-            @RequestParam("archivo") MultipartFile archivo,
-            @RequestParam("restaurantId") Long restaurantId
-    ) {
-        cartaService.guardarCarta(archivo, restaurantId);
-        return ResponseEntity.ok("Carta subida correctamente");
-    }
-
-    @PutMapping
-    public ResponseEntity<String> actualizarCarta(
-            @RequestParam("archivo") MultipartFile archivo,
-            @RequestParam("restaurantId") Long restaurantId
-    ) {
-        cartaService.actualizarCarta(archivo, restaurantId);
-        return ResponseEntity.ok("Carta actualizada correctamente");
-    }
-
+    /** Admin only (see SecurityConfig). */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarCarta(@PathVariable Long id) {
-        cartaService.eliminarCarta(id);
+        cartaService.eliminarPorId(id);
         return ResponseEntity.noContent().build();
     }
-
-
-
-
-
-
 }

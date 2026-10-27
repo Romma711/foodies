@@ -7,6 +7,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
+/**
+ * The PDF itself lives in {@link com.example.Foodies.Storage.FileStorage}; this row only keeps its key.
+ * The old `contenido_pdf` column is intentionally left unmapped (not dropped) so existing data is not destroyed.
+ */
 @Entity
 @Table(name = "Cartas")
 @Data
@@ -22,10 +28,15 @@ public class Carta {
     @Column(nullable = false)
     private String nombreArchivo;
 
+    /** Null only for legacy rows created when PDFs were stored in the database. */
+    @Column(name = "storage_key")
+    private String storageKey;
 
-    @Lob
-    @Column(name = "contenido_pdf", columnDefinition = "LONGBLOB")
-    private byte[] contenidoPdf;
+    @Column(name = "tamanio_bytes")
+    private Long tamanioBytes;
+
+    @Column(name = "actualizada_en")
+    private Instant actualizadaEn;
 
     @OneToOne
     @JoinColumn(name = "restaurant_id", nullable = false, unique = true)

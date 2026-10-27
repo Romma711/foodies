@@ -2,6 +2,7 @@ package com.example.Foodies.Restaurant;
 
 
 
+import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.EntityNotFoundException;
@@ -32,6 +33,8 @@ public class RestaurantService {
     private RestaurantMapper restaurantMapper;
     @Autowired
     private UsuarioMapper usuarioMapper;
+    @Autowired
+    private CartaService cartaService;
 
 
 
@@ -81,8 +84,11 @@ public class RestaurantService {
         return restaurantMapper.toDetailDTO(restaurant);
     }
 
+    @Transactional
     public void eliminarRestaurante(Long id){
         Restaurant restaurant = restaurantRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("Restaurante no encontrado"));
+        // The carta row goes away by cascade; its stored PDF has to be removed explicitly.
+        cartaService.eliminarArchivo(restaurant);
         restaurantRepo.delete(restaurant);
     }
 
