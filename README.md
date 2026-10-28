@@ -473,6 +473,26 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 ```
 ###
 
+>`GET`
+>
+>`/api/admin/entidades/clientes` · `/api/admin/entidades/restaurantes`
+>
+>- Listados para "Gestión de Entidades": clientes con `strikes` y `activo`; restaurantes en cualquier estado con `estado`, `strikes`, `activo` y el email del encargado
+```json
+[{ "id": 7, "nombre": "Pasta Nostra", "ubicacion": "Av. Colón 1200", "especialidad": "PASTAS", "estado": "APROBADO", "strikes": 1, "activo": true, "usuarioId": 12, "email": "pasta@mail.com" }]
+```
+###
+
+>`PATCH`
+>
+>`/api/admin/usuarios/{id}/activo` · `/api/admin/restaurantes/{id}/activo`
+>
+>- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al loguearse con su contraseña correcta y en cualquier request con un token anterior. Un restaurante dado de baja deja de aparecer en `GET /api/restaurantes`. A un administrador no se lo puede dar de baja (400)
+```json
+{ "activo": false }
+```
+###
+
 ### Emails de moderación
 
 Se envían con `JavaMailSender`. Por defecto apuntan al sandbox de [Mailtrap](https://mailtrap.io): cargá las credenciales de tu inbox en estas variables de entorno. Para usar un SMTP real alcanza con cambiarlas.

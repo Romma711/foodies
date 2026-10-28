@@ -1,6 +1,7 @@
 package com.example.Foodies.Moderacion;
 
 import com.example.Foodies.Enums.EstadoRestaurante;
+import com.example.Foodies.Moderacion.dtos.EntidadRestauranteDTO;
 import com.example.Foodies.Moderacion.dtos.SolicitudRestauranteDTO;
 import com.example.Foodies.Restaurant.Restaurant;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,6 +34,20 @@ public interface ModeracionRestaurantRepository extends JpaRepository<Restaurant
             order by r.id
             """)
     List<SolicitudRestauranteDTO> findSolicitudes(@Param("estado") EstadoRestaurante estado);
+
+    /**
+     * Todos los restaurantes con su estado, strikes y baja lógica, para "Gestión de Entidades".
+     *
+     * @return una fila por restaurante, ordenadas por id
+     */
+    @Query("""
+            select new com.example.Foodies.Moderacion.dtos.EntidadRestauranteDTO(
+                r.id, r.nombre, r.ubicacion, r.especialidad, r.estado, r.strikes, r.activo, u.id, u.email)
+            from Restaurant r
+            join r.usuario u
+            order by r.id
+            """)
+    List<EntidadRestauranteDTO> findEntidades();
 
     /**
      * Completa el estado de las filas creadas antes de que existiera la columna.

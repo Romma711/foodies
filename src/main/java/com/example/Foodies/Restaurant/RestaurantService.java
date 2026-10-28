@@ -48,7 +48,7 @@ public class RestaurantService {
     }
 
     public List<RestaurantListDTO> getAll() {
-        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrue();
+        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrueAndActivoTrue();
         if(restaurantes.isEmpty()){
             throw new ListNoContentException("No hay restaurantes");
         }
