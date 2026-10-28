@@ -425,6 +425,66 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 [{ "id": 9, "comentario": "Muy rico", "calificacion": 5, "nombreUsuario": "Ana Gómez", "restauranteId": 5, "nombreRestaurante": "Ochiwan" }]
 ```
 ###
+
+### Moderación (Fase 3)
+
+Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincronizado con `aprobado`: un registro nuevo arranca en `PENDIENTE` y `PUT /api/admin/approved/{usuarioId}` también lo pasa a `APROBADO`. Las filas anteriores a la columna se completan al arrancar a partir de `aprobado`. Restaurantes y usuarios suman `strikes` (default 0) y `activo` (default `true`, para la baja lógica).
+
+>`GET`
+>
+>`/api/admin/restaurantes/pendientes`
+>
+>- Solicitudes de alta en estado `PENDIENTE`, con los datos de contacto del encargado
+```json
+[{ "restaurantId": 7, "nombre": "Pasta Nostra", "ubicacion": "Av. Colón 1200", "especialidad": "PASTAS", "cupoMaximo": 40, "estado": "PENDIENTE", "usuarioId": 12, "email": "pasta@mail.com", "telefono": "2234000000", "fechaRegistro": "2026-10-28T10:15:00" }]
+```
+###
+
+>`PUT`
+>
+>`/api/admin/restaurantes/{id}/aprobar` · `/api/admin/restaurantes/{id}/rechazar`
+>
+>- Aprueba (publica el restaurante y le da `ROLE_ENCARGADO` a su cuenta) o rechaza una solicitud. Rechazar un restaurante ya aprobado responde 400
+```json
+{ "restaurantId": 7, "nombre": "Pasta Nostra", "estado": "APROBADO" }
+```
+###
+
+>`POST`
+>
+>`/api/admin/usuarios/{id}/strikes` · `/api/admin/restaurantes/{id}/strikes`
+>
+>- Suma un strike y envía el aviso por email (al usuario o al encargado del restaurante). `motivo` es obligatorio (5 a 255 caracteres). A los administradores no se les puede dar strikes. Si el email falla, el strike igual se guarda y `emailEnviado` vuelve en `false`. Con 3 strikes, `sugerirBaja` es `true`
+```json
+{ "motivo": "Lenguaje ofensivo en una reseña" }
+```
+```json
+{ "id": 4, "nombre": "Ana Gómez", "email": "ana@mail.com", "strikes": 3, "sugerirBaja": true, "emailEnviado": true }
+```
+###
+
+>`PUT`
+>
+>`/api/admin/restaurantes/{id}/ubicacion`
+>
+>- Carga las coordenadas para el mapa (latitud entre -90 y 90, longitud entre -180 y 180). `GET /api/restaurantes` y `GET /api/restaurantes/{id}` ahora devuelven `latitud` y `longitud` (`null` hasta que se cargan)
+```json
+{ "latitud": -38.0055, "longitud": -57.5426 }
+```
+###
+
+### Emails de moderación
+
+Se envían con `JavaMailSender`. Por defecto apuntan al sandbox de [Mailtrap](https://mailtrap.io): cargá las credenciales de tu inbox en estas variables de entorno. Para usar un SMTP real alcanza con cambiarlas.
+
+| Variable | Default |
+|---|---|
+| `MAIL_HOST` | `sandbox.smtp.mailtrap.io` |
+| `MAIL_PORT` | `2525` |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | vacías (las da Mailtrap) |
+| `MAIL_FROM` | `no-reply@foodies.com` |
+
+###
 ## 🎡 Roles y Permisos
 
 ### CLIENTE
