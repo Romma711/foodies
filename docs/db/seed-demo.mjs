@@ -7,12 +7,13 @@ const DEMO_PASSWORD = 'demo1234';
 const ADMIN = { email: 'admin@foodies.com', password: 'admin123' };
 
 const RESTAURANTES = [
-  { nombre: 'La Parrilla de Tito', especialidad: 'PARRILLA' },
-  { nombre: 'Ochiwan', especialidad: 'ASIATICA' },
-  { nombre: 'Pasta Nostra', especialidad: 'PASTAS' },
-  { nombre: 'El Muelle', especialidad: 'PESCADOS' },
-  { nombre: 'Café Tostado', especialidad: 'CAFE' },
-  { nombre: 'Minutas Don Pepe', especialidad: 'MINUTAS' },
+  // Coordinates are approximate points in Mar del Plata for the map.
+  { nombre: 'La Parrilla de Tito', especialidad: 'PARRILLA', latitud: -38.0023, longitud: -57.5545 },
+  { nombre: 'Ochiwan', especialidad: 'ASIATICA', latitud: -37.9962, longitud: -57.5498 },
+  { nombre: 'Pasta Nostra', especialidad: 'PASTAS', latitud: -38.0107, longitud: -57.5419 },
+  { nombre: 'El Muelle', especialidad: 'PESCADOS', latitud: -38.0446, longitud: -57.5326 },
+  { nombre: 'Café Tostado', especialidad: 'CAFE', latitud: -38.0068, longitud: -57.5378 },
+  { nombre: 'Minutas Don Pepe', especialidad: 'MINUTAS', latitud: -37.991, longitud: -57.56 },
 ];
 
 const CLIENTES = [
@@ -119,6 +120,11 @@ async function main() {
     if (!encontrado) throw new Error(`No se encontró el restaurante ${r.nombre}`);
     return encontrado.id;
   });
+
+  console.log('Ubicaciones');
+  for (const [i, r] of RESTAURANTES.entries()) {
+    await call('PUT', `/admin/restaurantes/${idRestaurante[i]}/ubicacion`, { latitud: r.latitud, longitud: r.longitud }, admin);
+  }
 
   console.log('Clientes');
   const clientes = [];
