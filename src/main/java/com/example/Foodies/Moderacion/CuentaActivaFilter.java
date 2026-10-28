@@ -5,11 +5,8 @@ import com.example.Foodies.Usuario.UsuarioRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -20,10 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
@@ -63,7 +57,7 @@ public class CuentaActivaFilter extends OncePerRequestFilter {
         if (HttpMethod.POST.matches(request.getMethod()) && LOGIN.equals(request.getServletPath())) {
             // The login controller still needs to read the body, so it is buffered once.
             CuerpoReleible releible = new CuerpoReleible(request);
-            if (loginDeCuentaDadaDeBaja(releible.cuerpo)) {
+            if (loginDeCuentaDadaDeBaja(releible.cuerpo())) {
                 rechazar(response);
                 return;
             }
@@ -109,47 +103,5 @@ public class CuentaActivaFilter extends OncePerRequestFilter {
         objectMapper.writeValue(response.getWriter(), Map.of(
                 "error", "cuenta dada de baja",
                 "mensaje", "Tu cuenta fue dada de baja. Escribinos si creés que es un error."));
-    }
-
-    /** Request whose body can be read again after this filter inspected it. */
-    private static final class CuerpoReleible extends HttpServletRequestWrapper {
-
-        private final byte[] cuerpo;
-
-        CuerpoReleible(HttpServletRequest request) throws IOException {
-            super(request);
-            this.cuerpo = request.getInputStream().readAllBytes();
-        }
-
-        @Override
-        public ServletInputStream getInputStream() {
-            ByteArrayInputStream datos = new ByteArrayInputStream(cuerpo);
-            return new ServletInputStream() {
-                @Override
-                public int read() {
-                    return datos.read();
-                }
-
-                @Override
-                public boolean isFinished() {
-                    return datos.available() == 0;
-                }
-
-                @Override
-                public boolean isReady() {
-                    return true;
-                }
-
-                @Override
-                public void setReadListener(ReadListener listener) {
-                    throw new UnsupportedOperationException("Lectura asíncrona no soportada");
-                }
-            };
-        }
-
-        @Override
-        public BufferedReader getReader() {
-            return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
-        }
     }
 }

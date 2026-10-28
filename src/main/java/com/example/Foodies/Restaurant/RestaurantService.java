@@ -40,7 +40,7 @@ public class RestaurantService {
 
 
     public List<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida){
-        List<Restaurant> restaurants = restaurantRepo.findByEspecialidad(especialidadDeComida);
+        List<Restaurant> restaurants = restaurantRepo.findByEspecialidadAndAprobadoTrueAndActivoTrue(especialidadDeComida);
         if(restaurants.isEmpty()){
             throw new ListNoContentException("No hay restaurantes con esta especialidad");
         }
@@ -57,7 +57,10 @@ public class RestaurantService {
     }
 
     public RestaurantDetailDTO getRestaurantById(Long restaurantId){
-        Restaurant restaurant = restaurantRepo.findById(restaurantId).orElseThrow(()-> new EntityNotFoundException("restaurant No encontado"));
+        // A restaurant deactivated by an admin (Phase 3) is hidden as if it did not exist.
+        Restaurant restaurant = restaurantRepo.findById(restaurantId)
+                .filter(r -> !Boolean.FALSE.equals(r.getActivo()))
+                .orElseThrow(()-> new EntityNotFoundException("restaurant No encontado"));
        return restaurantMapper.toDetailDTO(restaurant);
     }
 

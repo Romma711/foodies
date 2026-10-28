@@ -454,7 +454,7 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 >
 >`/api/admin/usuarios/{id}/strikes` · `/api/admin/restaurantes/{id}/strikes`
 >
->- Suma un strike y envía el aviso por email (al usuario o al encargado del restaurante). `motivo` es obligatorio (5 a 255 caracteres). A los administradores no se les puede dar strikes. Si el email falla, el strike igual se guarda y `emailEnviado` vuelve en `false`. Con 3 strikes, `sugerirBaja` es `true`
+>- Suma un strike y envía el aviso por email (al usuario o al encargado del restaurante). `motivo` es obligatorio (5 a 255 caracteres). A los administradores no se les puede dar strikes. Si el email falla, el strike igual se guarda y `emailEnviado` vuelve en `false`. Con 3 strikes, `sugerirBaja` es `true`. Limitación conocida: el contador se incrementa sin bloqueo, así que dos strikes simultáneos sobre la misma cuenta pueden contarse como uno; es aceptable porque la moderación la hace un solo administrador
 ```json
 { "motivo": "Lenguaje ofensivo en una reseña" }
 ```
@@ -487,7 +487,7 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 >
 >`/api/admin/usuarios/{id}/activo` · `/api/admin/restaurantes/{id}/activo`
 >
->- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al loguearse con su contraseña correcta y en cualquier request con un token anterior. Un restaurante dado de baja deja de aparecer en `GET /api/restaurantes`. A un administrador no se lo puede dar de baja (400)
+>- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al loguearse con su contraseña correcta y en cualquier request con un token anterior. Un restaurante dado de baja se oculta en todas las consultas públicas (`GET /api/restaurantes`, `/especialidad` y `/{id}`, que responde 404) y no acepta reservas nuevas (`POST /api/reservas` responde 404 `Restaurante no encontrado`). A un administrador no se lo puede dar de baja (400)
 ```json
 { "activo": false }
 ```

@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -131,6 +132,31 @@ class EntidadesControllerTest {
     }
 
     @Test
+    void unRestauranteDadoDeBajaNoApareceEnNingunaConsultaPublicaNiAceptaReservas() {
+        String nombre = registrarRestaurante();
+        Long id = idRestaurante(nombre);
+        send(HttpMethod.PUT, "/api/admin/restaurantes/" + id + "/aprobar", admin(), null, Map.class);
+        Cliente cliente = registrarCliente();
+        String token = login(cliente.email(), "secret1");
+
+        send(HttpMethod.PATCH, "/api/admin/restaurantes/" + id + "/activo", admin(), Map.of("activo", false), Map.class);
+
+        assertThat(nombresPorEspecialidad("PASTAS")).doesNotContain(nombre);
+        assertThat(rest.getForEntity("/api/restaurantes/" + id, Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        ResponseEntity<Map> reserva = send(HttpMethod.POST, "/api/reservas", token, reservaPara(cliente, id), Map.class);
+        assertThat(reserva.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(reserva.getBody()).containsEntry("mensaje", "Restaurante no encontrado");
+
+        send(HttpMethod.PATCH, "/api/admin/restaurantes/" + id + "/activo", admin(), Map.of("activo", true), Map.class);
+
+        assertThat(nombresPorEspecialidad("PASTAS")).contains(nombre);
+        assertThat(rest.getForEntity("/api/restaurantes/" + id, Map.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(send(HttpMethod.POST, "/api/reservas", token, reservaPara(cliente, id), Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void noSePuedeDarDeBajaAUnAdministrador() {
         Long adminId = usuarioRepo.findByEmail("admin@foodies.com").orElseThrow().getId();
 
@@ -169,6 +195,24 @@ class EntidadesControllerTest {
             return List.of();
         }
         return ((List<?>) resp.getBody()).stream().map(item -> ((Map<?, ?>) item).get("nombre")).map(Object.class::cast).toList();
+    }
+
+    private List<Object> nombresPorEspecialidad(String especialidad) {
+        ResponseEntity<List> resp = rest.getForEntity(
+                "/api/restaurantes/especialidad?especialidadDeComida=" + especialidad, List.class);
+        if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+            return List.of();
+        }
+        return ((List<?>) resp.getBody()).stream().map(item -> ((Map<?, ?>) item).get("nombre")).map(Object.class::cast).toList();
+    }
+
+    private Map<String, Object> reservaPara(Cliente cliente, Long restaurantId) {
+        return Map.of(
+                "cantidad", 2,
+                "fechaReserva", LocalDate.now().plusDays(1).toString(),
+                "horarioLlegada", "20:00",
+                "idUsuario", cliente.id(),
+                "idRestaurant", restaurantId);
     }
 
     private Map<?, ?> buscar(List<?> filas, String campo, Object valor) {
