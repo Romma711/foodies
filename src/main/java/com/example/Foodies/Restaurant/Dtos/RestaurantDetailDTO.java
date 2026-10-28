@@ -12,7 +12,10 @@ public record RestaurantDetailDTO(
         String nombre,
         Integer cupoMaximo,
         String ubicacion,
-        EspecialidadDeComida especialidad
+        EspecialidadDeComida especialidad,
+        // Map coordinates (Phase 3); null until an admin sets the location.
+        Double latitud,
+        Double longitud
 
 ) {
 }
