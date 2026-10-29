@@ -35,6 +35,9 @@ public class Restaurant {
     @Min(value = 1,message = "El cupo debe ser mayor a 1")
     private Integer cupoMaximo;
 
+    /** Porcentaje del cupo diario que se acepta solo (0-100). Null o 0 = todas las reservas quedan pendientes. */
+    private Integer porcentajeAutoAceptacion;
+
 
     @Column(nullable = false)
     @NotBlank(message = "La ubicacion es obligatoria")

@@ -57,6 +57,9 @@ public class RestaurantePanelService {
         if (patch.getEspecialidad() != null) {
             restaurant.setEspecialidad(patch.getEspecialidad());
         }
+        if (patch.getPorcentajeAutoAceptacion() != null) {
+            restaurant.setPorcentajeAutoAceptacion(patch.getPorcentajeAutoAceptacion());
+        }
         return toDto(restaurantRepo.save(restaurant));
     }
 
@@ -97,8 +100,9 @@ public class RestaurantePanelService {
     }
 
     private MiRestauranteDTO toDto(Restaurant restaurant) {
+        Integer porcentaje = restaurant.getPorcentajeAutoAceptacion();
         return new MiRestauranteDTO(restaurant.getId(), restaurant.getNombre(), restaurant.getCupoMaximo(),
-                restaurant.getUbicacion(), restaurant.getEspecialidad(),
+                porcentaje == null ? 0 : porcentaje, restaurant.getUbicacion(), restaurant.getEspecialidad(),
                 cartaService.buscarPorRestaurante(restaurant).orElse(null));
     }
 
@@ -114,6 +118,10 @@ public class RestaurantePanelService {
         }
         if (patch.getCupoMaximo() != null && patch.getCupoMaximo() < 1) {
             throw new BusinessException("El cupo máximo debe ser al menos 1");
+        }
+        Integer porcentaje = patch.getPorcentajeAutoAceptacion();
+        if (porcentaje != null && (porcentaje < 0 || porcentaje > 100)) {
+            throw new BusinessException("El porcentaje de aceptación automática debe estar entre 0 y 100");
         }
     }
 }

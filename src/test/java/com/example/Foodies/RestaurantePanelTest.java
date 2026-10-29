@@ -185,7 +185,102 @@ class RestaurantePanelTest {
         assertThat(aceptada.getBody()).containsEntry("estado", "ACEPTADA");
     }
 
+    @Test
+    void elCupoSeCalculaPorRestauranteYSinContarLasCanceladas() {
+        Encargado encargado = nuevoEncargado();
+        Encargado otro = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(5);
+
+        // El otro restaurante llena su cupo (10) ese mismo día: no debe afectar al primero.
+        assertThat(reservar(cliente, otro.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> llena = reservar(cliente, encargado.restaurantId(), fecha, 10);
+        assertThat(llena.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 1).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // Al cancelarla, el cupo vuelve a estar libre.
+        String estadoPath = "/api/reservas/" + ((Number) llena.getBody().get("id")).longValue() + "/estado";
+        assertThat(send(HttpMethod.PATCH, estadoPath, encargado.token(), Map.of("estado", "CANCELADA")).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void elEncargadoConfiguraElPorcentajeDeAutoAceptacion() {
+        Encargado encargado = nuevoEncargado();
+
+        assertThat(get("/api/restaurantes/me", encargado.token()).getBody())
+                .containsEntry("porcentajeAutoAceptacion", 0);
+
+        ResponseEntity<Map> actualizado = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
+                Map.of("porcentajeAutoAceptacion", 60));
+        assertThat(actualizado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(actualizado.getBody()).containsEntry("porcentajeAutoAceptacion", 60);
+        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getPorcentajeAutoAceptacion())
+                .isEqualTo(60);
+
+        for (int invalido : new int[]{-1, 101}) {
+            ResponseEntity<Map> rechazado = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
+                    Map.of("porcentajeAutoAceptacion", invalido));
+            assertThat(rechazado.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getPorcentajeAutoAceptacion())
+                .isEqualTo(60);
+
+        // Cambiar otro campo no apaga la auto-aceptación.
+        send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("nombre", "Otro nombre"));
+        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getPorcentajeAutoAceptacion())
+                .isEqualTo(60);
+
+        ResponseEntity<Map> apagado = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
+                Map.of("porcentajeAutoAceptacion", 0));
+        assertThat(apagado.getBody()).containsEntry("porcentajeAutoAceptacion", 0);
+    }
+
+    @Test
+    void lasReservasSeAceptanSolasHastaElPorcentajeYLaQueLoCruzaQuedaPendiente() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(6);
+        // Cupo 10 al 60%: se aceptan solas hasta 6 personas.
+        send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 60));
+
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        // 4 aceptadas + 3 = 7 > 6: cruza el límite, queda pendiente.
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 3))).isEqualTo("PENDIENTE");
+        // 4 aceptadas + 2 = 6: justo en el límite, se acepta.
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        // Ya hay 6 aceptadas: todo lo que sigue queda pendiente.
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void sinAutoAceptacionLasReservasQuedanPendientes() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), LocalDate.now().plusDays(7), 1)))
+                .isEqualTo("PENDIENTE");
+    }
+
     // --- helpers ---
+
+    private ResponseEntity<Map> reservar(Cliente cliente, Long restaurantId, LocalDate fecha, int cantidad) {
+        return send(HttpMethod.POST, "/api/reservas", cliente.token(), Map.of(
+                "cantidad", cantidad,
+                "fechaReserva", fecha.toString(),
+                "horarioLlegada", "20:00",
+                "idUsuario", cliente.id(),
+                "idRestaurant", restaurantId));
+    }
+
+    private static String estado(ResponseEntity<Map> reserva) {
+        assertThat(reserva.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return (String) reserva.getBody().get("estadoReserva");
+    }
 
     private ResponseEntity<Map> get(String path, String token) {
         return rest.exchange(path, HttpMethod.GET, new HttpEntity<>(headers(token)), Map.class);
