@@ -58,7 +58,8 @@ public class ModeracionService {
 
     /**
      * Aprueba una solicitud: publica el restaurante y le da al encargado el rol {@code ROLE_ENCARGADO}.
-     * También sirve para aprobar una solicitud rechazada antes.
+     * También sirve para aprobar una solicitud rechazada antes. Después del commit le envía al
+     * encargado el email de aprobación; si el restaurante ya estaba aprobado no lo repite.
      *
      * @param restaurantId id del restaurante
      * @return el estado final de la solicitud
@@ -67,8 +68,14 @@ public class ModeracionService {
     @Transactional
     public EstadoSolicitudDTO aprobar(Long restaurantId) {
         Restaurant restaurant = buscarRestaurante(restaurantId);
+        boolean yaEstabaAprobado = restaurant.getEstado() == EstadoRestaurante.APROBADO;
         usuarioService.aprobarEncargado(restaurant.getUsuario().getId());
         restaurant.setEstado(EstadoRestaurante.APROBADO);
+        if (!yaEstabaAprobado) {
+            String email = restaurant.getUsuario().getEmail();
+            String nombre = restaurant.getNombre();
+            DespuesDelCommit.ejecutar(() -> emailService.enviarRestauranteAprobado(email, nombre));
+        }
         return new EstadoSolicitudDTO(restaurant.getId(), restaurant.getNombre(), restaurant.getEstado());
     }
 

@@ -493,7 +493,15 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 ```
 ###
 
-### Emails de moderación
+### Emails
+
+| Cuándo | Para quién | Asunto |
+|---|---|---|
+| El restaurante acepta una reserva (`PATCH /api/reservas/{id}/estado` con `ACEPTADA`) | Cliente | `Foodies: tu reserva en {restaurante} está confirmada` (fecha, hora, personas y dirección) |
+| El admin aprueba un restaurante (`PUT /api/admin/restaurantes/{id}/aprobar`) | Encargado | `Foodies: tu restaurante {restaurante} fue aprobado` |
+| El admin aplica un strike | Usuario o encargado | `Foodies: aviso de sanción (n de 3)` |
+
+Los avisos de reserva confirmada y de restaurante aprobado salen después de guardar el cambio y no se repiten si la reserva ya estaba aceptada o el restaurante ya estaba aprobado. Si el correo falla, la operación igual queda hecha y el error queda en el log.
 
 Se envían con `JavaMailSender`. Por defecto apuntan al sandbox de [Mailtrap](https://mailtrap.io): cargá las credenciales de tu inbox en estas variables de entorno. Para usar un SMTP real alcanza con cambiarlas.
 

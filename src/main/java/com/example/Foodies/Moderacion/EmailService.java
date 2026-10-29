@@ -10,12 +10,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 /**
- * Envío de emails de moderación con {@link JavaMailSender}.
+ * Envío de emails de Foodies con {@link JavaMailSender}: confirmación de reserva, aprobación del
+ * restaurante y aviso de sanción.
  *
  * <p>En desarrollo apunta a Mailtrap (ver {@code spring.mail.*} en {@code application.properties});
  * para producción alcanza con cambiar las variables {@code MAIL_*}. Si no hay servidor configurado o
  * el envío falla, se registra en el log y se devuelve {@code false}: un problema de correo nunca
- * revierte la sanción.</p>
+ * revierte la operación que lo originó.</p>
  */
 @Service
 public class EmailService {
@@ -42,21 +43,52 @@ public class EmailService {
      * @return {@code true} si el servidor de correo aceptó el mensaje
      */
     public boolean enviarAvisoSancion(String destinatario, String nombre, int strikes, int limite, String motivo) {
+        return enviar(destinatario, "el aviso de sanción",
+                PlantillaAvisoSancion.asunto(strikes, limite),
+                PlantillaAvisoSancion.cuerpo(nombre, strikes, limite, motivo));
+    }
+
+    /**
+     * Le avisa al encargado que su restaurante fue aprobado y ya está publicado.
+     *
+     * @param destinatario email del encargado
+     * @param restaurante  nombre del restaurante
+     * @return {@code true} si el servidor de correo aceptó el mensaje
+     */
+    public boolean enviarRestauranteAprobado(String destinatario, String restaurante) {
+        return enviar(destinatario, "la aprobación del restaurante",
+                PlantillaRestauranteAprobado.asunto(restaurante),
+                PlantillaRestauranteAprobado.cuerpo(restaurante));
+    }
+
+    /**
+     * Le confirma al cliente la reserva que aceptó el restaurante.
+     *
+     * @param reserva datos de la reserva, incluido el email del cliente
+     * @return {@code true} si el servidor de correo aceptó el mensaje
+     */
+    public boolean enviarReservaConfirmada(ReservaConfirmada reserva) {
+        return enviar(reserva.email(), "la confirmación de reserva",
+                PlantillaReservaConfirmada.asunto(reserva.restaurante()),
+                PlantillaReservaConfirmada.cuerpo(reserva));
+    }
+
+    private boolean enviar(String destinatario, String descripcion, String asunto, String cuerpo) {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (sender == null) {
-            log.warn("No hay servidor de correo configurado; no se envió el aviso de sanción a {}", destinatario);
+            log.warn("No hay servidor de correo configurado; no se envió {} a {}", descripcion, destinatario);
             return false;
         }
         SimpleMailMessage mensaje = new SimpleMailMessage();
         mensaje.setFrom(remitente);
         mensaje.setTo(destinatario);
-        mensaje.setSubject(PlantillaAvisoSancion.asunto(strikes, limite));
-        mensaje.setText(PlantillaAvisoSancion.cuerpo(nombre, strikes, limite, motivo));
+        mensaje.setSubject(asunto);
+        mensaje.setText(cuerpo);
         try {
             sender.send(mensaje);
             return true;
         } catch (MailException ex) {
-            log.error("No se pudo enviar el aviso de sanción a {}: {}", destinatario, ex.getMessage());
+            log.error("No se pudo enviar {} a {}: {}", descripcion, destinatario, ex.getMessage());
             return false;
         }
     }
