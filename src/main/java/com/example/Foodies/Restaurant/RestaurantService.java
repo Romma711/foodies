@@ -57,9 +57,9 @@ public class RestaurantService {
     }
 
     public RestaurantDetailDTO getRestaurantById(Long restaurantId){
-        // A restaurant deactivated by an admin (Phase 3) is hidden as if it did not exist.
+        // Public detail: only approved restaurants that were not deactivated by an admin (Phase 3).
         Restaurant restaurant = restaurantRepo.findById(restaurantId)
-                .filter(r -> !Boolean.FALSE.equals(r.getActivo()))
+                .filter(r -> r.isAprobado() && !Boolean.FALSE.equals(r.getActivo()))
                 .orElseThrow(()-> new EntityNotFoundException("restaurant No encontado"));
        return restaurantMapper.toDetailDTO(restaurant);
     }

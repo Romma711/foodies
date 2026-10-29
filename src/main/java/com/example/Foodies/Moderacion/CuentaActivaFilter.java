@@ -13,22 +13,20 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Aplica la baja lógica de usuarios (Fase 3) sin modificar el login ni el filtro JWT existentes.
  *
  * <ul>
- *   <li>{@code POST /api/auth/login}: si el email y la contraseña son correctos pero la cuenta está
- *       dada de baja, responde 403. Con credenciales incorrectas no dice nada de la baja: el login
- *       responde como siempre, así no se revela qué cuentas fueron dadas de baja.</li>
+ *   <li>{@code POST /api/auth/login}: si la cuenta del email está dada de baja responde 403, sea cual
+ *       sea la contraseña. Decisión del producto: el aviso de baja tiene prioridad sobre el error de
+ *       credenciales, aunque eso permita saber qué emails corresponden a cuentas dadas de baja.</li>
  *   <li>Cualquier otra request autenticada: si la cuenta del token fue dada de baja después de
  *       emitirlo, responde 403.</li>
  * </ul>
@@ -42,12 +40,10 @@ public class CuentaActivaFilter extends OncePerRequestFilter {
     private static final String LOGIN = "/api/auth/login";
 
     private final UsuarioRepository usuarioRepo;
-    private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
 
-    public CuentaActivaFilter(UsuarioRepository usuarioRepo, PasswordEncoder passwordEncoder, ObjectMapper objectMapper) {
+    public CuentaActivaFilter(UsuarioRepository usuarioRepo, ObjectMapper objectMapper) {
         this.usuarioRepo = usuarioRepo;
-        this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
     }
 
@@ -78,14 +74,10 @@ public class CuentaActivaFilter extends OncePerRequestFilter {
         try {
             JsonNode json = objectMapper.readTree(cuerpo);
             String email = json.path("email").asText(null);
-            String password = json.path("password").asText(null);
-            if (email == null || password == null) {
+            if (email == null) {
                 return false;
             }
-            Optional<Usuario> usuario = usuarioRepo.findByEmail(email);
-            return usuario.isPresent()
-                    && dadaDeBaja(usuario.get())
-                    && passwordEncoder.matches(password, usuario.get().getPassword());
+            return usuarioRepo.findByEmail(email).map(this::dadaDeBaja).orElse(false);
         } catch (IOException ex) {
             // Malformed body: let the login endpoint answer as it always did.
             return false;

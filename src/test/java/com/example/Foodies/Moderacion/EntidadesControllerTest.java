@@ -105,6 +105,30 @@ class EntidadesControllerTest {
     }
 
     @Test
+    void unaCuentaDadaDeBajaVeElAvisoDeBajaAunqueLaClaveSeaIncorrecta() {
+        Cliente cliente = registrarCliente();
+        send(HttpMethod.PATCH, "/api/admin/usuarios/" + cliente.id() + "/activo", admin(), Map.of("activo", false), Map.class);
+
+        ResponseEntity<Map> login = intentarLogin(cliente.email(), "otra-clave");
+
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(login.getBody()).containsEntry("error", "cuenta dada de baja");
+    }
+
+    @Test
+    void unRestauranteSinAprobarNoApareceEnElDetallePublicoHastaQueLoAprueban() {
+        String nombre = registrarRestaurante();
+        Long id = idRestaurante(nombre);
+
+        assertThat(rest.getForEntity("/api/restaurantes/" + id, Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        send(HttpMethod.PUT, "/api/admin/restaurantes/" + id + "/aprobar", admin(), null, Map.class);
+
+        assertThat(rest.getForEntity("/api/restaurantes/" + id, Map.class).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void unaCredencialIncorrectaDeUnaCuentaActivaSigueRespondiendoComoAntes() {
         Cliente cliente = registrarCliente();
 

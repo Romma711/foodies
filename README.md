@@ -487,7 +487,7 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 >
 >`/api/admin/usuarios/{id}/activo` · `/api/admin/restaurantes/{id}/activo`
 >
->- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al loguearse con su contraseña correcta y en cualquier request con un token anterior. Un restaurante dado de baja se oculta en todas las consultas públicas (`GET /api/restaurantes`, `/especialidad` y `/{id}`, que responde 404) y no acepta reservas nuevas (`POST /api/reservas` responde 404 `Restaurante no encontrado`). A un administrador no se lo puede dar de baja (400)
+>- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al intentar loguearse (con cualquier contraseña) y en cualquier request con un token anterior. Las consultas públicas (`GET /api/restaurantes`, `/especialidad` y `/{id}`) solo muestran restaurantes aprobados y activos a la vez; el detalle de uno pendiente, rechazado o dado de baja responde 404. Un restaurante dado de baja tampoco acepta reservas nuevas (`POST /api/reservas` responde 404 `Restaurante no encontrado`). A un administrador no se lo puede dar de baja (400)
 ```json
 { "activo": false }
 ```
