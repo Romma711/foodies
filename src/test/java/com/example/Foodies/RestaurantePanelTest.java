@@ -99,7 +99,10 @@ class RestaurantePanelTest {
         Encargado encargado = nuevoEncargado();
 
         assertThat(rest.getForEntity("/api/restaurantes", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(get("/api/restaurantes/" + encargado.restaurantId(), null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> detalle = get("/api/restaurantes/" + encargado.restaurantId(), null);
+        assertThat(detalle.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // La capacidad es un dato interno del restaurante: el catálogo público no la expone.
+        assertThat(detalle.getBody()).containsEntry("nombre", encargado.nombre()).doesNotContainKey("cupoMaximo");
     }
 
     @Test
@@ -197,8 +200,11 @@ class RestaurantePanelTest {
         ResponseEntity<Map> llena = reservar(cliente, encargado.restaurantId(), fecha, 10);
         assertThat(llena.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 1).getStatusCode())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
+        ResponseEntity<Map> sinLugar = reservar(cliente, encargado.restaurantId(), fecha, 1);
+        assertThat(sinLugar.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        // El cliente se entera de que no hay lugar, pero no de cuál es la capacidad.
+        assertThat(sinLugar.getBody()).containsEntry("mensaje",
+                "No hay lugar para 1 persona ese día. Probá con otra fecha o menos personas.");
 
         // Al cancelarla, el cupo vuelve a estar libre.
         String estadoPath = "/api/reservas/" + ((Number) llena.getBody().get("id")).longValue() + "/estado";
