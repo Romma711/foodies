@@ -272,7 +272,109 @@ class RestaurantePanelTest {
                 .isEqualTo("PENDIENTE");
     }
 
+    @Test
+    void elEncargadoGestionaLosCuposEspecialesDeSuRestaurante() {
+        Encargado encargado = nuevoEncargado();
+        Encargado otro = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(8);
+        String path = "/api/restaurantes/me/cupos-especiales/" + fecha;
+
+        assertThat(send(HttpMethod.PUT, path, null, Map.of("cupo", 4)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(send(HttpMethod.PUT, path, cliente.token(), Map.of("cupo", 4)).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        ResponseEntity<Map> creado = send(HttpMethod.PUT, path, encargado.token(),
+                Map.of("cupo", 4, "motivo", "Cumpleaños privado"));
+        assertThat(creado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(creado.getBody())
+                .containsEntry("fecha", fecha.toString())
+                .containsEntry("cupo", 4)
+                .containsEntry("motivo", "Cumpleaños privado")
+                .containsEntry("reservadas", 0);
+
+        // Volver a guardar la misma fecha la modifica, no crea otra.
+        send(HttpMethod.PUT, path, encargado.token(), Map.of("cupo", 3));
+        ResponseEntity<List> lista = listarCuposEspeciales(encargado.token());
+        assertThat(lista.getBody()).hasSize(1);
+        assertThat(((Map<?, ?>) lista.getBody().get(0)).get("cupo")).isEqualTo(3);
+        assertThat(listarCuposEspeciales(otro.token()).getBody()).isEmpty();
+
+        assertThat(send(HttpMethod.DELETE, path, encargado.token(), null).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(listarCuposEspeciales(encargado.token()).getBody()).isEmpty();
+    }
+
+    @Test
+    void elCupoEspecialSeValida() {
+        Encargado encargado = nuevoEncargado();
+        String base = "/api/restaurantes/me/cupos-especiales/";
+        LocalDate fecha = LocalDate.now().plusDays(9);
+
+        assertThat(send(HttpMethod.PUT, base + fecha, encargado.token(), Map.of("cupo", -1)).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        // Sirve para reducir la capacidad: no puede superar la capacidad normal (10).
+        assertThat(send(HttpMethod.PUT, base + fecha, encargado.token(), Map.of("cupo", 11)).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(send(HttpMethod.PUT, base + LocalDate.now().minusDays(1), encargado.token(), Map.of("cupo", 4))
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(listarCuposEspeciales(encargado.token()).getBody()).isEmpty();
+    }
+
+    @Test
+    void noSePuedeBajarElCupoPorDebajoDeLoYaReservado() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(10);
+        String path = "/api/restaurantes/me/cupos-especiales/" + fecha;
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 6).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<Map> rechazado = send(HttpMethod.PUT, path, encargado.token(), Map.of("cupo", 5));
+        assertThat(rechazado.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(rechazado.getBody()).containsEntry("mensaje",
+                "Ya hay 6 personas reservadas ese día. No podés bajar el cupo a menos de 6.");
+        assertThat(listarCuposEspeciales(encargado.token()).getBody()).isEmpty();
+
+        ResponseEntity<Map> aceptado = send(HttpMethod.PUT, path, encargado.token(), Map.of("cupo", 6));
+        assertThat(aceptado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(aceptado.getBody()).containsEntry("reservadas", 6);
+    }
+
+    @Test
+    void lasReservasDeEseDiaUsanElCupoEspecial() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(11);
+        send(HttpMethod.PUT, "/api/restaurantes/me/cupos-especiales/" + fecha, encargado.token(), Map.of("cupo", 4));
+
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> sinLugar = reservar(cliente, encargado.restaurantId(), fecha, 1);
+        assertThat(sinLugar.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat((String) sinLugar.getBody().get("mensaje")).startsWith("No hay lugar");
+
+        // Los demás días siguen con la capacidad normal.
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha.plusDays(1), 10).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void laAceptacionAutomaticaSeCalculaSobreElCupoEspecial() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(12);
+        // 50% de un cupo especial de 4: se aceptan solas hasta 2 personas.
+        send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 50));
+        send(HttpMethod.PUT, "/api/restaurantes/me/cupos-especiales/" + fecha, encargado.token(), Map.of("cupo", 4));
+
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
+    }
+
     // --- helpers ---
+
+    private ResponseEntity<List> listarCuposEspeciales(String token) {
+        return rest.exchange("/api/restaurantes/me/cupos-especiales", HttpMethod.GET,
+                new HttpEntity<>(headers(token)), List.class);
+    }
 
     private ResponseEntity<Map> reservar(Cliente cliente, Long restaurantId, LocalDate fecha, int cantidad) {
         return send(HttpMethod.POST, "/api/reservas", cliente.token(), Map.of(

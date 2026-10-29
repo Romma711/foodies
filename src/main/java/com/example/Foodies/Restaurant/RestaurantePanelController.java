@@ -2,14 +2,18 @@ package com.example.Foodies.Restaurant;
 
 import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Carta.Dtos.CartaDTO;
+import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
+import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
 import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
 import com.example.Foodies.Restaurant.Dtos.MiRestauranteDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /** Restaurant manager panel. `me` is always the restaurant of the authenticated ROLE_ENCARGADO user. */
@@ -49,6 +53,28 @@ public class RestaurantePanelController {
     @GetMapping("/me/reservas")
     public List<ReservaPanelDTO> getReservas() {
         return panelService.getReservas();
+    }
+
+    /** Próximos días con capacidad reducida del restaurante del encargado. */
+    @GetMapping("/me/cupos-especiales")
+    public List<CupoEspecialDTO> getCuposEspeciales() {
+        return panelService.getCuposEspeciales();
+    }
+
+    /** Crea o modifica el cupo especial de un día (`yyyy-MM-dd`). */
+    @PutMapping("/me/cupos-especiales/{fecha}")
+    public CupoEspecialDTO guardarCupoEspecial(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
+            @RequestBody CupoEspecialRequestDTO request) {
+        return panelService.guardarCupoEspecial(fecha, request);
+    }
+
+    /** Ese día vuelve a regir la capacidad normal. */
+    @DeleteMapping("/me/cupos-especiales/{fecha}")
+    public ResponseEntity<Void> eliminarCupoEspecial(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        panelService.eliminarCupoEspecial(fecha);
+        return ResponseEntity.noContent().build();
     }
 
     /** Public: where to download a restaurant's menu. */
