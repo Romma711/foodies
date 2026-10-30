@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -369,7 +370,164 @@ class RestaurantePanelTest {
         assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
     }
 
+    @Test
+    void elRegistroExigeEntreTresYCincoFotosConUnaDelFrente() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String nombre = "Resto fotos " + suffix;
+        Map<String, Object> datos = datosRegistro("fotos-" + suffix + "@test.com", nombre, suffix);
+        String url = "/api/auth/register/restaurante";
+
+        // Sin fotos, con pocas, con demasiadas, sin la del frente, con un archivo que no es imagen o muy pesado:
+        // se rechaza y no se crea nada.
+        var sinFotos = RegistroRestauranteMultipart.entity(RegistroRestauranteMultipart.soloDatos(datos));
+        var sinFrente = RegistroRestauranteMultipart.soloDatos(datos);
+        for (int i = 0; i < 3; i++) {
+            sinFrente.add("salones", RegistroRestauranteMultipart.archivo("s" + i + ".jpg", RegistroRestauranteMultipart.JPEG));
+        }
+        var noEsImagen = RegistroRestauranteMultipart.soloDatos(datos);
+        noEsImagen.add("frente", RegistroRestauranteMultipart.archivo("frente.jpg", "no soy una foto".getBytes(StandardCharsets.UTF_8)));
+        noEsImagen.add("salones", RegistroRestauranteMultipart.archivo("s1.jpg", RegistroRestauranteMultipart.JPEG));
+        noEsImagen.add("salones", RegistroRestauranteMultipart.archivo("s2.jpg", RegistroRestauranteMultipart.JPEG));
+        var muyGrande = RegistroRestauranteMultipart.soloDatos(datos);
+        byte[] grande = Arrays.copyOf(RegistroRestauranteMultipart.JPEG, 5 * 1024 * 1024 + 1);
+        muyGrande.add("frente", RegistroRestauranteMultipart.archivo("frente.jpg", grande));
+        muyGrande.add("salones", RegistroRestauranteMultipart.archivo("s1.jpg", RegistroRestauranteMultipart.JPEG));
+        muyGrande.add("salones", RegistroRestauranteMultipart.archivo("s2.jpg", RegistroRestauranteMultipart.JPEG));
+
+        List<HttpEntity<?>> invalidos = List.of(
+                sinFotos,
+                RegistroRestauranteMultipart.conFotos(datos, 1),
+                RegistroRestauranteMultipart.conFotos(datos, 5),
+                RegistroRestauranteMultipart.entity(sinFrente),
+                RegistroRestauranteMultipart.entity(noEsImagen),
+                RegistroRestauranteMultipart.entity(muyGrande));
+        for (HttpEntity<?> invalido : invalidos) {
+            assertThat(rest.postForEntity(url, invalido, Map.class).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+        assertThat(restaurantRepo.findAll()).noneMatch(r -> r.getNombre().equals(nombre));
+
+        // 1 del frente + 4 del salón = 5: el máximo permitido.
+        assertThat(rest.postForEntity(url, RegistroRestauranteMultipart.conFotos(datos, 4), Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+        Long id = restaurantRepo.findAll().stream().filter(r -> r.getNombre().equals(nombre))
+                .map(Restaurant::getId).findFirst().orElseThrow();
+        assertThat(rest.exchange("/api/restaurantes/" + id + "/fotos", HttpMethod.GET, null, List.class).getBody())
+                .hasSize(5);
+    }
+
+    @Test
+    void laFotoDelFrenteEsLaPortadaDelCatalogo() {
+        Encargado encargado = nuevoEncargado();
+
+        ResponseEntity<List> fotos = rest.exchange("/api/restaurantes/" + encargado.restaurantId() + "/fotos",
+                HttpMethod.GET, null, List.class);
+        assertThat(fotos.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(fotos.getBody()).hasSize(3);
+        Map<?, ?> frente = (Map<?, ?>) fotos.getBody().get(0);
+        assertThat(frente.get("tipo")).isEqualTo("FRENTE");
+        assertThat(((Map<?, ?>) fotos.getBody().get(1)).get("tipo")).isEqualTo("SALON");
+
+        ResponseEntity<List> catalogo = rest.exchange("/api/restaurantes", HttpMethod.GET, null, List.class);
+        Map<?, ?> item = (Map<?, ?>) catalogo.getBody().stream()
+                .filter(r -> ((Number) ((Map<?, ?>) r).get("id")).longValue() == encargado.restaurantId())
+                .findFirst().orElseThrow();
+        assertThat(item.get("fotoPortada")).isEqualTo(frente.get("url"));
+
+        ResponseEntity<byte[]> imagen = rest.getForEntity((String) frente.get("url"), byte[].class);
+        assertThat(imagen.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(imagen.getHeaders().getContentType()).isEqualTo(MediaType.IMAGE_JPEG);
+    }
+
+    @Test
+    void elEncargadoGestionaSusFotosRespetandoLosLimites() {
+        Encargado encargado = nuevoEncargado();
+        Encargado otro = nuevoEncargado();
+        List<Map<?, ?>> fotos = misFotos(encargado.token());
+        assertThat(fotos).hasSize(3);
+        Long frenteId = idDe(fotos.get(0));
+        Long salonId = idDe(fotos.get(1));
+
+        assertThat(subirFoto(encargado.token(), "SALON", RegistroRestauranteMultipart.WEBP).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(subirFoto(encargado.token(), "SALON", RegistroRestauranteMultipart.JPEG).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> sexta = subirFoto(encargado.token(), "SALON", RegistroRestauranteMultipart.JPEG);
+        assertThat(sexta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(sexta.getBody()).containsEntry("mensaje", "Podés tener hasta 5 fotos. Borrá una antes de subir otra.");
+        assertThat(subirFoto(encargado.token(), "FRENTE", RegistroRestauranteMultipart.JPEG).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // La del frente no se borra: se reemplaza, y el archivo anterior se elimina.
+        assertThat(send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + frenteId, encargado.token(), null)
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        Path frenteViejo = storedFile((String) fotos.get(0).get("url"));
+        ResponseEntity<Map> reemplazada = reemplazarFoto(encargado.token(), frenteId, RegistroRestauranteMultipart.PNG);
+        assertThat(reemplazada.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(reemplazada.getBody()).containsEntry("tipo", "FRENTE");
+        assertThat(frenteViejo).doesNotExist();
+        assertThat(storedFile((String) reemplazada.getBody().get("url"))).exists();
+
+        // Otro encargado no puede tocar estas fotos.
+        assertThat(send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + salonId, otro.token(), null)
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // Se puede bajar hasta 2 fotos del salón, no menos.
+        List<Long> salones = misFotos(encargado.token()).stream()
+                .filter(f -> "SALON".equals(f.get("tipo"))).map(RestaurantePanelTest::idDe).toList();
+        assertThat(salones).hasSize(4);
+        assertThat(send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + salones.get(0), encargado.token(), null)
+                .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + salones.get(1), encargado.token(), null)
+                .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        ResponseEntity<Map> minimo = send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + salones.get(2), encargado.token(), null);
+        assertThat(minimo.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(minimo.getBody()).containsEntry("mensaje",
+                "Tenés que tener al menos 2 fotos del salón. Subí otra antes de borrar esta.");
+        assertThat(misFotos(encargado.token())).hasSize(3);
+    }
+
+    @Test
+    void elAdminVeLasFotosDeLosRestaurantesAAprobar() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String nombre = "Resto pendiente " + suffix;
+        assertThat(rest.postForEntity("/api/auth/register/restaurante",
+                RegistroRestauranteMultipart.conFotos(datosRegistro("pend-" + suffix + "@test.com", nombre, suffix), 2),
+                Map.class).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        ResponseEntity<List> pendientes = rest.exchange("/api/admin/requests", HttpMethod.GET,
+                new HttpEntity<>(headers(login("admin@foodies.com", "admin123"))), List.class);
+        Map<?, ?> pendiente = (Map<?, ?>) pendientes.getBody().stream()
+                .filter(p -> nombre.equals(((Map<?, ?>) p).get("nombre"))).findFirst().orElseThrow();
+        assertThat((List<?>) pendiente.get("fotos")).hasSize(3);
+    }
+
     // --- helpers ---
+
+    private List<Map<?, ?>> misFotos(String token) {
+        ResponseEntity<List> resp = rest.exchange("/api/restaurantes/me/fotos", HttpMethod.GET,
+                new HttpEntity<>(headers(token)), List.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return ((List<?>) resp.getBody()).stream().<Map<?, ?>>map(f -> (Map<?, ?>) f).toList();
+    }
+
+    private static Long idDe(Map<?, ?> foto) {
+        return ((Number) foto.get("id")).longValue();
+    }
+
+    private ResponseEntity<Map> subirFoto(String token, String tipo, byte[] contenido) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("tipo", tipo);
+        body.add("archivo", RegistroRestauranteMultipart.archivo("foto.img", contenido));
+        HttpHeaders headers = headers(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        return rest.exchange("/api/restaurantes/me/fotos", HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
+    }
+
+    private ResponseEntity<Map> reemplazarFoto(String token, Long fotoId, byte[] contenido) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("archivo", RegistroRestauranteMultipart.archivo("foto.img", contenido));
+        HttpHeaders headers = headers(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        return rest.exchange("/api/restaurantes/me/fotos/" + fotoId, HttpMethod.PUT, new HttpEntity<>(body, headers), Map.class);
+    }
 
     private ResponseEntity<List> listarCuposEspeciales(String token) {
         return rest.exchange("/api/restaurantes/me/cupos-especiales", HttpMethod.GET,
@@ -437,14 +595,8 @@ class RestaurantePanelTest {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         String email = "encargado-" + suffix + "@test.com";
         String nombre = "Resto " + suffix;
-        ResponseEntity<UsuarioDetailDTO> reg = rest.postForEntity("/api/auth/register/restaurante", Map.of(
-                "email", email,
-                "password", "secret1",
-                "nombreRestaurante", nombre,
-                "direccion", "Calle " + suffix,
-                "telefono", "2230000000",
-                "especialidadDeComida", "PASTAS",
-                "cupoMaximo", 10), UsuarioDetailDTO.class);
+        ResponseEntity<UsuarioDetailDTO> reg = rest.postForEntity("/api/auth/register/restaurante",
+                RegistroRestauranteMultipart.conFotos(datosRegistro(email, nombre, suffix), 2), UsuarioDetailDTO.class);
         assertThat(reg.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
         ResponseEntity<UsuarioDetailDTO> aprobado = rest.exchange("/api/admin/approved/{id}", HttpMethod.PUT,
@@ -458,6 +610,17 @@ class RestaurantePanelTest {
                 .findFirst()
                 .orElseThrow();
         return new Encargado(login(email, "secret1"), restaurantId, nombre);
+    }
+
+    private static Map<String, Object> datosRegistro(String email, String nombre, String suffix) {
+        return Map.of(
+                "email", email,
+                "password", "secret1",
+                "nombreRestaurante", nombre,
+                "direccion", "Calle " + suffix,
+                "telefono", "2230000000",
+                "especialidadDeComida", "PASTAS",
+                "cupoMaximo", 10);
     }
 
     private Cliente nuevoCliente() {

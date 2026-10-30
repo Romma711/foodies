@@ -2,6 +2,8 @@ package com.example.Foodies.Restaurant;
 
 
 
+import java.util.Map;
+import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
@@ -35,6 +37,8 @@ public class RestaurantService {
     private UsuarioMapper usuarioMapper;
     @Autowired
     private CartaService cartaService;
+    @Autowired
+    private FotoService fotoService;
 
 
 
@@ -44,7 +48,7 @@ public class RestaurantService {
         if(restaurants.isEmpty()){
             throw new ListNoContentException("No hay restaurantes con esta especialidad");
         }
-        return restaurantMapper.toListDTO(restaurants);
+        return conPortada(restaurants);
     }
 
     public List<RestaurantListDTO> getAll() {
@@ -53,7 +57,7 @@ public class RestaurantService {
             throw new ListNoContentException("No hay restaurantes");
         }
 
-        return restaurantMapper.toListDTO(restaurantes);
+        return conPortada(restaurantes);
     }
 
     public RestaurantDetailDTO getRestaurantById(Long restaurantId){
@@ -89,7 +93,17 @@ public class RestaurantService {
         Restaurant restaurant = restaurantRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("Restaurante no encontrado"));
         // The carta row goes away by cascade; its stored PDF has to be removed explicitly.
         cartaService.eliminarArchivo(restaurant);
+        fotoService.eliminarArchivos(restaurant);
         restaurantRepo.delete(restaurant);
+    }
+
+    /** La foto del frente de todos los restaurantes sale de una sola consulta. */
+    private List<RestaurantListDTO> conPortada(List<Restaurant> restaurantes) {
+        Map<Long, String> portadas = fotoService.portadas(restaurantes.stream().map(Restaurant::getId).toList());
+        return restaurantes.stream()
+                .map(r -> new RestaurantListDTO(r.getId(), r.getNombre(), r.getUbicacion(), r.getEspecialidad(),
+                        portadas.get(r.getId())))
+                .toList();
     }
 
     public List<UsuarioRestoAAprobarDTO> getRestaurantNotAprobados(){
@@ -99,7 +113,8 @@ public class RestaurantService {
                         r.getNombre(),
                         r.getUsuario().getEmail(),
                         r.getUsuario().getTelefono(),
-                        String.valueOf(r.getUsuario().getRol())
+                        String.valueOf(r.getUsuario().getRol()),
+                        fotoService.listar(r.getId())
                 ))
                 .toList();
         if(usuarios.isEmpty()){
