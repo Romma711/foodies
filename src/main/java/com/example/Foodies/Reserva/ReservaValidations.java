@@ -24,7 +24,9 @@ public class ReservaValidations {
 
     public static void validateCupo(Integer cantidad,Integer reservado, Integer cupoMaximo) throws NotValidCupoException{
         if((cantidad + reservado) > cupoMaximo){
-            throw new NotValidCupoException("El cupo maximo es: " + cupoMaximo);
+            // No se informa la capacidad: al cliente solo le importa si hay lugar o no.
+            throw new NotValidCupoException("No hay lugar para %d %s ese día. Probá con otra fecha o menos personas."
+                    .formatted(cantidad, cantidad == 1 ? "persona" : "personas"));
         }
         if(cantidad < 0){
             throw new NotValidCupoException("Cupo invalido");

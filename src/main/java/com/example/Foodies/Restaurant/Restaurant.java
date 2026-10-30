@@ -1,5 +1,7 @@
 package com.example.Foodies.Restaurant;
 
+import com.example.Foodies.CupoEspecial.CupoEspecial;
+import com.example.Foodies.Foto.FotoRestaurante;
 import com.example.Foodies.Carta.Carta;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Resena.Resena;
@@ -63,5 +65,11 @@ public class Restaurant {
 
      @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<Resena> resenas = new ArrayList<>();
+
+     @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
+     private List<CupoEspecial> cuposEspeciales = new ArrayList<>();
+
+     @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
+     private List<FotoRestaurante> fotos = new ArrayList<>();
 
 }

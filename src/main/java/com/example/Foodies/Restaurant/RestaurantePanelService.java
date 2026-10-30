@@ -3,6 +3,11 @@ package com.example.Foodies.Restaurant;
 import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Carta.Dtos.CartaDTO;
 import com.example.Foodies.Config.CurrentUser;
+import com.example.Foodies.CupoEspecial.CupoEspecialService;
+import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
+import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
+import com.example.Foodies.Foto.Dtos.FotoDTO;
+import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
@@ -16,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
@@ -26,13 +32,18 @@ public class RestaurantePanelService {
     private final RestaurantRepository restaurantRepo;
     private final ReservaRepository reservaRepo;
     private final CartaService cartaService;
+    private final CupoEspecialService cupoEspecialService;
+    private final FotoService fotoService;
     private final CurrentUser currentUser;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
-                                   CartaService cartaService, CurrentUser currentUser) {
+                                   CartaService cartaService, CupoEspecialService cupoEspecialService,
+                                   FotoService fotoService, CurrentUser currentUser) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
+        this.cupoEspecialService = cupoEspecialService;
+        this.fotoService = fotoService;
         this.currentUser = currentUser;
     }
 
@@ -92,6 +103,38 @@ public class RestaurantePanelService {
         }
         reserva.setEstadoReserva(estado);
         return ReservaPanelDTO.from(reservaRepo.save(reserva));
+    }
+
+    public List<CupoEspecialDTO> getCuposEspeciales() {
+        return cupoEspecialService.listarProximos(miRestaurante());
+    }
+
+    public CupoEspecialDTO guardarCupoEspecial(LocalDate fecha, CupoEspecialRequestDTO request) {
+        return cupoEspecialService.guardar(miRestaurante(), fecha, request);
+    }
+
+    public void eliminarCupoEspecial(LocalDate fecha) {
+        cupoEspecialService.eliminar(miRestaurante(), fecha);
+    }
+
+    public List<FotoDTO> getFotos() {
+        return fotoService.listar(miRestaurante().getId());
+    }
+
+    public FotoDTO agregarFoto(MultipartFile archivo) {
+        return fotoService.agregar(miRestaurante(), archivo);
+    }
+
+    public List<FotoDTO> elegirPortada(Long fotoId) {
+        return fotoService.elegirPortada(miRestaurante(), fotoId);
+    }
+
+    public FotoDTO reemplazarFoto(Long fotoId, MultipartFile archivo) {
+        return fotoService.reemplazar(miRestaurante(), fotoId, archivo);
+    }
+
+    public void eliminarFoto(Long fotoId) {
+        fotoService.eliminar(miRestaurante(), fotoId);
     }
 
     private Restaurant miRestaurante() {

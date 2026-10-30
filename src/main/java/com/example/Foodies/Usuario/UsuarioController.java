@@ -1,5 +1,8 @@
 package com.example.Foodies.Usuario;
 
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Usuario.dtos.LoginRequestDTO;
@@ -35,9 +38,13 @@ public class UsuarioController {
         return ResponseEntity.created(URI.create("/api/usuarios/"+devolver.id())).body(devolver);
     }
 
-    @PostMapping("/register/restaurante")
-    public ResponseEntity<UsuarioDetailDTO> handleRegisterRestaurant(@Valid @RequestBody RegistroRestauranteRequestDTO usuario){
-        UsuarioDetailDTO devolver = usuarioService.peticionRegistroRestaurante(usuario);
+    /** Multipart: `datos` (JSON), `fotos` (3 a 5) y `portada` (índice en `fotos` de la que se muestra en el catálogo). */
+    @PostMapping(value = "/register/restaurante", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UsuarioDetailDTO> handleRegisterRestaurant(
+            @Valid @RequestPart("datos") RegistroRestauranteRequestDTO usuario,
+            @RequestPart(value = "fotos", required = false) List<MultipartFile> fotos,
+            @RequestParam(value = "portada", required = false) Integer portada){
+        UsuarioDetailDTO devolver = usuarioService.peticionRegistroRestaurante(usuario, fotos, portada);
         return ResponseEntity.created(URI.create("/api/restaurant/"+ devolver.id())).body(devolver);
     }
 }

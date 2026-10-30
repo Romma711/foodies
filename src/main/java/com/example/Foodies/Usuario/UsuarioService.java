@@ -1,5 +1,7 @@
 package com.example.Foodies.Usuario;
 
+import com.example.Foodies.Foto.FotoService;
+import org.springframework.web.multipart.MultipartFile;
 import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
@@ -37,6 +39,8 @@ public class UsuarioService implements UserDetailsService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private UsuarioMapper usuarioMapper;
+    @Autowired
+    private FotoService fotoService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -108,7 +112,10 @@ public class UsuarioService implements UserDetailsService {
     }
 
     @Transactional
-    public UsuarioDetailDTO peticionRegistroRestaurante(RegistroRestauranteRequestDTO r){
+    public UsuarioDetailDTO peticionRegistroRestaurante(RegistroRestauranteRequestDTO r, List<MultipartFile> fotos,
+                                                        Integer portada){
+        // Antes de crear nada: sin fotos válidas no hay registro.
+        FotoService.validarRegistro(fotos, portada);
         if(usuarioRepo.existsByEmail(r.getEmail())){
             throw new EmailDuplicadoException("El email esta en uso");
         }
@@ -126,7 +133,8 @@ public class UsuarioService implements UserDetailsService {
         rest.setCupoMaximo(r.getCupoMaximo());
 
         rest.setUsuario(usuario);
-        restaurantRepo.save(rest);
+        restaurantRepo.saveAndFlush(rest);
+        fotoService.guardarRegistro(rest, fotos, portada);
 
 
         return usuarioMapper.toDTO(usuario);
