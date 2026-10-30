@@ -10,6 +10,8 @@ public record RestaurantListDTO(
         EspecialidadDeComida especialidad,
         // Map coordinates (Phase 3); null until an admin sets the location.
         Double latitud,
-        Double longitud
+        Double longitud,
+        /** URL de la portada, o null si el restaurante todavía no cargó fotos. */
+        String fotoPortada
 ) {
 }

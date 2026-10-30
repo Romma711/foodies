@@ -1,5 +1,6 @@
 package com.example.Foodies;
 
+import com.example.Foodies.Foto.FotoRestauranteRepository;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
@@ -19,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,6 +46,9 @@ class RestaurantePanelTest {
 
     @Autowired
     private RestaurantRepository restaurantRepo;
+
+    @Autowired
+    private FotoRestauranteRepository fotoRepo;
 
     private record Encargado(String token, Long restaurantId, String nombre) {}
 
@@ -99,7 +104,10 @@ class RestaurantePanelTest {
         Encargado encargado = nuevoEncargado();
 
         assertThat(rest.getForEntity("/api/restaurantes", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(get("/api/restaurantes/" + encargado.restaurantId(), null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> detalle = get("/api/restaurantes/" + encargado.restaurantId(), null);
+        assertThat(detalle.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // La capacidad es un dato interno del restaurante: el catálogo público no la expone.
+        assertThat(detalle.getBody()).containsEntry("nombre", encargado.nombre()).doesNotContainKey("cupoMaximo");
     }
 
     @Test
@@ -185,7 +193,400 @@ class RestaurantePanelTest {
         assertThat(aceptada.getBody()).containsEntry("estado", "ACEPTADA");
     }
 
+    @Test
+    void elCupoSeCalculaPorRestauranteYSinContarLasCanceladas() {
+        Encargado encargado = nuevoEncargado();
+        Encargado otro = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(5);
+
+        // El otro restaurante llena su cupo (10) ese mismo día: no debe afectar al primero.
+        assertThat(reservar(cliente, otro.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> llena = reservar(cliente, encargado.restaurantId(), fecha, 10);
+        assertThat(llena.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<Map> sinLugar = reservar(cliente, encargado.restaurantId(), fecha, 1);
+        assertThat(sinLugar.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        // El cliente se entera de que no hay lugar, pero no de cuál es la capacidad.
+        assertThat(sinLugar.getBody()).containsEntry("mensaje",
+                "No hay lugar para 1 persona ese día. Probá con otra fecha o menos personas.");
+
+        // Al cancelarla, el cupo vuelve a estar libre.
+        String estadoPath = "/api/reservas/" + ((Number) llena.getBody().get("id")).longValue() + "/estado";
+        assertThat(send(HttpMethod.PATCH, estadoPath, encargado.token(), Map.of("estado", "CANCELADA")).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void elEncargadoConfiguraElPorcentajeDeAutoAceptacion() {
+        Encargado encargado = nuevoEncargado();
+
+        assertThat(get("/api/restaurantes/me", encargado.token()).getBody())
+                .containsEntry("porcentajeAutoAceptacion", 0);
+
+        ResponseEntity<Map> actualizado = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
+                Map.of("porcentajeAutoAceptacion", 60));
+        assertThat(actualizado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(actualizado.getBody()).containsEntry("porcentajeAutoAceptacion", 60);
+        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getPorcentajeAutoAceptacion())
+                .isEqualTo(60);
+
+        for (int invalido : new int[]{-1, 101}) {
+            ResponseEntity<Map> rechazado = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
+                    Map.of("porcentajeAutoAceptacion", invalido));
+            assertThat(rechazado.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getPorcentajeAutoAceptacion())
+                .isEqualTo(60);
+
+        // Cambiar otro campo no apaga la auto-aceptación.
+        send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("nombre", "Otro nombre"));
+        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getPorcentajeAutoAceptacion())
+                .isEqualTo(60);
+
+        ResponseEntity<Map> apagado = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
+                Map.of("porcentajeAutoAceptacion", 0));
+        assertThat(apagado.getBody()).containsEntry("porcentajeAutoAceptacion", 0);
+    }
+
+    @Test
+    void lasReservasSeAceptanSolasHastaElPorcentajeYLaQueLoCruzaQuedaPendiente() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(6);
+        // Cupo 10 al 60%: se aceptan solas hasta 6 personas.
+        send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 60));
+
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        // 4 aceptadas + 3 = 7 > 6: cruza el límite, queda pendiente.
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 3))).isEqualTo("PENDIENTE");
+        // 4 aceptadas + 2 = 6: justo en el límite, se acepta.
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        // Ya hay 6 aceptadas: todo lo que sigue queda pendiente.
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void sinAutoAceptacionLasReservasQuedanPendientes() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), LocalDate.now().plusDays(7), 1)))
+                .isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void elEncargadoGestionaLosCuposEspecialesDeSuRestaurante() {
+        Encargado encargado = nuevoEncargado();
+        Encargado otro = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(8);
+        String path = "/api/restaurantes/me/cupos-especiales/" + fecha;
+
+        assertThat(send(HttpMethod.PUT, path, null, Map.of("cupo", 4)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(send(HttpMethod.PUT, path, cliente.token(), Map.of("cupo", 4)).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        ResponseEntity<Map> creado = send(HttpMethod.PUT, path, encargado.token(),
+                Map.of("cupo", 4, "motivo", "Cumpleaños privado"));
+        assertThat(creado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(creado.getBody())
+                .containsEntry("fecha", fecha.toString())
+                .containsEntry("cupo", 4)
+                .containsEntry("motivo", "Cumpleaños privado")
+                .containsEntry("reservadas", 0);
+
+        // Volver a guardar la misma fecha la modifica, no crea otra.
+        send(HttpMethod.PUT, path, encargado.token(), Map.of("cupo", 3));
+        ResponseEntity<List> lista = listarCuposEspeciales(encargado.token());
+        assertThat(lista.getBody()).hasSize(1);
+        assertThat(((Map<?, ?>) lista.getBody().get(0)).get("cupo")).isEqualTo(3);
+        assertThat(listarCuposEspeciales(otro.token()).getBody()).isEmpty();
+
+        assertThat(send(HttpMethod.DELETE, path, encargado.token(), null).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(listarCuposEspeciales(encargado.token()).getBody()).isEmpty();
+    }
+
+    @Test
+    void elCupoEspecialSeValida() {
+        Encargado encargado = nuevoEncargado();
+        String base = "/api/restaurantes/me/cupos-especiales/";
+        LocalDate fecha = LocalDate.now().plusDays(9);
+
+        assertThat(send(HttpMethod.PUT, base + fecha, encargado.token(), Map.of("cupo", -1)).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        // Sirve para reducir la capacidad: no puede superar la capacidad normal (10).
+        assertThat(send(HttpMethod.PUT, base + fecha, encargado.token(), Map.of("cupo", 11)).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(send(HttpMethod.PUT, base + LocalDate.now().minusDays(1), encargado.token(), Map.of("cupo", 4))
+                .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(listarCuposEspeciales(encargado.token()).getBody()).isEmpty();
+    }
+
+    @Test
+    void noSePuedeBajarElCupoPorDebajoDeLoYaReservado() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(10);
+        String path = "/api/restaurantes/me/cupos-especiales/" + fecha;
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 6).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<Map> rechazado = send(HttpMethod.PUT, path, encargado.token(), Map.of("cupo", 5));
+        assertThat(rechazado.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(rechazado.getBody()).containsEntry("mensaje",
+                "Ya hay 6 personas reservadas ese día. No podés bajar el cupo a menos de 6.");
+        assertThat(listarCuposEspeciales(encargado.token()).getBody()).isEmpty();
+
+        ResponseEntity<Map> aceptado = send(HttpMethod.PUT, path, encargado.token(), Map.of("cupo", 6));
+        assertThat(aceptado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(aceptado.getBody()).containsEntry("reservadas", 6);
+    }
+
+    @Test
+    void lasReservasDeEseDiaUsanElCupoEspecial() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(11);
+        send(HttpMethod.PUT, "/api/restaurantes/me/cupos-especiales/" + fecha, encargado.token(), Map.of("cupo", 4));
+
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> sinLugar = reservar(cliente, encargado.restaurantId(), fecha, 1);
+        assertThat(sinLugar.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat((String) sinLugar.getBody().get("mensaje")).startsWith("No hay lugar");
+
+        // Los demás días siguen con la capacidad normal.
+        assertThat(reservar(cliente, encargado.restaurantId(), fecha.plusDays(1), 10).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void laAceptacionAutomaticaSeCalculaSobreElCupoEspecial() {
+        Encargado encargado = nuevoEncargado();
+        Cliente cliente = nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(12);
+        // 50% de un cupo especial de 4: se aceptan solas hasta 2 personas.
+        send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 50));
+        send(HttpMethod.PUT, "/api/restaurantes/me/cupos-especiales/" + fecha, encargado.token(), Map.of("cupo", 4));
+
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void elRegistroExigeEntreTresYCincoFotosYUnaPortada() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String nombre = "Resto fotos " + suffix;
+        Map<String, Object> datos = datosRegistro("fotos-" + suffix + "@test.com", nombre, suffix);
+        String url = "/api/auth/register/restaurante";
+
+        // Sin fotos, con pocas, con demasiadas, con una portada que no existe, con un archivo que no es imagen
+        // o muy pesado: se rechaza y no se crea nada.
+        var sinFotos = RegistroRestauranteMultipart.entity(RegistroRestauranteMultipart.soloDatos(datos));
+        var noEsImagen = RegistroRestauranteMultipart.soloDatos(datos);
+        noEsImagen.add("fotos", RegistroRestauranteMultipart.archivo("f0.jpg", "no soy una foto".getBytes(StandardCharsets.UTF_8)));
+        noEsImagen.add("fotos", RegistroRestauranteMultipart.archivo("f1.jpg", RegistroRestauranteMultipart.JPEG));
+        noEsImagen.add("fotos", RegistroRestauranteMultipart.archivo("f2.jpg", RegistroRestauranteMultipart.JPEG));
+        var muyGrande = RegistroRestauranteMultipart.soloDatos(datos);
+        byte[] grande = Arrays.copyOf(RegistroRestauranteMultipart.JPEG, 5 * 1024 * 1024 + 1);
+        muyGrande.add("fotos", RegistroRestauranteMultipart.archivo("f0.jpg", grande));
+        muyGrande.add("fotos", RegistroRestauranteMultipart.archivo("f1.jpg", RegistroRestauranteMultipart.JPEG));
+        muyGrande.add("fotos", RegistroRestauranteMultipart.archivo("f2.jpg", RegistroRestauranteMultipart.JPEG));
+
+        List<HttpEntity<?>> invalidos = List.of(
+                sinFotos,
+                RegistroRestauranteMultipart.conFotos(datos, 2),
+                RegistroRestauranteMultipart.conFotos(datos, 6),
+                RegistroRestauranteMultipart.conFotos(datos, 3, 3),
+                RegistroRestauranteMultipart.entity(noEsImagen),
+                RegistroRestauranteMultipart.entity(muyGrande));
+        for (HttpEntity<?> invalido : invalidos) {
+            assertThat(rest.postForEntity(url, invalido, Map.class).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+        ResponseEntity<Map> pocas = rest.postForEntity(url, RegistroRestauranteMultipart.conFotos(datos, 2), Map.class);
+        assertThat(pocas.getBody()).containsEntry("mensaje", "Subí entre 3 y 5 fotos del restaurante");
+        ResponseEntity<Map> sinPortada = rest.postForEntity(url, RegistroRestauranteMultipart.conFotos(datos, 3, 3), Map.class);
+        assertThat(sinPortada.getBody()).containsEntry("mensaje", "Elegí cuál de las fotos es la portada");
+        assertThat(restaurantRepo.findAll()).noneMatch(r -> r.getNombre().equals(nombre));
+
+        // 5 fotos es el máximo; la portada es la que se eligió (la tercera, la única en JPEG).
+        assertThat(rest.postForEntity(url, RegistroRestauranteMultipart.conFotos(datos, 5, 2), Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+        Long id = restaurantRepo.findAll().stream().filter(r -> r.getNombre().equals(nombre))
+                .map(Restaurant::getId).findFirst().orElseThrow();
+        List<?> fotos = rest.exchange("/api/restaurantes/" + id + "/fotos", HttpMethod.GET, null, List.class).getBody();
+        assertThat(fotos).hasSize(5);
+        assertThat(fotos).filteredOn(f -> Boolean.TRUE.equals(((Map<?, ?>) f).get("portada"))).hasSize(1);
+        Map<?, ?> portada = (Map<?, ?>) fotos.get(0);
+        assertThat(portada.get("portada")).isEqualTo(true);
+        assertThat(rest.getForEntity((String) portada.get("url"), byte[].class).getHeaders().getContentType())
+                .isEqualTo(MediaType.IMAGE_JPEG);
+    }
+
+    @Test
+    void laPortadaElegidaEsLaMiniaturaDelCatalogo() {
+        Encargado encargado = nuevoEncargado();
+
+        ResponseEntity<List> fotos = rest.exchange("/api/restaurantes/" + encargado.restaurantId() + "/fotos",
+                HttpMethod.GET, null, List.class);
+        assertThat(fotos.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(fotos.getBody()).hasSize(3);
+        Map<?, ?> portada = (Map<?, ?>) fotos.getBody().get(0);
+        assertThat(portada.get("portada")).isEqualTo(true);
+        assertThat(((Map<?, ?>) fotos.getBody().get(1)).get("portada")).isEqualTo(false);
+
+        assertThat(fotoPortadaEnCatalogo(encargado.restaurantId())).isEqualTo(portada.get("url"));
+
+        ResponseEntity<byte[]> imagen = rest.getForEntity((String) portada.get("url"), byte[].class);
+        assertThat(imagen.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(imagen.getHeaders().getContentType()).isEqualTo(MediaType.IMAGE_JPEG);
+    }
+
+    @Test
+    void elEncargadoGestionaSusFotosRespetandoLosLimites() {
+        Encargado encargado = nuevoEncargado();
+        Encargado otro = nuevoEncargado();
+        List<Map<?, ?>> fotos = misFotos(encargado.token());
+        assertThat(fotos).hasSize(3);
+        Long portadaId = idDe(fotos.get(0));
+        Long otraId = idDe(fotos.get(1));
+
+        ResponseEntity<Map> nueva = subirFoto(encargado.token(), RegistroRestauranteMultipart.WEBP);
+        assertThat(nueva.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(nueva.getBody()).containsEntry("portada", false);
+        assertThat(subirFoto(encargado.token(), RegistroRestauranteMultipart.JPEG).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> sexta = subirFoto(encargado.token(), RegistroRestauranteMultipart.JPEG);
+        assertThat(sexta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(sexta.getBody()).containsEntry("mensaje", "Podés tener hasta 5 fotos. Borrá una antes de subir otra.");
+
+        // La portada no se borra: primero hay que elegir otra.
+        ResponseEntity<Map> borrarPortada = send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + portadaId, encargado.token(), null);
+        assertThat(borrarPortada.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(borrarPortada.getBody()).containsEntry("mensaje",
+                "La portada no se puede borrar. Elegí otra portada antes de borrar esta.");
+
+        // Cambiar la portada: queda una sola, va primero y es la miniatura del catálogo.
+        ResponseEntity<List> conNuevaPortada = rest.exchange("/api/restaurantes/me/fotos/" + otraId + "/portada",
+                HttpMethod.PUT, new HttpEntity<>(headers(encargado.token())), List.class);
+        assertThat(conNuevaPortada.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Map<?, ?>> despues = misFotos(encargado.token());
+        assertThat(idDe(despues.get(0))).isEqualTo(otraId);
+        assertThat(despues).filteredOn(f -> Boolean.TRUE.equals(f.get("portada"))).hasSize(1);
+        assertThat(fotoPortadaEnCatalogo(encargado.restaurantId())).isEqualTo(despues.get(0).get("url"));
+
+        // Reemplazar mantiene si es portada o no, y borra el archivo anterior.
+        Path anterior = storedFile((String) despues.get(0).get("url"));
+        ResponseEntity<Map> reemplazada = reemplazarFoto(encargado.token(), otraId, RegistroRestauranteMultipart.PNG);
+        assertThat(reemplazada.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(reemplazada.getBody()).containsEntry("portada", true);
+        assertThat(anterior).doesNotExist();
+        assertThat(storedFile((String) reemplazada.getBody().get("url"))).exists();
+
+        // Otro encargado no puede tocar estas fotos.
+        assertThat(send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + portadaId, otro.token(), null)
+                .getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(rest.exchange("/api/restaurantes/me/fotos/" + portadaId + "/portada", HttpMethod.PUT,
+                new HttpEntity<>(headers(otro.token())), Map.class).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // Se puede bajar hasta 3 fotos, no menos. La que era portada ya no lo es y se puede borrar.
+        List<Long> borrables = misFotos(encargado.token()).stream()
+                .filter(f -> Boolean.FALSE.equals(f.get("portada"))).map(RestaurantePanelTest::idDe).toList();
+        assertThat(borrables).hasSize(4).contains(portadaId);
+        assertThat(send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + borrables.get(0), encargado.token(), null)
+                .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + borrables.get(1), encargado.token(), null)
+                .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        ResponseEntity<Map> minimo = send(HttpMethod.DELETE, "/api/restaurantes/me/fotos/" + borrables.get(2), encargado.token(), null);
+        assertThat(minimo.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(minimo.getBody()).containsEntry("mensaje",
+                "Tenés que tener al menos 3 fotos. Subí otra antes de borrar esta.");
+        assertThat(misFotos(encargado.token())).hasSize(3);
+    }
+
+    @Test
+    void sinFotosLaPrimeraQueSeSubeEsLaPortada() {
+        // Restaurantes registrados antes de que las fotos fueran obligatorias.
+        Encargado encargado = nuevoEncargado();
+        fotoRepo.deleteAll(fotoRepo.findAllByRestaurant_Id(encargado.restaurantId()));
+
+        ResponseEntity<Map> primera = subirFoto(encargado.token(), RegistroRestauranteMultipart.JPEG);
+        assertThat(primera.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(primera.getBody()).containsEntry("portada", true);
+        assertThat(subirFoto(encargado.token(), RegistroRestauranteMultipart.PNG).getBody()).containsEntry("portada", false);
+        assertThat(fotoPortadaEnCatalogo(encargado.restaurantId())).isEqualTo(primera.getBody().get("url"));
+    }
+
+    @Test
+    void elAdminVeLasFotosDeLosRestaurantesAAprobar() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String nombre = "Resto pendiente " + suffix;
+        assertThat(rest.postForEntity("/api/auth/register/restaurante",
+                RegistroRestauranteMultipart.conFotos(datosRegistro("pend-" + suffix + "@test.com", nombre, suffix), 3),
+                Map.class).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        ResponseEntity<List> pendientes = rest.exchange("/api/admin/requests", HttpMethod.GET,
+                new HttpEntity<>(headers(login("admin@foodies.com", "admin123"))), List.class);
+        Map<?, ?> pendiente = (Map<?, ?>) pendientes.getBody().stream()
+                .filter(p -> nombre.equals(((Map<?, ?>) p).get("nombre"))).findFirst().orElseThrow();
+        assertThat((List<?>) pendiente.get("fotos")).hasSize(3);
+    }
+
     // --- helpers ---
+
+    private Object fotoPortadaEnCatalogo(Long restaurantId) {
+        ResponseEntity<List> catalogo = rest.exchange("/api/restaurantes", HttpMethod.GET, null, List.class);
+        Map<?, ?> item = (Map<?, ?>) catalogo.getBody().stream()
+                .filter(r -> ((Number) ((Map<?, ?>) r).get("id")).longValue() == restaurantId)
+                .findFirst().orElseThrow();
+        return item.get("fotoPortada");
+    }
+
+    private List<Map<?, ?>> misFotos(String token) {
+        ResponseEntity<List> resp = rest.exchange("/api/restaurantes/me/fotos", HttpMethod.GET,
+                new HttpEntity<>(headers(token)), List.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return ((List<?>) resp.getBody()).stream().<Map<?, ?>>map(f -> (Map<?, ?>) f).toList();
+    }
+
+    private static Long idDe(Map<?, ?> foto) {
+        return ((Number) foto.get("id")).longValue();
+    }
+
+    private ResponseEntity<Map> subirFoto(String token, byte[] contenido) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("archivo", RegistroRestauranteMultipart.archivo("foto.img", contenido));
+        HttpHeaders headers = headers(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        return rest.exchange("/api/restaurantes/me/fotos", HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
+    }
+
+    private ResponseEntity<Map> reemplazarFoto(String token, Long fotoId, byte[] contenido) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("archivo", RegistroRestauranteMultipart.archivo("foto.img", contenido));
+        HttpHeaders headers = headers(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        return rest.exchange("/api/restaurantes/me/fotos/" + fotoId, HttpMethod.PUT, new HttpEntity<>(body, headers), Map.class);
+    }
+
+    private ResponseEntity<List> listarCuposEspeciales(String token) {
+        return rest.exchange("/api/restaurantes/me/cupos-especiales", HttpMethod.GET,
+                new HttpEntity<>(headers(token)), List.class);
+    }
+
+    private ResponseEntity<Map> reservar(Cliente cliente, Long restaurantId, LocalDate fecha, int cantidad) {
+        return send(HttpMethod.POST, "/api/reservas", cliente.token(), Map.of(
+                "cantidad", cantidad,
+                "fechaReserva", fecha.toString(),
+                "horarioLlegada", "20:00",
+                "idUsuario", cliente.id(),
+                "idRestaurant", restaurantId));
+    }
+
+    private static String estado(ResponseEntity<Map> reserva) {
+        assertThat(reserva.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return (String) reserva.getBody().get("estadoReserva");
+    }
 
     private ResponseEntity<Map> get(String path, String token) {
         return rest.exchange(path, HttpMethod.GET, new HttpEntity<>(headers(token)), Map.class);
@@ -234,14 +635,8 @@ class RestaurantePanelTest {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         String email = "encargado-" + suffix + "@test.com";
         String nombre = "Resto " + suffix;
-        ResponseEntity<UsuarioDetailDTO> reg = rest.postForEntity("/api/auth/register/restaurante", Map.of(
-                "email", email,
-                "password", "secret1",
-                "nombreRestaurante", nombre,
-                "direccion", "Calle " + suffix,
-                "telefono", "2230000000",
-                "especialidadDeComida", "PASTAS",
-                "cupoMaximo", 10), UsuarioDetailDTO.class);
+        ResponseEntity<UsuarioDetailDTO> reg = rest.postForEntity("/api/auth/register/restaurante",
+                RegistroRestauranteMultipart.conFotos(datosRegistro(email, nombre, suffix), 3), UsuarioDetailDTO.class);
         assertThat(reg.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
         ResponseEntity<UsuarioDetailDTO> aprobado = rest.exchange("/api/admin/approved/{id}", HttpMethod.PUT,
@@ -255,6 +650,17 @@ class RestaurantePanelTest {
                 .findFirst()
                 .orElseThrow();
         return new Encargado(login(email, "secret1"), restaurantId, nombre);
+    }
+
+    private static Map<String, Object> datosRegistro(String email, String nombre, String suffix) {
+        return Map.of(
+                "email", email,
+                "password", "secret1",
+                "nombreRestaurante", nombre,
+                "direccion", "Calle " + suffix,
+                "telefono", "2230000000",
+                "especialidadDeComida", "PASTAS",
+                "cupoMaximo", 10);
     }
 
     private Cliente nuevoCliente() {

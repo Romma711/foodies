@@ -8,6 +8,7 @@ public record MiRestauranteDTO(
         Long id,
         String nombre,
         Integer cupoMaximo,
+        Integer porcentajeAutoAceptacion,
         String ubicacion,
         EspecialidadDeComida especialidad,
         CartaDTO carta

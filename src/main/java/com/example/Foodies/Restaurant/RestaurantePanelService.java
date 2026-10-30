@@ -3,6 +3,11 @@ package com.example.Foodies.Restaurant;
 import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Carta.Dtos.CartaDTO;
 import com.example.Foodies.Config.CurrentUser;
+import com.example.Foodies.CupoEspecial.CupoEspecialService;
+import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
+import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
+import com.example.Foodies.Foto.Dtos.FotoDTO;
+import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
@@ -16,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
@@ -26,13 +32,18 @@ public class RestaurantePanelService {
     private final RestaurantRepository restaurantRepo;
     private final ReservaRepository reservaRepo;
     private final CartaService cartaService;
+    private final CupoEspecialService cupoEspecialService;
+    private final FotoService fotoService;
     private final CurrentUser currentUser;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
-                                   CartaService cartaService, CurrentUser currentUser) {
+                                   CartaService cartaService, CupoEspecialService cupoEspecialService,
+                                   FotoService fotoService, CurrentUser currentUser) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
+        this.cupoEspecialService = cupoEspecialService;
+        this.fotoService = fotoService;
         this.currentUser = currentUser;
     }
 
@@ -56,6 +67,9 @@ public class RestaurantePanelService {
         }
         if (patch.getEspecialidad() != null) {
             restaurant.setEspecialidad(patch.getEspecialidad());
+        }
+        if (patch.getPorcentajeAutoAceptacion() != null) {
+            restaurant.setPorcentajeAutoAceptacion(patch.getPorcentajeAutoAceptacion());
         }
         return toDto(restaurantRepo.save(restaurant));
     }
@@ -91,14 +105,47 @@ public class RestaurantePanelService {
         return ReservaPanelDTO.from(reservaRepo.save(reserva));
     }
 
+    public List<CupoEspecialDTO> getCuposEspeciales() {
+        return cupoEspecialService.listarProximos(miRestaurante());
+    }
+
+    public CupoEspecialDTO guardarCupoEspecial(LocalDate fecha, CupoEspecialRequestDTO request) {
+        return cupoEspecialService.guardar(miRestaurante(), fecha, request);
+    }
+
+    public void eliminarCupoEspecial(LocalDate fecha) {
+        cupoEspecialService.eliminar(miRestaurante(), fecha);
+    }
+
+    public List<FotoDTO> getFotos() {
+        return fotoService.listar(miRestaurante().getId());
+    }
+
+    public FotoDTO agregarFoto(MultipartFile archivo) {
+        return fotoService.agregar(miRestaurante(), archivo);
+    }
+
+    public List<FotoDTO> elegirPortada(Long fotoId) {
+        return fotoService.elegirPortada(miRestaurante(), fotoId);
+    }
+
+    public FotoDTO reemplazarFoto(Long fotoId, MultipartFile archivo) {
+        return fotoService.reemplazar(miRestaurante(), fotoId, archivo);
+    }
+
+    public void eliminarFoto(Long fotoId) {
+        fotoService.eliminar(miRestaurante(), fotoId);
+    }
+
     private Restaurant miRestaurante() {
         return restaurantRepo.findByUsuario_Email(currentUser.email())
                 .orElseThrow(() -> new EntityNotFoundException("No tenés un restaurante asociado"));
     }
 
     private MiRestauranteDTO toDto(Restaurant restaurant) {
+        Integer porcentaje = restaurant.getPorcentajeAutoAceptacion();
         return new MiRestauranteDTO(restaurant.getId(), restaurant.getNombre(), restaurant.getCupoMaximo(),
-                restaurant.getUbicacion(), restaurant.getEspecialidad(),
+                porcentaje == null ? 0 : porcentaje, restaurant.getUbicacion(), restaurant.getEspecialidad(),
                 cartaService.buscarPorRestaurante(restaurant).orElse(null));
     }
 
@@ -114,6 +161,10 @@ public class RestaurantePanelService {
         }
         if (patch.getCupoMaximo() != null && patch.getCupoMaximo() < 1) {
             throw new BusinessException("El cupo máximo debe ser al menos 1");
+        }
+        Integer porcentaje = patch.getPorcentajeAutoAceptacion();
+        if (porcentaje != null && (porcentaje < 0 || porcentaje > 100)) {
+            throw new BusinessException("El porcentaje de aceptación automática debe estar entre 0 y 100");
         }
     }
 }

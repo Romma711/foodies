@@ -1,5 +1,6 @@
 package com.example.Foodies.Moderacion;
 
+import com.example.Foodies.RegistroRestauranteMultipart;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Usuario.UsuarioRepository;
@@ -258,14 +259,15 @@ class EntidadesControllerTest {
     private String registrarRestaurante() {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         String nombre = "Resto " + suffix;
-        ResponseEntity<UsuarioDetailDTO> reg = rest.postForEntity("/api/auth/register/restaurante", Map.of(
+        ResponseEntity<UsuarioDetailDTO> reg = rest.postForEntity("/api/auth/register/restaurante",
+                RegistroRestauranteMultipart.conFotos(Map.of(
                 "email", "resto-" + suffix + "@test.com",
                 "password", "secret1",
                 "nombreRestaurante", nombre,
                 "direccion", "Calle " + suffix,
                 "telefono", "2230000000",
                 "especialidadDeComida", "PASTAS",
-                "cupoMaximo", 10), UsuarioDetailDTO.class);
+                "cupoMaximo", 10), 3), UsuarioDetailDTO.class);
         assertThat(reg.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return nombre;
     }
