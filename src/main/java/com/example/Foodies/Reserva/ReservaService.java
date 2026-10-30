@@ -1,5 +1,6 @@
 package com.example.Foodies.Reserva;
 
+import com.example.Foodies.CupoEspecial.CupoEspecialService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.*;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -15,9 +16,11 @@ import java.lang.Exception;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Predicate;
 
 @Service
 public class ReservaService {
@@ -30,6 +33,8 @@ public class ReservaService {
 
     @Autowired
     private RestaurantRepository restauranteRepo;
+    @Autowired
+    private CupoEspecialService cupoEspecialService;
 
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
         Usuario usuario = usuarioRepo.findById(reserva.getIdUsuario())
@@ -59,25 +64,24 @@ public class ReservaService {
             // Captura cualquier otra excepción relacionada con fechas
             throw new BusinessException("Error al procesar la fecha. Verifique el formato yyyy-MM-dd");
         }
-        //Aca valida si el cupo del dia no esta lleno
-        try{
-            ReservaValidations.validateCupo(
-                    reserva.getCantidad(),
-                    reservaRepo.findAllByFechaReserva(fecha)
-                            .stream()
-                            .mapToInt(Reserva::getCantidad)
-                            .sum(),
-                    restaurante.getCupoMaximo());
-        }catch (NotValidCupoException e){
-                throw new NotValidCupoException(e.getMessage());
-        }
-
+        //Aca valida si el cupo del dia no esta lleno, contando solo las reservas no canceladas de este restaurante
+        //El cupo del dia es el cupo especial si el restaurante cargo uno, si no su capacidad normal
+        int cupoDelDia = cupoEspecialService.cupoDelDia(restaurante, LocalDate.parse(reserva.getFechaReserva()));
+        List<Reserva> reservasDelDia = reservaRepo.findAllByRestaurant_IdAndFechaReserva(restaurante.getId(), fecha);
+        ReservaValidations.validateCupo(
+                reserva.getCantidad(),
+                personas(reservasDelDia, estado -> estado != EstadoReserva.CANCELADA),
+                cupoDelDia);
 
         Reserva reservanueva = new Reserva();
         reservanueva.setCantidad(reserva.getCantidad());
         reservanueva.setFechaReserva(fecha);
         reservanueva.setHorariollegada(horaParseada);
-        reservanueva.setEstadoReserva(EstadoReserva.PENDIENTE);
+        reservanueva.setEstadoReserva(estadoInicial(
+                restaurante,
+                cupoDelDia,
+                reserva.getCantidad(),
+                personas(reservasDelDia, estado -> estado == EstadoReserva.ACEPTADA)));
         reservanueva.setUsuario(usuario);
         reservanueva.setRestaurant(restaurante);
         reservanueva = reservaRepo.save(reservanueva);
@@ -91,6 +95,27 @@ public class ReservaService {
                 reservanueva.getUsuario().getNombre(),
                 reservanueva.getRestaurant().getNombre()
         );
+    }
+
+    private static int personas(List<Reserva> reservas, Predicate<EstadoReserva> estado) {
+        return reservas.stream()
+                .filter(r -> estado.test(r.getEstadoReserva()))
+                .mapToInt(Reserva::getCantidad)
+                .sum();
+    }
+
+    /**
+     * Se acepta sola si el restaurante tiene auto-aceptación y, sumando esta reserva, las personas aceptadas del día
+     * no superan el porcentaje elegido del cupo del día. La reserva que cruza el límite queda pendiente.
+     */
+    private static EstadoReserva estadoInicial(Restaurant restaurante, int cupoDelDia, int cantidad,
+                                               int aceptadasDelDia) {
+        Integer porcentaje = restaurante.getPorcentajeAutoAceptacion();
+        if (porcentaje == null || porcentaje <= 0) {
+            return EstadoReserva.PENDIENTE;
+        }
+        int limite = cupoDelDia * porcentaje / 100;
+        return aceptadasDelDia + cantidad <= limite ? EstadoReserva.ACEPTADA : EstadoReserva.PENDIENTE;
     }
 
     public List<ReservaListDTO> getAllReservas() {

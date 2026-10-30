@@ -10,7 +10,6 @@ import java.util.List;
 public record RestaurantDetailDTO(
         Long id,
         String nombre,
-        Integer cupoMaximo,
         String ubicacion,
         EspecialidadDeComida especialidad
 

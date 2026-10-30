@@ -5,11 +5,15 @@ import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -19,6 +23,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class FlujoCompletoTest {
+
+    @TempDir
+    static Path storageDir;
+
+    @DynamicPropertySource
+    static void storage(DynamicPropertyRegistry registry) {
+        registry.add("storage.provider", () -> "local");
+        registry.add("storage.local.dir", () -> storageDir.toString());
+    }
 
     @Autowired
     private TestRestTemplate rest;
@@ -62,14 +75,14 @@ class FlujoCompletoTest {
             // 3. Registrar restaurante (encargado pendiente)
             ResponseEntity<UsuarioDetailDTO> regRes = rest.postForEntity(
                     "/api/auth/register/restaurante",
-                    Map.of(
+                    RegistroRestauranteMultipart.conFotos(Map.of(
                             "email", "encargado" + i + "@test.com",
                             "password", "secret1",
                             "nombreRestaurante", "Resto" + i,
                             "direccion", "Direccion " + i,
                             "telefono", "22" + i,
                             "especialidadDeComida", "PASTAS",
-                            "cupoMaximo", 10),
+                            "cupoMaximo", 10), 3),
                     UsuarioDetailDTO.class);
             assertThat(regRes.getStatusCode()).isEqualTo(HttpStatus.CREATED);
             assertThat(regRes.getBody().rol()).isEqualTo("ROLE_PENDIENTE");
