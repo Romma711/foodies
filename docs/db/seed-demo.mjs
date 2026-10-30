@@ -83,10 +83,30 @@ function safeJson(text) {
 const login = async ({ email, password }) => (await call('POST', '/auth/login', { email, password })).Token;
 const slug = (texto) => texto.normalize('NFD').replace(/[^\w]/g, '').toLowerCase();
 
+// Restaurant sign-up is multipart and needs 3 to 5 photos: three 1x1 PNGs in warm tones.
+const FOTOS_DEMO = [
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGN40RUHAAQuAdF9dnbFAAAAAElFTkSuQmCC',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4dHIaAAUCAlLeoKX0AAAAAElFTkSuQmCC',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPYkOAAAAMUAVEONchDAAAAAElFTkSuQmCC',
+];
+
+async function registrarRestaurante(body) {
+  const form = new FormData();
+  form.append('datos', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+  FOTOS_DEMO.forEach((foto, i) =>
+    form.append('fotos', new Blob([Buffer.from(foto, 'base64')], { type: 'image/png' }), `foto-${i}.png`),
+  );
+  form.append('portada', '0');
+  const res = await fetch(API + '/auth/register/restaurante', { method: 'POST', body: form });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`POST /auth/register/restaurante → ${res.status} ${text.slice(0, 200)}`);
+  return text ? safeJson(text) : null;
+}
+
 /** Registers the account unless it already exists; returns the response or null. */
 async function registrarSiFalta(path, body) {
   try {
-    return await call('POST', path, body);
+    return path === '/auth/register/restaurante' ? await registrarRestaurante(body) : await call('POST', path, body);
   } catch (error) {
     console.warn(`  ya existía o falló: ${body.email} (${error.message.split('→')[1]?.trim()})`);
     return null;
