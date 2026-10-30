@@ -103,6 +103,29 @@ class NotificacionesEmailTest {
     }
 
     @Test
+    void unaReservaAceptadaAutomaticamenteTambienLeAvisaAlCliente() {
+        Cuenta encargado = registrarRestaurante();
+        Long restaurantId = idRestaurante(encargado.nombre());
+        send(HttpMethod.PUT, "/api/admin/restaurantes/" + restaurantId + "/aprobar", admin(), null, Map.class);
+        send(HttpMethod.PATCH, "/api/restaurantes/me", login(encargado.email()),
+                Map.of("porcentajeAutoAceptacion", 100), Map.class);
+        Cuenta cliente = registrarCliente();
+        clearInvocations(mailSender);
+
+        ResponseEntity<Map> reserva = send(HttpMethod.POST, "/api/reservas", login(cliente.email()), Map.of(
+                "cantidad", 3,
+                "fechaReserva", LocalDate.now().plusDays(2).toString(),
+                "horarioLlegada", "20:30",
+                "idUsuario", cliente.id(),
+                "idRestaurant", restaurantId), Map.class);
+
+        assertThat(reserva.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(reserva.getBody()).containsEntry("estadoReserva", "ACEPTADA");
+        assertThat(unicoMailPara(cliente.email()).getSubject())
+                .isEqualTo("Foodies: tu reserva en " + encargado.nombre() + " está confirmada");
+    }
+
+    @Test
     void cancelarUnaReservaNoEnviaLaConfirmacion() {
         Escenario escenario = reservaPendiente();
 

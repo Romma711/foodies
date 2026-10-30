@@ -497,7 +497,7 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 
 | Cuándo | Para quién | Asunto |
 |---|---|---|
-| El restaurante acepta una reserva (`PATCH /api/reservas/{id}/estado` con `ACEPTADA`) | Cliente | `Foodies: tu reserva en {restaurante} está confirmada` (fecha, hora, personas y dirección) |
+| El restaurante acepta una reserva (`PATCH /api/reservas/{id}/estado` con `ACEPTADA`) o la reserva se crea ya aceptada por la aceptación automática | Cliente | `Foodies: tu reserva en {restaurante} está confirmada` (fecha, hora, personas y dirección) |
 | El admin aprueba un restaurante (`PUT /api/admin/restaurantes/{id}/aprobar`) | Encargado | `Foodies: tu restaurante {restaurante} fue aprobado` |
 | El admin aplica un strike | Usuario o encargado | `Foodies: aviso de sanción (n de 3)` |
 

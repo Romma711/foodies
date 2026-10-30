@@ -9,6 +9,8 @@ import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostInsertEventListener;
 import org.hibernate.event.spi.PostUpdateEvent;
 import org.hibernate.event.spi.PostUpdateEventListener;
 import org.hibernate.persister.entity.EntityPersister;
@@ -21,16 +23,17 @@ import java.util.Arrays;
 import java.util.Date;
 
 /**
- * Le envía al cliente el email de reserva confirmada cuando una reserva pasa a {@code ACEPTADA},
- * sin modificar el servicio ni el controlador de reservas: escucha la actualización de la entidad
- * en Hibernate.
+ * Le envía al cliente el email de reserva confirmada cuando una reserva pasa a {@code ACEPTADA}
+ * (el restaurante la acepta) o se crea ya aceptada (aceptación automática), sin modificar el
+ * servicio ni el controlador de reservas: escucha el alta y la actualización de la entidad en
+ * Hibernate.
  *
  * <p>Los datos se copian durante el flush, con la sesión abierta, y el email sale recién después
  * del commit (ver {@link DespuesDelCommit}). Volver a guardar una reserva que ya estaba aceptada no
  * repite el aviso.</p>
  */
 @Component
-public class ReservaConfirmadaListener implements PostUpdateEventListener {
+public class ReservaConfirmadaListener implements PostUpdateEventListener, PostInsertEventListener {
 
     private static final String ESTADO = "estadoReserva";
 
@@ -48,13 +51,27 @@ public class ReservaConfirmadaListener implements PostUpdateEventListener {
                 .getServiceRegistry()
                 .requireService(EventListenerRegistry.class)
                 .appendListeners(EventType.POST_UPDATE, this);
+        entityManagerFactory.unwrap(SessionFactoryImplementor.class)
+                .getServiceRegistry()
+                .requireService(EventListenerRegistry.class)
+                .appendListeners(EventType.POST_INSERT, this);
     }
 
     @Override
     public void onPostUpdate(PostUpdateEvent event) {
-        if (!(event.getEntity() instanceof Reserva reserva) || !recienAceptada(event, reserva)) {
-            return;
+        if (event.getEntity() instanceof Reserva reserva && recienAceptada(event, reserva)) {
+            avisar(reserva);
         }
+    }
+
+    @Override
+    public void onPostInsert(PostInsertEvent event) {
+        if (event.getEntity() instanceof Reserva reserva && reserva.getEstadoReserva() == EstadoReserva.ACEPTADA) {
+            avisar(reserva);
+        }
+    }
+
+    private void avisar(Reserva reserva) {
         Usuario cliente = reserva.getUsuario();
         Restaurant restaurant = reserva.getRestaurant();
         if (cliente == null || cliente.getEmail() == null || restaurant == null
