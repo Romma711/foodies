@@ -28,9 +28,9 @@ public class FotoRestaurante {
     @EqualsAndHashCode.Exclude
     private Restaurant restaurant;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private TipoFoto tipo;
+    /** Exactamente una foto por restaurante es la portada: la miniatura del catálogo. */
+    @Column(nullable = false)
+    private boolean portada;
 
     @Column(name = "storage_key", nullable = false)
     private String storageKey;

@@ -97,7 +97,7 @@ public class RestaurantService {
         restaurantRepo.delete(restaurant);
     }
 
-    /** La foto del frente de todos los restaurantes sale de una sola consulta. */
+    /** La portada de todos los restaurantes sale de una sola consulta. */
     private List<RestaurantListDTO> conPortada(List<Restaurant> restaurantes) {
         Map<Long, String> portadas = fotoService.portadas(restaurantes.stream().map(Restaurant::getId).toList());
         return restaurantes.stream()

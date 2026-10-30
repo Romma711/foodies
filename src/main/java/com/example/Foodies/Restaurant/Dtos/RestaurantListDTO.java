@@ -8,7 +8,7 @@ public record RestaurantListDTO(
         String nombre,
         String ubicacion,
         EspecialidadDeComida especialidad,
-        /** URL de la foto del frente, o null si el restaurante todavía no la cargó. */
+        /** URL de la portada, o null si el restaurante todavía no cargó fotos. */
         String fotoPortada
 ) {
 }

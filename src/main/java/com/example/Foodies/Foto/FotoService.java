@@ -21,20 +21,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Fotos de un restaurante: exactamente 1 del frente (la portada del catálogo) y al menos 2 del salón,
- * entre 3 y 5 en total. Los restaurantes registrados antes de esta regla pueden tener menos y completarlas desde el panel.
+ * Fotos de un restaurante: entre 3 y 5, y exactamente una es la portada (la miniatura del catálogo), elegida por
+ * el encargado. Los restaurantes registrados antes de esta regla pueden tener menos y completarlas desde el panel.
  */
 @Service
 public class FotoService {
 
     public static final int MIN_FOTOS = 3;
     public static final int MAX_FOTOS = 5;
-    public static final int MIN_SALON = 2;
     private static final long MAX_BYTES = 5L * 1024 * 1024;
 
     private static final Logger log = LoggerFactory.getLogger(FotoService.class);
     private static final Comparator<FotoRestaurante> ORDEN =
-            Comparator.comparing(FotoRestaurante::getTipo).thenComparing(FotoRestaurante::getId);
+            Comparator.comparing(FotoRestaurante::isPortada).reversed().thenComparing(FotoRestaurante::getId);
 
     private final FotoRestauranteRepository fotoRepo;
     private final FileStorage storage;
@@ -45,27 +44,24 @@ public class FotoService {
     }
 
     /** Valida las fotos del registro antes de crear nada, para no dejar un restaurante a medias. */
-    public static void validarRegistro(MultipartFile frente, List<MultipartFile> salones) {
-        List<MultipartFile> delSalon = salones == null ? List.of() : salones.stream().filter(f -> !f.isEmpty()).toList();
-        if (frente == null || frente.isEmpty()) {
-            throw new BusinessException("Subí una foto del frente del restaurante");
+    public static void validarRegistro(List<MultipartFile> fotos, Integer portada) {
+        List<MultipartFile> subidas = noVacias(fotos);
+        if (subidas.size() < MIN_FOTOS || subidas.size() > MAX_FOTOS) {
+            throw new BusinessException("Subí entre %d y %d fotos del restaurante".formatted(MIN_FOTOS, MAX_FOTOS));
         }
-        if (delSalon.size() < MIN_SALON) {
-            throw new BusinessException("Subí al menos %d fotos del salón".formatted(MIN_SALON));
+        if (portada == null || portada < 0 || portada >= subidas.size()) {
+            throw new BusinessException("Elegí cuál de las fotos es la portada");
         }
-        if (1 + delSalon.size() > MAX_FOTOS) {
-            throw new BusinessException("Podés subir hasta %d fotos en total".formatted(MAX_FOTOS));
-        }
-        validarImagen(frente);
-        delSalon.forEach(FotoService::validarImagen);
+        subidas.forEach(FotoService::validarImagen);
     }
 
     /** Guarda las fotos del registro. Se asume que {@link #validarRegistro} ya pasó. */
     @Transactional
-    public void guardarRegistro(Restaurant restaurant, MultipartFile frente, List<MultipartFile> salones) {
-        guardarNueva(restaurant, TipoFoto.FRENTE, validarImagen(frente));
-        salones.stream().filter(f -> !f.isEmpty())
-                .forEach(f -> guardarNueva(restaurant, TipoFoto.SALON, validarImagen(f)));
+    public void guardarRegistro(Restaurant restaurant, List<MultipartFile> fotos, int portada) {
+        List<MultipartFile> subidas = noVacias(fotos);
+        for (int i = 0; i < subidas.size(); i++) {
+            guardarNueva(restaurant, i == portada, validarImagen(subidas.get(i)));
+        }
     }
 
     @Transactional(readOnly = true)
@@ -73,33 +69,39 @@ public class FotoService {
         return fotoRepo.findAllByRestaurant_Id(restaurantId).stream().sorted(ORDEN).map(this::toDto).toList();
     }
 
-    /** URL de la foto del frente de cada restaurante; los que no tienen foto quedan afuera del mapa. */
+    /** URL de la portada de cada restaurante; los que no tienen fotos quedan afuera del mapa. */
     @Transactional(readOnly = true)
     public Map<Long, String> portadas(Collection<Long> restaurantIds) {
         if (restaurantIds.isEmpty()) {
             return Map.of();
         }
-        return fotoRepo.findAllByRestaurant_IdInAndTipo(restaurantIds, TipoFoto.FRENTE).stream()
+        return fotoRepo.findAllByRestaurant_IdInAndPortadaTrue(restaurantIds).stream()
                 .collect(Collectors.toMap(f -> f.getRestaurant().getId(), f -> storage.publicUrl(f.getStorageKey()),
                         (a, b) -> a));
     }
 
+    /** Si el restaurante todavía no tiene portada, la foto que sube queda como portada. */
     @Transactional
-    public FotoDTO agregar(Restaurant restaurant, TipoFoto tipo, MultipartFile archivo) {
-        if (tipo == null) {
-            throw new BusinessException("Indicá si la foto es del frente o del salón");
-        }
+    public FotoDTO agregar(Restaurant restaurant, MultipartFile archivo) {
         List<FotoRestaurante> actuales = fotoRepo.findAllByRestaurant_Id(restaurant.getId());
         if (actuales.size() >= MAX_FOTOS) {
             throw new BusinessException("Podés tener hasta %d fotos. Borrá una antes de subir otra.".formatted(MAX_FOTOS));
         }
-        if (tipo == TipoFoto.FRENTE && actuales.stream().anyMatch(f -> f.getTipo() == TipoFoto.FRENTE)) {
-            throw new BusinessException("Ya tenés una foto del frente. Reemplazala en lugar de subir otra.");
-        }
-        return toDto(guardarNueva(restaurant, tipo, validarImagen(archivo)));
+        boolean sinPortada = actuales.stream().noneMatch(FotoRestaurante::isPortada);
+        return toDto(guardarNueva(restaurant, sinPortada, validarImagen(archivo)));
     }
 
-    /** Cambia la imagen manteniendo el tipo. El archivo anterior se borra una vez confirmado el cambio. */
+    /** Marca la foto como portada y desmarca la anterior. Devuelve las fotos en el orden en que se muestran. */
+    @Transactional
+    public List<FotoDTO> elegirPortada(Restaurant restaurant, Long fotoId) {
+        FotoRestaurante elegida = propia(restaurant, fotoId);
+        List<FotoRestaurante> fotos = fotoRepo.findAllByRestaurant_Id(restaurant.getId());
+        fotos.forEach(f -> f.setPortada(f.getId().equals(elegida.getId())));
+        fotoRepo.saveAllAndFlush(fotos);
+        return fotos.stream().sorted(ORDEN).map(this::toDto).toList();
+    }
+
+    /** Cambia la imagen manteniendo si es portada. El archivo anterior se borra una vez confirmado el cambio. */
     @Transactional
     public FotoDTO reemplazar(Restaurant restaurant, Long fotoId, MultipartFile archivo) {
         FotoRestaurante foto = propia(restaurant, fotoId);
@@ -115,14 +117,12 @@ public class FotoService {
     @Transactional
     public void eliminar(Restaurant restaurant, Long fotoId) {
         FotoRestaurante foto = propia(restaurant, fotoId);
-        if (foto.getTipo() == TipoFoto.FRENTE) {
-            throw new BusinessException("La foto del frente no se puede borrar, solo reemplazar.");
+        if (foto.isPortada()) {
+            throw new BusinessException("La portada no se puede borrar. Elegí otra portada antes de borrar esta.");
         }
-        long salones = fotoRepo.findAllByRestaurant_Id(restaurant.getId()).stream()
-                .filter(f -> f.getTipo() == TipoFoto.SALON).count();
-        if (salones <= MIN_SALON) {
+        if (fotoRepo.findAllByRestaurant_Id(restaurant.getId()).size() <= MIN_FOTOS) {
             throw new BusinessException(
-                    "Tenés que tener al menos %d fotos del salón. Subí otra antes de borrar esta.".formatted(MIN_SALON));
+                    "Tenés que tener al menos %d fotos. Subí otra antes de borrar esta.".formatted(MIN_FOTOS));
         }
         restaurant.getFotos().remove(foto);
         fotoRepo.delete(foto);
@@ -144,10 +144,10 @@ public class FotoService {
         return foto;
     }
 
-    private FotoRestaurante guardarNueva(Restaurant restaurant, TipoFoto tipo, Imagen imagen) {
+    private FotoRestaurante guardarNueva(Restaurant restaurant, boolean portada, Imagen imagen) {
         FotoRestaurante foto = new FotoRestaurante();
         foto.setRestaurant(restaurant);
-        foto.setTipo(tipo);
+        foto.setPortada(portada);
         foto.setStorageKey(subir(restaurant, imagen));
         foto.setCreadaEn(Instant.now());
         restaurant.getFotos().add(foto);
@@ -172,7 +172,11 @@ public class FotoService {
     }
 
     private FotoDTO toDto(FotoRestaurante foto) {
-        return new FotoDTO(foto.getId(), foto.getTipo(), storage.publicUrl(foto.getStorageKey()));
+        return new FotoDTO(foto.getId(), storage.publicUrl(foto.getStorageKey()), foto.isPortada());
+    }
+
+    private static List<MultipartFile> noVacias(List<MultipartFile> fotos) {
+        return fotos == null ? List.of() : fotos.stream().filter(f -> !f.isEmpty()).toList();
     }
 
     private record Imagen(byte[] contenido, String contentType, String extension) {}

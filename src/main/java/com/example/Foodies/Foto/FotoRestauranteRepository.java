@@ -9,5 +9,5 @@ public interface FotoRestauranteRepository extends JpaRepository<FotoRestaurante
 
     List<FotoRestaurante> findAllByRestaurant_Id(Long restaurantId);
 
-    List<FotoRestaurante> findAllByRestaurant_IdInAndTipo(Collection<Long> restaurantIds, TipoFoto tipo);
+    List<FotoRestaurante> findAllByRestaurant_IdInAndPortadaTrue(Collection<Long> restaurantIds);
 }

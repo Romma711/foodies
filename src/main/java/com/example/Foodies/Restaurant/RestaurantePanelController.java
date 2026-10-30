@@ -6,7 +6,6 @@ import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
 import com.example.Foodies.Foto.Dtos.FotoDTO;
 import com.example.Foodies.Foto.FotoService;
-import com.example.Foodies.Foto.TipoFoto;
 import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
 import com.example.Foodies.Restaurant.Dtos.MiRestauranteDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
@@ -89,8 +88,13 @@ public class RestaurantePanelController {
     }
 
     @PostMapping(value = "/me/fotos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public FotoDTO agregarFoto(@RequestParam("tipo") TipoFoto tipo, @RequestParam("archivo") MultipartFile archivo) {
-        return panelService.agregarFoto(tipo, archivo);
+    public FotoDTO agregarFoto(@RequestParam("archivo") MultipartFile archivo) {
+        return panelService.agregarFoto(archivo);
+    }
+
+    @PutMapping("/me/fotos/{fotoId}/portada")
+    public List<FotoDTO> elegirPortada(@PathVariable Long fotoId) {
+        return panelService.elegirPortada(fotoId);
     }
 
     @PutMapping(value = "/me/fotos/{fotoId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -104,7 +108,7 @@ public class RestaurantePanelController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Público: la del frente primero y después las del salón. */
+    /** Público: la portada primero y después las demás. */
     @GetMapping("/{id}/fotos")
     public List<FotoDTO> getFotos(@PathVariable Long id) {
         return fotoService.listar(id);

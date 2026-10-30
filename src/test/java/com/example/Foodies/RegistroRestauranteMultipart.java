@@ -21,13 +21,18 @@ final class RegistroRestauranteMultipart {
     private RegistroRestauranteMultipart() {
     }
 
-    /** Registro válido: 1 foto del frente y `salones` fotos del salón. */
-    static HttpEntity<MultiValueMap<String, Object>> conFotos(Map<String, Object> datos, int salones) {
+    /** `cantidad` fotos con la primera como portada. */
+    static HttpEntity<MultiValueMap<String, Object>> conFotos(Map<String, Object> datos, int cantidad) {
+        return conFotos(datos, cantidad, 0);
+    }
+
+    /** La portada va en JPEG y las demás en PNG, así se puede saber cuál quedó como portada. */
+    static HttpEntity<MultiValueMap<String, Object>> conFotos(Map<String, Object> datos, int cantidad, int portada) {
         MultiValueMap<String, Object> body = soloDatos(datos);
-        body.add("frente", archivo("frente.jpg", JPEG));
-        for (int i = 0; i < salones; i++) {
-            body.add("salones", archivo("salon-" + i + ".png", PNG));
+        for (int i = 0; i < cantidad; i++) {
+            body.add("fotos", i == portada ? archivo("foto-" + i + ".jpg", JPEG) : archivo("foto-" + i + ".png", PNG));
         }
+        body.add("portada", String.valueOf(portada));
         return entity(body);
     }
 

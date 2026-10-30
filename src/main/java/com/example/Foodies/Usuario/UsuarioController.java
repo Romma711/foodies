@@ -38,13 +38,13 @@ public class UsuarioController {
         return ResponseEntity.created(URI.create("/api/usuarios/"+devolver.id())).body(devolver);
     }
 
-    /** Multipart: `datos` (JSON), `frente` (1 foto) y `salones` (2 a 4 fotos). */
+    /** Multipart: `datos` (JSON), `fotos` (3 a 5) y `portada` (índice en `fotos` de la que se muestra en el catálogo). */
     @PostMapping(value = "/register/restaurante", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UsuarioDetailDTO> handleRegisterRestaurant(
             @Valid @RequestPart("datos") RegistroRestauranteRequestDTO usuario,
-            @RequestPart(value = "frente", required = false) MultipartFile frente,
-            @RequestPart(value = "salones", required = false) List<MultipartFile> salones){
-        UsuarioDetailDTO devolver = usuarioService.peticionRegistroRestaurante(usuario, frente, salones);
+            @RequestPart(value = "fotos", required = false) List<MultipartFile> fotos,
+            @RequestParam(value = "portada", required = false) Integer portada){
+        UsuarioDetailDTO devolver = usuarioService.peticionRegistroRestaurante(usuario, fotos, portada);
         return ResponseEntity.created(URI.create("/api/restaurant/"+ devolver.id())).body(devolver);
     }
 }

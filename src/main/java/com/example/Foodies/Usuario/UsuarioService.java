@@ -112,10 +112,10 @@ public class UsuarioService implements UserDetailsService {
     }
 
     @Transactional
-    public UsuarioDetailDTO peticionRegistroRestaurante(RegistroRestauranteRequestDTO r, MultipartFile frente,
-                                                        List<MultipartFile> salones){
+    public UsuarioDetailDTO peticionRegistroRestaurante(RegistroRestauranteRequestDTO r, List<MultipartFile> fotos,
+                                                        Integer portada){
         // Antes de crear nada: sin fotos válidas no hay registro.
-        FotoService.validarRegistro(frente, salones);
+        FotoService.validarRegistro(fotos, portada);
         if(usuarioRepo.existsByEmail(r.getEmail())){
             throw new EmailDuplicadoException("El email esta en uso");
         }
@@ -134,7 +134,7 @@ public class UsuarioService implements UserDetailsService {
 
         rest.setUsuario(usuario);
         restaurantRepo.saveAndFlush(rest);
-        fotoService.guardarRegistro(rest, frente, salones);
+        fotoService.guardarRegistro(rest, fotos, portada);
 
 
         return usuarioMapper.toDTO(usuario);

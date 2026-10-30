@@ -82,7 +82,7 @@ class FlujoCompletoTest {
                             "direccion", "Direccion " + i,
                             "telefono", "22" + i,
                             "especialidadDeComida", "PASTAS",
-                            "cupoMaximo", 10), 2),
+                            "cupoMaximo", 10), 3),
                     UsuarioDetailDTO.class);
             assertThat(regRes.getStatusCode()).isEqualTo(HttpStatus.CREATED);
             assertThat(regRes.getBody().rol()).isEqualTo("ROLE_PENDIENTE");

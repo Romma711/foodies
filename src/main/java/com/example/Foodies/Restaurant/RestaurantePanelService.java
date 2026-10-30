@@ -8,7 +8,6 @@ import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
 import com.example.Foodies.Foto.Dtos.FotoDTO;
 import com.example.Foodies.Foto.FotoService;
-import com.example.Foodies.Foto.TipoFoto;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
@@ -122,8 +121,12 @@ public class RestaurantePanelService {
         return fotoService.listar(miRestaurante().getId());
     }
 
-    public FotoDTO agregarFoto(TipoFoto tipo, MultipartFile archivo) {
-        return fotoService.agregar(miRestaurante(), tipo, archivo);
+    public FotoDTO agregarFoto(MultipartFile archivo) {
+        return fotoService.agregar(miRestaurante(), archivo);
+    }
+
+    public List<FotoDTO> elegirPortada(Long fotoId) {
+        return fotoService.elegirPortada(miRestaurante(), fotoId);
     }
 
     public FotoDTO reemplazarFoto(Long fotoId, MultipartFile archivo) {
