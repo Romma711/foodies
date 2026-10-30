@@ -6,6 +6,8 @@ import com.example.Foodies.Config.CurrentUser;
 import com.example.Foodies.CupoEspecial.CupoEspecialService;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
+import com.example.Foodies.Foto.Dtos.FotoDTO;
+import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
@@ -31,15 +33,17 @@ public class RestaurantePanelService {
     private final ReservaRepository reservaRepo;
     private final CartaService cartaService;
     private final CupoEspecialService cupoEspecialService;
+    private final FotoService fotoService;
     private final CurrentUser currentUser;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
                                    CartaService cartaService, CupoEspecialService cupoEspecialService,
-                                   CurrentUser currentUser) {
+                                   FotoService fotoService, CurrentUser currentUser) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
         this.cupoEspecialService = cupoEspecialService;
+        this.fotoService = fotoService;
         this.currentUser = currentUser;
     }
 
@@ -111,6 +115,26 @@ public class RestaurantePanelService {
 
     public void eliminarCupoEspecial(LocalDate fecha) {
         cupoEspecialService.eliminar(miRestaurante(), fecha);
+    }
+
+    public List<FotoDTO> getFotos() {
+        return fotoService.listar(miRestaurante().getId());
+    }
+
+    public FotoDTO agregarFoto(MultipartFile archivo) {
+        return fotoService.agregar(miRestaurante(), archivo);
+    }
+
+    public List<FotoDTO> elegirPortada(Long fotoId) {
+        return fotoService.elegirPortada(miRestaurante(), fotoId);
+    }
+
+    public FotoDTO reemplazarFoto(Long fotoId, MultipartFile archivo) {
+        return fotoService.reemplazar(miRestaurante(), fotoId, archivo);
+    }
+
+    public void eliminarFoto(Long fotoId) {
+        fotoService.eliminar(miRestaurante(), fotoId);
     }
 
     private Restaurant miRestaurante() {

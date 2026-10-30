@@ -4,6 +4,8 @@ import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Carta.Dtos.CartaDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
+import com.example.Foodies.Foto.Dtos.FotoDTO;
+import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
 import com.example.Foodies.Restaurant.Dtos.MiRestauranteDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
@@ -23,10 +25,13 @@ public class RestaurantePanelController {
 
     private final RestaurantePanelService panelService;
     private final CartaService cartaService;
+    private final FotoService fotoService;
 
-    public RestaurantePanelController(RestaurantePanelService panelService, CartaService cartaService) {
+    public RestaurantePanelController(RestaurantePanelService panelService, CartaService cartaService,
+                                      FotoService fotoService) {
         this.panelService = panelService;
         this.cartaService = cartaService;
+        this.fotoService = fotoService;
     }
 
     @GetMapping("/me")
@@ -75,6 +80,38 @@ public class RestaurantePanelController {
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
         panelService.eliminarCupoEspecial(fecha);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me/fotos")
+    public List<FotoDTO> getMisFotos() {
+        return panelService.getFotos();
+    }
+
+    @PostMapping(value = "/me/fotos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public FotoDTO agregarFoto(@RequestParam("archivo") MultipartFile archivo) {
+        return panelService.agregarFoto(archivo);
+    }
+
+    @PutMapping("/me/fotos/{fotoId}/portada")
+    public List<FotoDTO> elegirPortada(@PathVariable Long fotoId) {
+        return panelService.elegirPortada(fotoId);
+    }
+
+    @PutMapping(value = "/me/fotos/{fotoId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public FotoDTO reemplazarFoto(@PathVariable Long fotoId, @RequestParam("archivo") MultipartFile archivo) {
+        return panelService.reemplazarFoto(fotoId, archivo);
+    }
+
+    @DeleteMapping("/me/fotos/{fotoId}")
+    public ResponseEntity<Void> eliminarFoto(@PathVariable Long fotoId) {
+        panelService.eliminarFoto(fotoId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Público: la portada primero y después las demás. */
+    @GetMapping("/{id}/fotos")
+    public List<FotoDTO> getFotos(@PathVariable Long id) {
+        return fotoService.listar(id);
     }
 
     /** Public: where to download a restaurant's menu. */
