@@ -61,11 +61,9 @@ public class ReservaRestauranteActivoFilter extends OncePerRequestFilter {
 
     private boolean restauranteDadoDeBaja(byte[] cuerpo) {
         try {
+            // asLong also reads "5": Jackson binds a quoted id to the DTO, so it must be checked too.
             JsonNode id = objectMapper.readTree(cuerpo).path("idRestaurant");
-            if (!id.canConvertToLong()) {
-                return false;
-            }
-            return restaurantRepo.findById(id.asLong())
+            return restaurantRepo.findById(id.asLong(-1))
                     .map(restaurant -> Boolean.FALSE.equals(restaurant.getActivo()))
                     .orElse(false);
         } catch (IOException ex) {

@@ -19,6 +19,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -172,6 +173,10 @@ class EntidadesControllerTest {
         ResponseEntity<Map> reserva = send(HttpMethod.POST, "/api/reservas", token, reservaPara(cliente, id), Map.class);
         assertThat(reserva.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(reserva.getBody()).containsEntry("mensaje", "Restaurante no encontrado");
+        Map<String, Object> conIdDeTexto = new HashMap<>(reservaPara(cliente, id));
+        conIdDeTexto.put("idRestaurant", String.valueOf(id));
+        assertThat(send(HttpMethod.POST, "/api/reservas", token, conIdDeTexto, Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
 
         send(HttpMethod.PATCH, "/api/admin/restaurantes/" + id + "/activo", admin(), Map.of("activo", true), Map.class);
 
