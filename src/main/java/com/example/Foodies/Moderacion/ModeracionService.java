@@ -4,6 +4,7 @@ import com.example.Foodies.Enums.EstadoRestaurante;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
+import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Moderacion.dtos.EstadoSolicitudDTO;
 import com.example.Foodies.Moderacion.dtos.SolicitudRestauranteDTO;
 import com.example.Foodies.Moderacion.dtos.StrikeResultadoDTO;
@@ -35,25 +36,30 @@ public class ModeracionService {
     private final UsuarioRepository usuarioRepo;
     private final UsuarioService usuarioService;
     private final EmailService emailService;
+    private final FotoService fotoService;
 
     public ModeracionService(ModeracionRestaurantRepository restaurantRepo,
                              UsuarioRepository usuarioRepo,
                              UsuarioService usuarioService,
-                             EmailService emailService) {
+                             EmailService emailService,
+                             FotoService fotoService) {
         this.restaurantRepo = restaurantRepo;
         this.usuarioRepo = usuarioRepo;
         this.usuarioService = usuarioService;
         this.emailService = emailService;
+        this.fotoService = fotoService;
     }
 
     /**
      * Lista las solicitudes de alta que esperan revisión.
      *
-     * @return solicitudes en estado PENDIENTE, de la más antigua a la más nueva
+     * @return solicitudes en estado PENDIENTE con sus fotos, de la más antigua a la más nueva
      */
     @Transactional(readOnly = true)
     public List<SolicitudRestauranteDTO> solicitudesPendientes() {
-        return restaurantRepo.findSolicitudes(EstadoRestaurante.PENDIENTE);
+        return restaurantRepo.findSolicitudes(EstadoRestaurante.PENDIENTE).stream()
+                .map(solicitud -> solicitud.conFotos(fotoService.listar(solicitud.restaurantId())))
+                .toList();
     }
 
     /**

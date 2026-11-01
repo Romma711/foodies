@@ -436,7 +436,7 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 >
 >- Solicitudes de alta en estado `PENDIENTE`, con los datos de contacto del encargado
 ```json
-[{ "restaurantId": 7, "nombre": "Pasta Nostra", "ubicacion": "Av. Colón 1200", "especialidad": "PASTAS", "cupoMaximo": 40, "estado": "PENDIENTE", "usuarioId": 12, "email": "pasta@mail.com", "telefono": "2234000000", "fechaRegistro": "2026-10-28T10:15:00" }]
+[{ "restaurantId": 7, "nombre": "Pasta Nostra", "ubicacion": "Av. Colón 1200", "especialidad": "PASTAS", "cupoMaximo": 40, "estado": "PENDIENTE", "usuarioId": 12, "email": "pasta@mail.com", "telefono": "2234000000", "fechaRegistro": "2026-10-28T10:15:00", "fotos": [{ "id": 1, "url": "/api/files/fotos/7/portada.jpg", "portada": true }] }]
 ```
 ###
 

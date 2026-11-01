@@ -85,6 +85,21 @@ class ModeracionControllerTest {
     }
 
     @Test
+    void lasSolicitudesPendientesTraenLasFotosConSuPortada() {
+        Solicitud solicitud = registrarRestaurante();
+
+        ResponseEntity<List> pendientes = send(HttpMethod.GET, "/api/admin/restaurantes/pendientes", admin(), null, List.class);
+
+        assertThat(pendientes.getBody()).anySatisfy(item -> {
+            Map<?, ?> fila = (Map<?, ?>) item;
+            assertThat(fila.get("restaurantId")).isEqualTo(solicitud.restaurantId().intValue());
+            List<?> fotos = (List<?>) fila.get("fotos");
+            assertThat(fotos).hasSize(3);
+            assertThat(fotos).filteredOn(foto -> Boolean.TRUE.equals(((Map<?, ?>) foto).get("portada"))).hasSize(1);
+        });
+    }
+
+    @Test
     void aprobarUnaSolicitudLaPublicaYHabilitaAlEncargado() {
         Solicitud solicitud = registrarRestaurante();
 
