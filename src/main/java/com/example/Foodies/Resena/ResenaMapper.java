@@ -4,6 +4,7 @@ import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Resena.dtos.ResenaDetailDTO;
 import com.example.Foodies.Resena.dtos.ResenaListDTO;
 import com.example.Foodies.Resena.dtos.ResenaRequestDTO;
+import com.example.Foodies.Resena.dtos.ResenaUsuarioDTO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -25,6 +26,12 @@ public interface ResenaMapper {
     ResenaListDTO toListDto(Resena resena);
 
     List<ResenaListDTO> toListDtoList(List<Resena> resenas);
+
+    @Mapping(target = "restauranteId", source = "restaurant.id")
+    @Mapping(target = "nombreRestaurante", source = "restaurant.nombre")
+    ResenaUsuarioDTO toUsuarioDto(Resena resena);
+
+    List<ResenaUsuarioDTO> toUsuarioDtoList(List<Resena> resenas);
 
     default Restaurant restaurantFromId(Long id) {
         if (id == null) {
