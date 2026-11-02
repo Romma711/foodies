@@ -10,6 +10,7 @@ import com.example.Foodies.Resena.dtos.ResenaDetailDTO;
 import com.example.Foodies.Resena.dtos.ResenaListDTO;
 import com.example.Foodies.Resena.dtos.ResenaPatchDTO;
 import com.example.Foodies.Resena.dtos.ResenaRequestDTO;
+import com.example.Foodies.Resena.dtos.ResenaUsuarioDTO;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
@@ -116,12 +117,12 @@ public class ResenaService {
         resenaRepo.delete(resena);
     }
 
-    public List<ResenaListDTO> getallResenaByUsuario(Long id) {
+    public List<ResenaUsuarioDTO> getallResenaByUsuario(Long id) {
         List<Resena> resenas = resenaRepo.findByUsuario_Id(id);
         if (resenas.isEmpty()) {
             throw new ListNoContentException("Este usuario no tiene reseñas");
         }
-        return resenaMapper.toListDtoList(resenas);
+        return resenaMapper.toUsuarioDtoList(resenas);
     }
 
     private Resena buscarResena(Long id) {
