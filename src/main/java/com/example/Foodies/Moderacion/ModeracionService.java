@@ -120,6 +120,7 @@ public class ModeracionService {
         if (usuario.getRol() == Role.ROLE_ADMIN) {
             throw new BusinessException("No se puede sancionar a un administrador");
         }
+        validarLimite(usuario.getStrikes());
         usuario.setStrikes(usuario.getStrikes() + 1);
         String nombre = Stream.of(usuario.getNombre(), usuario.getApellido())
                 .filter(parte -> parte != null && !parte.isBlank())
@@ -138,6 +139,7 @@ public class ModeracionService {
     @Transactional
     public StrikeResultadoDTO strikeRestaurante(Long restaurantId, String motivo) {
         Restaurant restaurant = buscarRestaurante(restaurantId);
+        validarLimite(restaurant.getStrikes());
         restaurant.setStrikes(restaurant.getStrikes() + 1);
         return notificar(restaurant.getId(), restaurant.getNombre(), restaurant.getUsuario().getEmail(),
                 restaurant.getStrikes(), motivo);
@@ -155,6 +157,13 @@ public class ModeracionService {
         Restaurant restaurant = buscarRestaurante(restaurantId);
         restaurant.setLatitud(ubicacion.latitud());
         restaurant.setLongitud(ubicacion.longitud());
+    }
+
+    private void validarLimite(int strikes) {
+        if (strikes >= LIMITE_STRIKES) {
+            throw new BusinessException(
+                    "Ya llegó al límite de %d strikes: el siguiente paso es darlo de baja".formatted(LIMITE_STRIKES));
+        }
     }
 
     private StrikeResultadoDTO notificar(Long id, String nombre, String email, int strikes, String motivo) {

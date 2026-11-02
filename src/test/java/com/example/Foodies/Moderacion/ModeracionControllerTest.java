@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -190,6 +191,38 @@ class ModeracionControllerTest {
                 .containsEntry("email", solicitud.email());
         assertThat(restaurantRepo.findById(solicitud.restaurantId()).orElseThrow().getStrikes()).isEqualTo(1);
         verify(mailSender).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void conTresStrikesNoSePuedeAplicarOtroNiSeEnviaAviso() {
+        Long clienteId = registrarCliente();
+        for (int i = 0; i < 3; i++) {
+            send(HttpMethod.POST, "/api/admin/usuarios/" + clienteId + "/strikes", admin(),
+                    Map.of("motivo", "Lenguaje ofensivo en una reseña"), Map.class);
+        }
+        reset(mailSender);
+
+        ResponseEntity<Map> resp = send(HttpMethod.POST, "/api/admin/usuarios/" + clienteId + "/strikes", admin(),
+                Map.of("motivo", "Otra falta registrada"), Map.class);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(resp.getBody()).containsEntry("mensaje", "Ya llegó al límite de 3 strikes: el siguiente paso es darlo de baja");
+        assertThat(usuarioRepo.findById(clienteId).orElseThrow().getStrikes()).isEqualTo(3);
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void unRestauranteConTresStrikesTampocoAdmiteOtro() {
+        Solicitud solicitud = registrarRestaurante();
+        String url = "/api/admin/restaurantes/" + solicitud.restaurantId() + "/strikes";
+        for (int i = 0; i < 3; i++) {
+            send(HttpMethod.POST, url, admin(), Map.of("motivo", "Reservas canceladas sin aviso"), Map.class);
+        }
+
+        ResponseEntity<Map> resp = send(HttpMethod.POST, url, admin(), Map.of("motivo", "Otra falta registrada"), Map.class);
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(restaurantRepo.findById(solicitud.restaurantId()).orElseThrow().getStrikes()).isEqualTo(3);
     }
 
     @Test
