@@ -425,6 +425,94 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 [{ "id": 9, "comentario": "Muy rico", "calificacion": 5, "nombreUsuario": "Ana Gómez", "restauranteId": 5, "nombreRestaurante": "Ochiwan" }]
 ```
 ###
+
+### Moderación (Fase 3)
+
+Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincronizado con `aprobado`: un registro nuevo arranca en `PENDIENTE` y `PUT /api/admin/approved/{usuarioId}` también lo pasa a `APROBADO`. Las filas anteriores a la columna se completan al arrancar a partir de `aprobado`. Restaurantes y usuarios suman `strikes` (default 0) y `activo` (default `true`, para la baja lógica).
+
+>`GET`
+>
+>`/api/admin/restaurantes/pendientes`
+>
+>- Solicitudes de alta en estado `PENDIENTE`, con los datos de contacto del encargado
+```json
+[{ "restaurantId": 7, "nombre": "Pasta Nostra", "ubicacion": "Av. Colón 1200", "especialidad": "PASTAS", "cupoMaximo": 40, "estado": "PENDIENTE", "usuarioId": 12, "email": "pasta@mail.com", "telefono": "2234000000", "fechaRegistro": "2026-10-28T10:15:00", "fotos": [{ "id": 1, "url": "/api/files/fotos/7/portada.jpg", "portada": true }] }]
+```
+###
+
+>`PUT`
+>
+>`/api/admin/restaurantes/{id}/aprobar` · `/api/admin/restaurantes/{id}/rechazar`
+>
+>- Aprueba (publica el restaurante y le da `ROLE_ENCARGADO` a su cuenta) o rechaza una solicitud. Rechazar un restaurante ya aprobado responde 400
+```json
+{ "restaurantId": 7, "nombre": "Pasta Nostra", "estado": "APROBADO" }
+```
+###
+
+>`POST`
+>
+>`/api/admin/usuarios/{id}/strikes` · `/api/admin/restaurantes/{id}/strikes`
+>
+>- Suma un strike y envía el aviso por email (al usuario o al encargado del restaurante). `motivo` es obligatorio (5 a 255 caracteres). A los administradores no se les puede dar strikes. Si el email falla, el strike igual se guarda y `emailEnviado` vuelve en `false`. Con 3 strikes, `sugerirBaja` es `true` y no se admiten más (400): el siguiente paso es la baja. Limitación conocida: el contador se incrementa sin bloqueo, así que dos strikes simultáneos sobre la misma cuenta pueden contarse como uno; es aceptable porque la moderación la hace un solo administrador
+```json
+{ "motivo": "Lenguaje ofensivo en una reseña" }
+```
+```json
+{ "id": 4, "nombre": "Ana Gómez", "email": "ana@mail.com", "strikes": 3, "sugerirBaja": true, "emailEnviado": true }
+```
+###
+
+>`PUT`
+>
+>`/api/admin/restaurantes/{id}/ubicacion`
+>
+>- Carga las coordenadas para el mapa (latitud entre -90 y 90, longitud entre -180 y 180). `GET /api/restaurantes` y `GET /api/restaurantes/{id}` ahora devuelven `latitud` y `longitud` (`null` hasta que se cargan)
+```json
+{ "latitud": -38.0055, "longitud": -57.5426 }
+```
+###
+
+>`GET`
+>
+>`/api/admin/entidades/clientes` · `/api/admin/entidades/restaurantes`
+>
+>- Listados para "Gestión de Entidades": clientes con `strikes` y `activo`; restaurantes en cualquier estado con `estado`, `strikes`, `activo` y el email del encargado
+```json
+[{ "id": 7, "nombre": "Pasta Nostra", "ubicacion": "Av. Colón 1200", "especialidad": "PASTAS", "estado": "APROBADO", "strikes": 1, "activo": true, "usuarioId": 12, "email": "pasta@mail.com" }]
+```
+###
+
+>`PATCH`
+>
+>`/api/admin/usuarios/{id}/activo` · `/api/admin/restaurantes/{id}/activo`
+>
+>- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al intentar loguearse (con cualquier contraseña) y en cualquier request con un token anterior. Las consultas públicas (`GET /api/restaurantes`, `/especialidad` y `/{id}`) solo muestran restaurantes aprobados y activos a la vez; el detalle de uno pendiente, rechazado o dado de baja responde 404. Un restaurante dado de baja tampoco acepta reservas nuevas (`POST /api/reservas` responde 404 `Restaurante no encontrado`). A un administrador no se lo puede dar de baja (400)
+```json
+{ "activo": false }
+```
+###
+
+### Emails
+
+| Cuándo | Para quién | Asunto |
+|---|---|---|
+| El restaurante acepta una reserva (`PATCH /api/reservas/{id}/estado` con `ACEPTADA`) o la reserva se crea ya aceptada por la aceptación automática | Cliente | `Foodies: tu reserva en {restaurante} está confirmada` (fecha, hora, personas y dirección) |
+| El admin aprueba un restaurante (`PUT /api/admin/restaurantes/{id}/aprobar`) | Encargado | `Foodies: tu restaurante {restaurante} fue aprobado` |
+| El admin aplica un strike | Usuario o encargado | `Foodies: aviso de sanción (n de 3)` |
+
+Los avisos de reserva confirmada y de restaurante aprobado salen después de guardar el cambio y no se repiten si la reserva ya estaba aceptada o el restaurante ya estaba aprobado. Si el correo falla, la operación igual queda hecha y el error queda en el log.
+
+Se envían con `JavaMailSender`. Por defecto apuntan al sandbox de [Mailtrap](https://mailtrap.io): cargá las credenciales de tu inbox en estas variables de entorno. Para usar un SMTP real alcanza con cambiarlas.
+
+| Variable | Default |
+|---|---|
+| `MAIL_HOST` | `sandbox.smtp.mailtrap.io` |
+| `MAIL_PORT` | `2525` |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | vacías (las da Mailtrap) |
+| `MAIL_FROM` | `no-reply@foodies.com` |
+
+###
 ## 🎡 Roles y Permisos
 
 ### CLIENTE

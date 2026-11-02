@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -51,5 +52,15 @@ public class Usuario {
     @CreationTimestamp
     @Column(name = "fecha_registro", updatable = false)
     private LocalDateTime fechaRegistro;
+
+    /** Sanciones acumuladas. La columna tiene default 0 para no dejar en null las filas existentes. */
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private Integer strikes = 0;
+
+    /** Baja lógica: {@code false} deshabilita la cuenta sin borrar sus reservas ni reseñas. */
+    @ColumnDefault("true")
+    @Column(nullable = false)
+    private Boolean activo = true;
 
 }

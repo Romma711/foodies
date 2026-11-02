@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /** Arma el `multipart/form-data` de `POST /api/auth/register/restaurante`: los datos en JSON y las fotos. */
-final class RegistroRestauranteMultipart {
+public final class RegistroRestauranteMultipart {
 
     /** Alcanza con la firma: el backend valida el contenido por sus primeros bytes. */
     static final byte[] JPEG = concat(new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0}, "jpeg");
@@ -22,7 +22,7 @@ final class RegistroRestauranteMultipart {
     }
 
     /** `cantidad` fotos con la primera como portada. */
-    static HttpEntity<MultiValueMap<String, Object>> conFotos(Map<String, Object> datos, int cantidad) {
+    public static HttpEntity<MultiValueMap<String, Object>> conFotos(Map<String, Object> datos, int cantidad) {
         return conFotos(datos, cantidad, 0);
     }
 

@@ -44,7 +44,7 @@ public class RestaurantService {
 
 
     public List<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida){
-        List<Restaurant> restaurants = restaurantRepo.findByEspecialidad(especialidadDeComida);
+        List<Restaurant> restaurants = restaurantRepo.findByEspecialidadAndAprobadoTrueAndActivoTrue(especialidadDeComida);
         if(restaurants.isEmpty()){
             throw new ListNoContentException("No hay restaurantes con esta especialidad");
         }
@@ -52,7 +52,7 @@ public class RestaurantService {
     }
 
     public List<RestaurantListDTO> getAll() {
-        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrue();
+        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrueAndActivoTrue();
         if(restaurantes.isEmpty()){
             throw new ListNoContentException("No hay restaurantes");
         }
@@ -61,7 +61,10 @@ public class RestaurantService {
     }
 
     public RestaurantDetailDTO getRestaurantById(Long restaurantId){
-        Restaurant restaurant = restaurantRepo.findById(restaurantId).orElseThrow(()-> new EntityNotFoundException("restaurant No encontado"));
+        // Public detail: only approved restaurants that were not deactivated by an admin (Phase 3).
+        Restaurant restaurant = restaurantRepo.findById(restaurantId)
+                .filter(r -> r.isAprobado() && !Boolean.FALSE.equals(r.getActivo()))
+                .orElseThrow(()-> new EntityNotFoundException("restaurant No encontado"));
        return restaurantMapper.toDetailDTO(restaurant);
     }
 
@@ -102,7 +105,7 @@ public class RestaurantService {
         Map<Long, String> portadas = fotoService.portadas(restaurantes.stream().map(Restaurant::getId).toList());
         return restaurantes.stream()
                 .map(r -> new RestaurantListDTO(r.getId(), r.getNombre(), r.getUbicacion(), r.getEspecialidad(),
-                        portadas.get(r.getId())))
+                        r.getLatitud(), r.getLongitud(), portadas.get(r.getId())))
                 .toList();
     }
 

@@ -7,12 +7,13 @@ const DEMO_PASSWORD = 'demo1234';
 const ADMIN = { email: 'admin@foodies.com', password: 'admin123' };
 
 const RESTAURANTES = [
-  { nombre: 'La Parrilla de Tito', especialidad: 'PARRILLA' },
-  { nombre: 'Ochiwan', especialidad: 'ASIATICA' },
-  { nombre: 'Pasta Nostra', especialidad: 'PASTAS' },
-  { nombre: 'El Muelle', especialidad: 'PESCADOS' },
-  { nombre: 'Café Tostado', especialidad: 'CAFE' },
-  { nombre: 'Minutas Don Pepe', especialidad: 'MINUTAS' },
+  // Coordinates are approximate points in Mar del Plata for the map.
+  { nombre: 'La Parrilla de Tito', especialidad: 'PARRILLA', latitud: -38.0023, longitud: -57.5545 },
+  { nombre: 'Ochiwan', especialidad: 'ASIATICA', latitud: -37.9962, longitud: -57.5498 },
+  { nombre: 'Pasta Nostra', especialidad: 'PASTAS', latitud: -38.0107, longitud: -57.5419 },
+  { nombre: 'El Muelle', especialidad: 'PESCADOS', latitud: -38.0446, longitud: -57.5326 },
+  { nombre: 'Café Tostado', especialidad: 'CAFE', latitud: -38.0068, longitud: -57.5378 },
+  { nombre: 'Minutas Don Pepe', especialidad: 'MINUTAS', latitud: -37.991, longitud: -57.56 },
 ];
 
 const CLIENTES = [
@@ -82,10 +83,30 @@ function safeJson(text) {
 const login = async ({ email, password }) => (await call('POST', '/auth/login', { email, password })).Token;
 const slug = (texto) => texto.normalize('NFD').replace(/[^\w]/g, '').toLowerCase();
 
+// Restaurant sign-up is multipart and needs 3 to 5 photos: three 1x1 PNGs in warm tones.
+const FOTOS_DEMO = [
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGN40RUHAAQuAdF9dnbFAAAAAElFTkSuQmCC',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4dHIaAAUCAlLeoKX0AAAAAElFTkSuQmCC',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPYkOAAAAMUAVEONchDAAAAAElFTkSuQmCC',
+];
+
+async function registrarRestaurante(body) {
+  const form = new FormData();
+  form.append('datos', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+  FOTOS_DEMO.forEach((foto, i) =>
+    form.append('fotos', new Blob([Buffer.from(foto, 'base64')], { type: 'image/png' }), `foto-${i}.png`),
+  );
+  form.append('portada', '0');
+  const res = await fetch(API + '/auth/register/restaurante', { method: 'POST', body: form });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`POST /auth/register/restaurante → ${res.status} ${text.slice(0, 200)}`);
+  return text ? safeJson(text) : null;
+}
+
 /** Registers the account unless it already exists; returns the response or null. */
 async function registrarSiFalta(path, body) {
   try {
-    return await call('POST', path, body);
+    return path === '/auth/register/restaurante' ? await registrarRestaurante(body) : await call('POST', path, body);
   } catch (error) {
     console.warn(`  ya existía o falló: ${body.email} (${error.message.split('→')[1]?.trim()})`);
     return null;
@@ -119,6 +140,11 @@ async function main() {
     if (!encontrado) throw new Error(`No se encontró el restaurante ${r.nombre}`);
     return encontrado.id;
   });
+
+  console.log('Ubicaciones');
+  for (const [i, r] of RESTAURANTES.entries()) {
+    await call('PUT', `/admin/restaurantes/${idRestaurante[i]}/ubicacion`, { latitud: r.latitud, longitud: r.longitud }, admin);
+  }
 
   console.log('Clientes');
   const clientes = [];
