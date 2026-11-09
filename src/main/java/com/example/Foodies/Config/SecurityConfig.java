@@ -51,6 +51,12 @@ public class SecurityConfig {
                         // Restaurant manager panel: always scoped to the caller's own restaurant.
                         .requestMatchers("/api/restaurantes/me", "/api/restaurantes/me/**").hasAuthority("ROLE_ENCARGADO")
                         .requestMatchers(HttpMethod.PATCH, "/api/reservas/*/estado").hasAuthority("ROLE_ENCARGADO")
+                        // Reservations: the services check ownership (client, restaurant manager or admin).
+                        .requestMatchers(HttpMethod.GET, "/api/reservas").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/reservas/restaurante/*").hasAnyAuthority("ROLE_ENCARGADO", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/reservas/*").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ENCARGADO", "ROLE_ADMIN")
+                        // Account list: admin only. Single accounts are checked against the caller in UsuarioService.
+                        .requestMatchers(HttpMethod.GET, "/api/clientes").hasAuthority("ROLE_ADMIN")
                         // Public catalog: read-only.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/restaurantes",
@@ -68,7 +74,7 @@ public class SecurityConfig {
                         // Public review list shown on each restaurant page.
                         .requestMatchers(HttpMethod.GET, "/api/resenas").permitAll()
                         // Writes by id are not ownership-checked, so only admins may use them.
-                        .requestMatchers("/api/restaurantes/*", "/api/carta/**", "/api/reservas/restaurante/*").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/restaurantes/*", "/api/carta/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(
                                 "/api/reservas/**",
                                 "/api/clientes/*",

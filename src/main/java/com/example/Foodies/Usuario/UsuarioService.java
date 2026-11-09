@@ -2,12 +2,14 @@ package com.example.Foodies.Usuario;
 
 import com.example.Foodies.Foto.FotoService;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.Foodies.Config.CurrentUser;
 import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
+import com.example.Foodies.Exception.ForbiddenException;
 import com.example.Foodies.Exception.NotApprovedException;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -43,6 +45,8 @@ public class UsuarioService implements UserDetailsService {
     private FotoService fotoService;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private CurrentUser currentUser;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -91,6 +95,18 @@ public class UsuarioService implements UserDetailsService {
 
     public List<UsuarioListDTO> getAllClientes() {
         return usuarioMapper.toListDTO(usuarioRepo.findByRol(Role.ROLE_CLIENTE));
+    }
+
+    /** An account is reachable only by an admin or by its own user; anyone else gets 403. */
+    public void verificarAccesoACuenta(Long id) {
+        if (currentUser.isAdmin()) {
+            return;
+        }
+        Usuario actual = usuarioRepo.findByEmail(currentUser.email())
+                .orElseThrow(() -> new ForbiddenException("No hay un usuario autenticado"));
+        if (!actual.getId().equals(id)) {
+            throw new ForbiddenException("Solo podés acceder a tu propia cuenta");
+        }
     }
 
     public UsuarioDetailDTO getClienteById(Long id){
