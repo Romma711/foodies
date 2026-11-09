@@ -25,6 +25,6 @@ class ResenaMapperTest {
 
         List<ResenaUsuarioDTO> dtos = mapper.toUsuarioDtoList(List.of(resena));
 
-        assertThat(dtos).containsExactly(new ResenaUsuarioDTO(9L, "Muy rico", 4, 5L, "Ochiwan"));
+        assertThat(dtos).containsExactly(new ResenaUsuarioDTO(9L, "Muy rico", 4, 5L, "Ochiwan", null));
     }
 }

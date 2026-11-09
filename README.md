@@ -320,9 +320,9 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 ###
 >`GET`
 >
->`/api/resenas`
+>`/api/resenas?id={restauranteId}`
 >
->- Listar todas las reseñas
+>- Listar las reseñas de un restaurante, de la más nueva a la más vieja según `fechaCreacion` (ISO `yyyy-MM-ddTHH:mm:ss`). Las reseñas anteriores a ese campo tienen `fechaCreacion: null` y van al final
 ###
 >`PUT`
 ```

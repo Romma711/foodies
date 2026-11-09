@@ -19,6 +19,7 @@ public interface ResenaMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "usuario", ignore = true)
+    @Mapping(target = "fechaCreacion", ignore = true)
     @Mapping(target = "restaurant", source = "restaurantId")
     Resena toEntity(ResenaRequestDTO resenaDTO);
 

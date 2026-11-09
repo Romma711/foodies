@@ -9,6 +9,9 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "resena")
@@ -36,5 +39,13 @@ public class Resena {
     @ManyToOne
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
+
+    /**
+     * Fecha y hora en que se escribió la reseña. Hibernate la completa al insertar y no se modifica después.
+     * Queda en {@code NULL} para las reseñas creadas antes de que existiera esta columna.
+     */
+    @CreationTimestamp
+    @Column(name = "fecha_creacion", updatable = false)
+    private LocalDateTime fechaCreacion;
 
 }
