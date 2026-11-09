@@ -181,7 +181,7 @@ async function main() {
         idRestaurant: idRestaurante[restaurante],
       }, cliente.token);
       if (n >= cantidad - canceladas) {
-        await call('PUT', `/reservas/${reserva.id}`, { cantidad: reserva.cantidad, estadoReserva: 'CANCELADA' }, admin);
+        await call('PUT', `/reservas/${reserva.id}`, { estadoReserva: 'CANCELADA' }, cliente.token);
       }
     }
   }
