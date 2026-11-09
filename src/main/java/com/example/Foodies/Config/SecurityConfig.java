@@ -32,11 +32,13 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
                             response.getWriter().write("{\"error\": \"No tenés permisos para acceder a este recurso\"}");
                         })
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
                             response.getWriter().write("{\"error\": \"No estás autenticado\"}");
                         })
                 )

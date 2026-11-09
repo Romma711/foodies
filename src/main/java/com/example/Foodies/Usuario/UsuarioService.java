@@ -132,7 +132,8 @@ public class UsuarioService implements UserDetailsService {
     @Transactional
     public UsuarioDetailDTO peticionRegistroRestaurante(RegistroRestauranteRequestDTO r, List<MultipartFile> fotos,
                                                         Integer portada){
-        // Antes de crear nada: sin fotos válidas no hay registro.
+        // Antes de crear nada: sin fotos válidas ni especialidad conocida no hay registro.
+        EspecialidadDeComida especialidad = especialidad(r.getEspecialidadDeComida());
         FotoService.validarRegistro(fotos, portada);
         if(usuarioRepo.existsByEmail(r.getEmail())){
             throw new EmailDuplicadoException("El email esta en uso");
@@ -147,7 +148,7 @@ public class UsuarioService implements UserDetailsService {
         rest.setNombre(r.getNombreRestaurante());
         rest.setUbicacion(r.getDireccion());
         rest.setAprobado(false);
-        rest.setEspecialidad(EspecialidadDeComida.valueOf(r.getEspecialidadDeComida()));
+        rest.setEspecialidad(especialidad);
         rest.setCupoMaximo(r.getCupoMaximo());
 
         rest.setUsuario(usuario);
@@ -171,6 +172,16 @@ public class UsuarioService implements UserDetailsService {
         usuario.getRestaurant().setAprobado(true);
 
         return usuarioMapper.toDTO(usuario);
+    }
+
+    private static EspecialidadDeComida especialidad(String valor) {
+        try {
+            return EspecialidadDeComida.valueOf(valor);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BusinessException("La especialidad '" + valor + "' no existe. Valores posibles: "
+                    + java.util.Arrays.stream(EspecialidadDeComida.values()).map(Enum::name)
+                    .collect(java.util.stream.Collectors.joining(", ")));
+        }
     }
 
     public void lanzarError(String mensaje){

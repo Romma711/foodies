@@ -3,6 +3,7 @@ package com.example.Foodies.Usuario;
 import com.example.Foodies.Usuario.dtos.UsuarioDetailDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioListDTO;
 import com.example.Foodies.Usuario.dtos.UsuarioPatchDTO;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,7 @@ public class ClienteController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<UsuarioDetailDTO> handleUpdateById(@PathVariable Long id, @RequestBody UsuarioPatchDTO update){
+    public ResponseEntity<UsuarioDetailDTO> handleUpdateById(@PathVariable Long id, @Valid @RequestBody UsuarioPatchDTO update){
         usuarioService.verificarAccesoACuenta(id);
         return ResponseEntity.ok(usuarioService.updateCliente(id, update));
     }
