@@ -41,6 +41,8 @@ public class UsuarioService implements UserDetailsService {
     private UsuarioMapper usuarioMapper;
     @Autowired
     private FotoService fotoService;
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -63,7 +65,7 @@ public class UsuarioService implements UserDetailsService {
         }
 
         UserDetails userDetails = loadUserByUsername(email);
-        return JwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList(), usuario.getId());
+        return jwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList(), usuario.getId());
     }
 
 

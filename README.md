@@ -73,6 +73,7 @@ spring.datasource.url=jdbc:mysql://localhost:3306/foodies
 spring.datasource.username=<tu-usuario>
 spring.datasource.password=<tu-contraseña>
 ```
+- Definir la clave para firmar los tokens JWT en la variable de entorno `JWT_SECRET` (al menos 32 bytes; por ejemplo, la salida de `openssl rand -base64 48`). No hay clave por defecto: si falta o es más corta, la app no arranca y el error lo indica. Los tests usan una clave propia definida en `src/test/resources/application.properties`.
 - Ejecutar el proyecto desde IntelliJ o con:
 ./mvnw spring-boot:run
 

@@ -15,6 +15,12 @@ import java.util.stream.Collectors;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
     private static final List<String> PUBLIC_URLS = List.of(
             "/api/carta/*",
             "/api/auth/login",
@@ -51,9 +57,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = header.substring(7);
 
         try {
-            if (JwtUtil.validateToken(token)) {
-                String username = JwtUtil.getUsername(token);
-                List<String> roles = JwtUtil.getRoles(token);
+            if (jwtUtil.validateToken(token)) {
+                String username = jwtUtil.getUsername(token);
+                List<String> roles = jwtUtil.getRoles(token);
 
                 List<SimpleGrantedAuthority> authorities = roles.stream()
                         .map(SimpleGrantedAuthority::new)  // no agregar "ROLE_" manualmente
@@ -66,6 +72,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
             response.getWriter().write("{\"error\": \"Token inválido o expirado\"}");
             return;
         }
