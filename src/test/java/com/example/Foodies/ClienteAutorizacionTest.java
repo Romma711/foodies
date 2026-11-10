@@ -85,6 +85,23 @@ class ClienteAutorizacionTest {
     }
 
     @Test
+    void elPatchSoloCambiaLosCamposQueRecibe() {
+        Cliente cliente = api.nuevoCliente();
+        String apellidoOriginal = usuarioRepo.findById(cliente.id()).orElseThrow().getApellido();
+
+        ResponseEntity<Map> patch = api.send(HttpMethod.PATCH, "/api/clientes/" + cliente.id(), cliente.token(),
+                Map.of("telefono", "2234444444"), Map.class);
+
+        assertThat(patch.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patch.getBody()).containsEntry("nombre", "Cliente").containsEntry("telefono", "2234444444");
+        assertThat(usuarioRepo.findById(cliente.id())).hasValueSatisfying(u -> {
+            assertThat(u.getNombre()).isEqualTo("Cliente");
+            assertThat(u.getApellido()).isEqualTo(apellidoOriginal);
+            assertThat(u.getTelefono()).isEqualTo("2234444444");
+        });
+    }
+
+    @Test
     void unClienteNoPuedeCambiarSuRolNiSuEstadoConPatch() {
         Cliente cliente = api.nuevoCliente();
 

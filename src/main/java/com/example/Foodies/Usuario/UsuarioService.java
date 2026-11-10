@@ -118,9 +118,16 @@ public class UsuarioService implements UserDetailsService {
     public UsuarioDetailDTO updateCliente(Long id, UsuarioPatchDTO update){
         Usuario existente = usuarioRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("ERROR: el cliente no existe"));
-        existente.setNombre(update.getNombre());
-        existente.setApellido(update.getApellido());
-        existente.setTelefono(update.getTelefono());
+        // PATCH semantics: a field missing from the request keeps its current value.
+        if (update.getNombre() != null) {
+            existente.setNombre(update.getNombre());
+        }
+        if (update.getApellido() != null) {
+            existente.setApellido(update.getApellido());
+        }
+        if (update.getTelefono() != null) {
+            existente.setTelefono(update.getTelefono());
+        }
         usuarioRepo.save(existente);
         return usuarioMapper.toDTO(existente);
     }
