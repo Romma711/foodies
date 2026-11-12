@@ -2,12 +2,14 @@ package com.example.Foodies.Usuario;
 
 import com.example.Foodies.Foto.FotoService;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.Foodies.Config.CurrentUser;
 import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
+import com.example.Foodies.Exception.ForbiddenException;
 import com.example.Foodies.Exception.NotApprovedException;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -41,6 +43,10 @@ public class UsuarioService implements UserDetailsService {
     private UsuarioMapper usuarioMapper;
     @Autowired
     private FotoService fotoService;
+    @Autowired
+    private JwtUtil jwtUtil;
+    @Autowired
+    private CurrentUser currentUser;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -63,7 +69,7 @@ public class UsuarioService implements UserDetailsService {
         }
 
         UserDetails userDetails = loadUserByUsername(email);
-        return JwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList(), usuario.getId());
+        return jwtUtil.createToken(userDetails.getUsername(),userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList(), usuario.getId());
     }
 
 
@@ -91,6 +97,18 @@ public class UsuarioService implements UserDetailsService {
         return usuarioMapper.toListDTO(usuarioRepo.findByRol(Role.ROLE_CLIENTE));
     }
 
+    /** An account is reachable only by an admin or by its own user; anyone else gets 403. */
+    public void verificarAccesoACuenta(Long id) {
+        if (currentUser.isAdmin()) {
+            return;
+        }
+        Usuario actual = usuarioRepo.findByEmail(currentUser.email())
+                .orElseThrow(() -> new ForbiddenException("No hay un usuario autenticado"));
+        if (!actual.getId().equals(id)) {
+            throw new ForbiddenException("Solo podés acceder a tu propia cuenta");
+        }
+    }
+
     public UsuarioDetailDTO getClienteById(Long id){
         Usuario usuario = usuarioRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("El cliente no existe"));
@@ -100,9 +118,16 @@ public class UsuarioService implements UserDetailsService {
     public UsuarioDetailDTO updateCliente(Long id, UsuarioPatchDTO update){
         Usuario existente = usuarioRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("ERROR: el cliente no existe"));
-        existente.setNombre(update.getNombre());
-        existente.setApellido(update.getApellido());
-        existente.setTelefono(update.getTelefono());
+        // PATCH semantics: a field missing from the request keeps its current value.
+        if (update.getNombre() != null) {
+            existente.setNombre(update.getNombre());
+        }
+        if (update.getApellido() != null) {
+            existente.setApellido(update.getApellido());
+        }
+        if (update.getTelefono() != null) {
+            existente.setTelefono(update.getTelefono());
+        }
         usuarioRepo.save(existente);
         return usuarioMapper.toDTO(existente);
     }
@@ -114,7 +139,8 @@ public class UsuarioService implements UserDetailsService {
     @Transactional
     public UsuarioDetailDTO peticionRegistroRestaurante(RegistroRestauranteRequestDTO r, List<MultipartFile> fotos,
                                                         Integer portada){
-        // Antes de crear nada: sin fotos válidas no hay registro.
+        // Antes de crear nada: sin fotos válidas ni especialidad conocida no hay registro.
+        EspecialidadDeComida especialidad = especialidad(r.getEspecialidadDeComida());
         FotoService.validarRegistro(fotos, portada);
         if(usuarioRepo.existsByEmail(r.getEmail())){
             throw new EmailDuplicadoException("El email esta en uso");
@@ -129,7 +155,7 @@ public class UsuarioService implements UserDetailsService {
         rest.setNombre(r.getNombreRestaurante());
         rest.setUbicacion(r.getDireccion());
         rest.setAprobado(false);
-        rest.setEspecialidad(EspecialidadDeComida.valueOf(r.getEspecialidadDeComida()));
+        rest.setEspecialidad(especialidad);
         rest.setCupoMaximo(r.getCupoMaximo());
 
         rest.setUsuario(usuario);
@@ -153,6 +179,16 @@ public class UsuarioService implements UserDetailsService {
         usuario.getRestaurant().setAprobado(true);
 
         return usuarioMapper.toDTO(usuario);
+    }
+
+    private static EspecialidadDeComida especialidad(String valor) {
+        try {
+            return EspecialidadDeComida.valueOf(valor);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            throw new BusinessException("La especialidad '" + valor + "' no existe. Valores posibles: "
+                    + java.util.Arrays.stream(EspecialidadDeComida.values()).map(Enum::name)
+                    .collect(java.util.stream.Collectors.joining(", ")));
+        }
     }
 
     public void lanzarError(String mensaje){

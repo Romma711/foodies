@@ -3,7 +3,6 @@ package com.example.Foodies.Usuario;
 import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
-import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
 import com.example.Foodies.Usuario.dtos.LoginRequestDTO;
 import com.example.Foodies.Usuario.dtos.RegistroClienteDTO;
@@ -26,7 +25,6 @@ public class UsuarioController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> handleLogin(@Valid @RequestBody LoginRequestDTO usuario){
         String token = usuarioService.login(usuario.getEmail(), usuario.getPassword());
-        JwtUtil.printTokenInfo(token);
         Map<String, String> devolver = new HashMap<>();
         devolver.put("Token","Bearer " +token);
         return ResponseEntity.ok(devolver);

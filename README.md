@@ -73,6 +73,7 @@ spring.datasource.url=jdbc:mysql://localhost:3306/foodies
 spring.datasource.username=<tu-usuario>
 spring.datasource.password=<tu-contraseña>
 ```
+- Definir la clave para firmar los tokens JWT en la variable de entorno `JWT_SECRET` (al menos 32 bytes; por ejemplo, la salida de `openssl rand -base64 48`). No hay clave por defecto: si falta o es más corta, la app no arranca y el error lo indica. Los tests usan una clave propia definida en `src/test/resources/application.properties`.
 - Ejecutar el proyecto desde IntelliJ o con:
 ./mvnw spring-boot:run
 
@@ -90,18 +91,18 @@ Para probar endpoints protegidos, hacé login en `POST /api/auth/login`, copiá 
 ## 👦 CLIENTE
 >`GET`
 >
->`/api/clientes/`
->- Lista todos los clientes
+>`/api/clientes`
+>- Lista todos los clientes (solo `ROLE_ADMIN`)
 ###
 >`GET`
 >
 >`/api/clientes/{id}`
->- Lista al cliente solicitado
+>- Lista al cliente solicitado (el admin o el propio cliente; otro id responde `403`)
 ###
 >`DELETE`
 >
 >`/api/clientes/{id}`
->- Elimina al cliente solicitado
+>- Elimina al cliente solicitado (el admin o el propio cliente; otro id responde `403`)
 ###
 >`PATCH`
 
@@ -115,7 +116,7 @@ Para probar endpoints protegidos, hacé login en `POST /api/auth/login`, copiá 
   "telefono":""
 }
 ```
->- Actualizar datos
+>- Actualizar datos (el admin o el propio cliente; otro id responde `403`). No permite cambiar el rol ni el estado de la cuenta.
 ###
 ## 🏥 RESTAURANTES
 >`GET`
@@ -232,56 +233,61 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 }
 ```
 
->- Crear nueva reserva
+>- Crear nueva reserva. La reserva queda a nombre del usuario del token: `idUsuario` es opcional y, si es de otro usuario, responde `403`
 ###
 >`GET`
 >
 >`/api/reservas`
 >
->- Listar todas las reservas
+>- Listar todas las reservas (solo `ROLE_ADMIN`)
 ###
 
 >`GET`
 >
 >`/api/reservas/usuario/{id}`
 >
->- Listar todas las reservas de un usuario
+>- Listar todas las reservas de un usuario (el propio usuario o el admin; si no, `403`)
 ###
 
 >`GET`
 >
 >`/api/reservas/restaurante/{id}`
 >
->- Listar todas las reservas de un restaurant
+>- Listar todas las reservas de un restaurant (su encargado o el admin; si no, `403`)
 ###
 
 >`GET`
 >
 >`/api/reservas/{id}`
 >
->- Listar la reseña indicada
+>- Ver la reserva indicada (su dueño, el encargado del restaurante o el admin; si no, `403`)
 ###
 
 >`PUT`
 
 ```
-/api/reservas/{id}/
+/api/reservas/{id}
 
-> Body
+> Body (todos opcionales)
 {
-  "cantidad": ,
-  "estadoReserva: ""
+  "cantidad": 4,
+  "fechaReserva": "2026-12-24",
+  "horarioLlegada": "21:30",
+  "estadoReserva": "CANCELADA"
 }
 ```
 
->- Crear nueva reserva
+>- Solo el dueño de la reserva (si no, `403`)
+>- Con `estadoReserva` solo se acepta `CANCELADA` (cancela la reserva e ignora los demás campos); otro valor responde `400`
+>- Si cambia fecha, hora o cantidad, la reserva vuelve a `PENDIENTE`. Se valida: cantidad mayor a 0, fecha y hora no anteriores a ahora (y hasta 3 meses), y cupo del día sin contar esta misma reserva. Los errores responden `400` con `{ "error", "mensaje" }`
+>- Una reserva `CANCELADA` no se puede modificar (`400`)
 ###
 
 >`DELETE`
 >
 >/api/reservas/{id}
 >
->- Eliminar reserva por ID
+>- Eliminar reserva por ID (su dueño o el admin; si no, `403`)
 
 ## 📄 RESEÑAS
 
@@ -314,9 +320,9 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 ###
 >`GET`
 >
->`/api/resenas`
+>`/api/resenas?id={restauranteId}`
 >
->- Listar todas las reseñas
+>- Listar las reseñas de un restaurante, de la más nueva a la más vieja según `fechaCreacion` (ISO `yyyy-MM-ddTHH:mm:ss`). Las reseñas anteriores a ese campo tienen `fechaCreacion: null` y van al final
 ###
 >`PUT`
 ```

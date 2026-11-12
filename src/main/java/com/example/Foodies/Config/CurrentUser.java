@@ -16,4 +16,11 @@ public class CurrentUser {
         }
         return auth.getName();
     }
+
+    /** True when the authenticated user has {@code ROLE_ADMIN}. */
+    public boolean isAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
 }

@@ -18,7 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -32,11 +32,13 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
                             response.getWriter().write("{\"error\": \"No tenés permisos para acceder a este recurso\"}");
                         })
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
                             response.getWriter().write("{\"error\": \"No estás autenticado\"}");
                         })
                 )
@@ -51,6 +53,12 @@ public class SecurityConfig {
                         // Restaurant manager panel: always scoped to the caller's own restaurant.
                         .requestMatchers("/api/restaurantes/me", "/api/restaurantes/me/**").hasAuthority("ROLE_ENCARGADO")
                         .requestMatchers(HttpMethod.PATCH, "/api/reservas/*/estado").hasAuthority("ROLE_ENCARGADO")
+                        // Reservations: the services check ownership (client, restaurant manager or admin).
+                        .requestMatchers(HttpMethod.GET, "/api/reservas").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/reservas/restaurante/*").hasAnyAuthority("ROLE_ENCARGADO", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/reservas/*").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ENCARGADO", "ROLE_ADMIN")
+                        // Account list: admin only. Single accounts are checked against the caller in UsuarioService.
+                        .requestMatchers(HttpMethod.GET, "/api/clientes").hasAuthority("ROLE_ADMIN")
                         // Public catalog: read-only.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/restaurantes",
@@ -68,7 +76,7 @@ public class SecurityConfig {
                         // Public review list shown on each restaurant page.
                         .requestMatchers(HttpMethod.GET, "/api/resenas").permitAll()
                         // Writes by id are not ownership-checked, so only admins may use them.
-                        .requestMatchers("/api/restaurantes/*", "/api/carta/**", "/api/reservas/restaurante/*").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/restaurantes/*", "/api/carta/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(
                                 "/api/reservas/**",
                                 "/api/clientes/*",
@@ -77,14 +85,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public JwtAuthFilter jwtAuthFilter() {
-        return new JwtAuthFilter();
+    public JwtAuthFilter jwtAuthFilter(JwtUtil jwtUtil) {
+        return new JwtAuthFilter(jwtUtil);
     }
 
 

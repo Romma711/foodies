@@ -34,6 +34,9 @@ public class ReservaValidations {
     }
 
     public static void validateDate(String fecha){
+        if (fecha == null || fecha.isBlank()) {
+            throw new BusinessException("La fecha es obligatoria");
+        }
         try {
             LocalDate fechaReserva = LocalDate.parse(fecha);
             LocalDate hoy = LocalDate.now();
@@ -49,6 +52,13 @@ public class ReservaValidations {
 
         } catch (DateTimeParseException e) {
             throw new BusinessException("Formato de fecha inválido. Debe ser yyyy-MM-dd (ejemplo: 2024-12-25)");
+        }
+    }
+
+    /** The reservation date and arrival time cannot be earlier than now. */
+    public static void validateNotPast(LocalDate fecha, java.time.LocalTime hora) {
+        if (java.time.LocalDateTime.of(fecha, hora).isBefore(java.time.LocalDateTime.now())) {
+            throw new BusinessException("La fecha y hora de la reserva no pueden ser anteriores a este momento");
         }
     }
 

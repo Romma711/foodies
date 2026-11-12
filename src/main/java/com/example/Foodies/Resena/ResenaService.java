@@ -17,6 +17,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -33,6 +34,11 @@ public class ResenaService {
 
     @Autowired
     private ResenaMapper resenaMapper;
+
+    /** Newest first by creation date; reviews without a date (older rows) go last, newest id first. */
+    private static final Comparator<Resena> MAS_RECIENTES = Comparator
+            .comparing(Resena::getFechaCreacion, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(Resena::getId, Comparator.nullsLast(Comparator.reverseOrder()));
 
     @Transactional
     public ResenaDetailDTO createResena(ResenaRequestDTO resena, String email) {
@@ -68,7 +74,7 @@ public class ResenaService {
         if (resenaList.isEmpty()) {
             throw new ListNoContentException("Este restaurante no tiene reseñas");
         }
-        return resenaMapper.toListDtoList(resenaList);
+        return resenaMapper.toListDtoList(resenaList.stream().sorted(MAS_RECIENTES).toList());
     }
 
     public ResenaDetailDTO getResenaById(Long id) {
@@ -79,7 +85,8 @@ public class ResenaService {
                 resena.getComentario(),
                 resena.getCalificacion(),
                 resena.getUsuario().getNombre(),
-                resena.getRestaurant().getNombre()
+                resena.getRestaurant().getNombre(),
+                resena.getFechaCreacion()
         );
     }
 
@@ -106,7 +113,8 @@ public class ResenaService {
                 resena.getComentario(),
                 resena.getCalificacion(),
                 resena.getUsuario().getNombre(),
-                resena.getRestaurant().getNombre()
+                resena.getRestaurant().getNombre(),
+                resena.getFechaCreacion()
         );
     }
 
@@ -122,7 +130,7 @@ public class ResenaService {
         if (resenas.isEmpty()) {
             throw new ListNoContentException("Este usuario no tiene reseñas");
         }
-        return resenaMapper.toUsuarioDtoList(resenas);
+        return resenaMapper.toUsuarioDtoList(resenas.stream().sorted(MAS_RECIENTES).toList());
     }
 
     private Resena buscarResena(Long id) {

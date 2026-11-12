@@ -4,82 +4,87 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
+/**
+ * Creates and reads the JWTs. The signing secret comes from the {@code jwt.secret} property
+ * (environment variable {@code JWT_SECRET}); there is no fallback, so the app refuses to start
+ * without a secret of at least 32 bytes (256 bits, the minimum for HS256).
+ */
+@Component
 public class JwtUtil {
-    private static final String SECRET = System.getenv("JWT_SECRET") != null
-            ? System.getenv("JWT_SECRET")
-            : "clave-ultra-secreta-andy-deja-el-lol-necesitamos-una-clave-mas-larga-para-cumplir-con-256-bits";
 
-    private static final long EXPIRATION =18000000L; // 5 horas |  3600000L 1 hora
+    static final int MIN_SECRET_BYTES = 32;
 
-    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
 
+    private static final long EXPIRATION = 18000000L; // 5 horas |  3600000L 1 hora
 
-    public static String createToken(String username, List<String> roles, Long usuarioId) {
+    private final SecretKey key;
+
+    public JwtUtil(@Value("${jwt.secret:}") String secret) {
+        this.key = Keys.hmacShaKeyFor(validSecret(secret));
+    }
+
+    static byte[] validSecret(String secret) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "Falta la clave JWT: definí la variable de entorno JWT_SECRET (al menos 32 bytes).");
+        }
+        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "La clave JWT es demasiado corta: JWT_SECRET debe tener al menos 32 bytes (tiene "
+                            + bytes.length + ").");
+        }
+        return bytes;
+    }
+
+    public String createToken(String username, List<String> roles, Long usuarioId) {
         return Jwts.builder()
                 .setSubject(username)
                 .claim("roles", roles)
                 .claim("usuarioId", usuarioId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
-                .signWith(KEY)
+                .signWith(key)
                 .compact();
     }
 
-    public static boolean validateToken(String token) {
+    public boolean validateToken(String token) {
         try {
-            Jwts.parser()
-                    .setSigningKey(KEY)
-                    .build()
-                    .parseClaimsJws(token);
+            claims(token);
             return true;
         } catch (ExpiredJwtException e) {
-            System.err.println("JWT expirado: " + e.getMessage());
+            log.debug("JWT expirado: {}", e.getMessage());
         } catch (Exception e) {
-            System.err.println("JWT inválido: " + e.getMessage());
+            log.debug("JWT inválido: {}", e.getMessage());
         }
         return false;
     }
 
-    public static String getUsername(String token) {
-        return Jwts.parser()
-                .setSigningKey(KEY)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+    public String getUsername(String token) {
+        return claims(token).getSubject();
     }
 
     @SuppressWarnings("unchecked")
-    public static List<String> getRoles(String token) {
-        return (List<String>) Jwts.parser()
-                .setSigningKey(KEY)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .get("roles");
+    public List<String> getRoles(String token) {
+        return (List<String>) claims(token).get("roles");
     }
 
-    public static void printTokenInfo(String token) {
-        try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey(KEY)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-
-            System.out.println("👉 Información del token:");
-            for (Map.Entry<String, Object> entry : claims.entrySet()) {
-                System.out.println("  🔹 " + entry.getKey() + ": " + entry.getValue());
-            }
-
-        } catch (Exception e) {
-            System.err.println("❌ Token inválido: " + e.getMessage());
-        }
+    private Claims claims(String token) {
+        return Jwts.parser()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

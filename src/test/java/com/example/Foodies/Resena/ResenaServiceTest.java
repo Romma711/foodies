@@ -77,7 +77,7 @@ class ResenaServiceTest {
         when(resenaRepo.save(any(Resena.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(resenaMapper.toDto(any(Resena.class)))
-                .thenReturn(new ResenaDetailDTO(1L, dto.getComentario(), 5, "Ana", "Ochiwan"));
+                .thenReturn(new ResenaDetailDTO(1L, dto.getComentario(), 5, "Ana", "Ochiwan", null));
 
         ResenaDetailDTO resultado = resenaService.createResena(dto, "ana@foodies.com");
 
