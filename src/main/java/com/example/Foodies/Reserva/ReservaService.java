@@ -294,6 +294,7 @@ public class ReservaService {
                 r.getHorariollegada(),
                 r.getEstadoReserva(),
                 r.getRestaurant().getNombre(),
+                r.getRestaurant().getId(),
                 r.getEspacio() == null ? null : r.getEspacio().getId(),
                 r.getEspacio() == null ? null : r.getEspacio().getNombre()
         );

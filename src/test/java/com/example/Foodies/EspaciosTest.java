@@ -353,6 +353,8 @@ class EspaciosTest {
         ResponseEntity<List> mias = api.send(HttpMethod.GET, "/api/reservas/usuario/" + cliente.id(), cliente.token(), null, List.class);
         assertThat(mias.getBody()).extracting(r -> ((Map<?, ?>) r).get("espacioNombre")).containsExactly("Patio");
         assertThat(mias.getBody()).extracting(r -> ((Map<?, ?>) r).get("idEspacio")).containsExactly(patioId.intValue());
+        assertThat(mias.getBody()).extracting(r -> ((Map<?, ?>) r).get("idRestaurant"))
+                .containsExactly(encargado.restaurantId().intValue());
     }
 
     // ---- B4: cupos especiales por espacio y fecha ----
