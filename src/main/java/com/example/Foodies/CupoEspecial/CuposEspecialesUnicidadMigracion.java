@@ -11,7 +11,7 @@ import java.sql.DatabaseMetaData;
 import java.util.List;
 
 /**
- * Al arrancar en MySQL, quita la clave única vieja de {@code CuposEspeciales} sobre
+ * Al arrancar en MySQL, quita la clave única vieja de {@code cupos_especiales} sobre
  * {@code (restaurant_id, fecha)}.
  *
  * <p>Ahora el cupo especial es por espacio y la clave única es {@code (espacio_id, fecha)}.
@@ -43,7 +43,7 @@ public class CuposEspecialesUnicidadMigracion implements ApplicationRunner {
         }
         List<String> tablas = jdbc.queryForList("""
                 select table_name from information_schema.tables
-                where table_schema = database() and lower(table_name) = 'cuposespeciales'
+                where table_schema = database() and lower(table_name) in ('cupos_especiales', 'cuposespeciales')
                 """, String.class);
         if (tablas.isEmpty()) {
             return;
