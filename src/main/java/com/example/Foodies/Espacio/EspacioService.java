@@ -79,8 +79,20 @@ public class EspacioService {
         espacio.setNombre(nombre);
         espacio.setCapacidad(request.capacidad());
         espacio = espacioRepo.save(espacio);
+        ajustarCuposEspeciales(espacio);
         recalcularCapacidadTotal(restaurant);
         return EspacioDTO.from(espacio);
+    }
+
+    /**
+     * Un cupo especial nunca supera la capacidad del espacio: al bajarla, los cupos especiales
+     * futuros mayores quedan en la nueva capacidad. Lo ya reservado no se pierde porque la
+     * capacidad no puede bajar de lo reservado en ningún día futuro.
+     */
+    private void ajustarCuposEspeciales(Espacio espacio) {
+        cupoRepo.findAllByEspacio_IdAndFechaGreaterThanEqualAndCupoGreaterThan(
+                        espacio.getId(), LocalDate.now(), espacio.getCapacidad())
+                .forEach(cupo -> cupo.setCupo(espacio.getCapacidad()));
     }
 
     /**

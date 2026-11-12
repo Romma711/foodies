@@ -194,6 +194,7 @@ Cada restaurante tiene uno o más espacios (salones, patios, barras) con su capa
 ```
 >- `tipo`: `SALON`, `PATIO` o `BARRA`. `nombre` hasta 60 caracteres y sin repetir dentro del restaurante. `capacidad` al menos 1
 >- La capacidad no puede quedar por debajo de las personas ya reservadas en un mismo día futuro (`400`)
+>- Al bajar la capacidad, los cupos especiales futuros mayores que la nueva capacidad pasan a ser iguales a ella
 >- Un espacio de otro restaurante responde `404`
 ###
 >`PATCH` `/api/restaurantes/me/espacios/{id}/activo`

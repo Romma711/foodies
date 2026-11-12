@@ -416,6 +416,23 @@ class EspaciosTest {
                 && c.getEspacio().getId().equals(salonPrincipal(otro).getId()));
     }
 
+    @Test
+    void alBajarLaCapacidadLosCuposEspecialesMayoresQuedanEnLaNuevaCapacidad() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        LocalDate fecha = LocalDate.now().plusDays(9);
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 10);
+        api.send(HttpMethod.PUT, cupoPath(patioId, fecha), encargado.token(), Map.of("cupo", 8), Map.class);
+        api.send(HttpMethod.PUT, cupoPath(patioId, fecha.plusDays(1)), encargado.token(), Map.of("cupo", 3), Map.class);
+
+        ResponseEntity<Map> achicado = api.send(HttpMethod.PUT, "/api/restaurantes/me/espacios/" + patioId,
+                encargado.token(), Map.of("tipo", "PATIO", "nombre", "Patio", "capacidad", 5), Map.class);
+        assertThat(achicado.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<List> lista = api.send(HttpMethod.GET, "/api/restaurantes/me/cupos-especiales",
+                encargado.token(), null, List.class);
+        assertThat(lista.getBody()).extracting(c -> ((Map<?, ?>) c).get("cupo")).containsExactly(5, 3);
+    }
+
     // ---- helpers ----
 
     private static String cupoPath(Long espacioId, LocalDate fecha) {
