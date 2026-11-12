@@ -240,7 +240,197 @@ class EspaciosTest {
         assertThat(api.status(HttpMethod.GET, "/api/restaurantes/999999/espacios", null, null)).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    // ---- B3: reservas por espacio ----
+
+    @Test
+    void laReservaExigeUnEspacioActivoDelRestaurante() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Encargado otro = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(2);
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
+        Long salonId = salonPrincipal(encargado).getId();
+
+        assertThat(mensaje(api.reservar(cliente, encargado.restaurantId(), null, fecha, 2)))
+                .contains("Elegí en qué espacio");
+        assertThat(mensaje(api.reservar(cliente, encargado.restaurantId(), salonPrincipal(otro).getId(), fecha, 2)))
+                .contains("no está disponible");
+        api.send(HttpMethod.PATCH, "/api/restaurantes/me/espacios/" + patioId + "/activo", encargado.token(),
+                Map.of("activo", false), Map.class);
+        assertThat(mensaje(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 2)))
+                .contains("no está disponible");
+
+        ResponseEntity<Map> ok = api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 2);
+        assertThat(ok.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(ok.getBody()).containsEntry("espacioNombre", "Salón principal")
+                .containsEntry("idEspacio", salonId.intValue());
+    }
+
+    @Test
+    void elCupoSeValidaPorEspacio() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(3);
+        Long salonId = salonPrincipal(encargado).getId();
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
+
+        assertThat(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> salonLleno = api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 1);
+        assertThat(salonLleno.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(salonLleno.getBody().toString()).doesNotContain("10");
+
+        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 1).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ResponseEntity<List> publico = api.send(HttpMethod.GET, "/api/restaurantes/" + encargado.restaurantId()
+                + "/espacios?fecha=" + fecha + "&cantidad=1", null, null, List.class);
+        assertThat(publico.getBody()).extracting(e -> ((Map<?, ?>) e).get("hayLugar")).containsExactly(false, false);
+    }
+
+    @Test
+    void laAutoAceptacionSeCalculaSobreElCupoDeCadaEspacio() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(4);
+        Long salonId = salonPrincipal(encargado).getId();
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
+        api.send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 50), Map.class);
+
+        assertThat(estado(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 1))).isEqualTo("PENDIENTE");
+        assertThat(estado(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 5))).isEqualTo("ACEPTADA");
+    }
+
+    @Test
+    void alModificarSePuedeCambiarDeEspacioYSeValidaSuCupo() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(5);
+        Long salonId = salonPrincipal(encargado).getId();
+        Long barraId = crearEspacio(encargado, "BARRA", "Barra", 3);
+        Long reservaId = ((Number) api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 4)
+                .getBody().get("id")).longValue();
+        String path = "/api/reservas/" + reservaId;
+
+        ResponseEntity<Map> sinLugar = api.send(HttpMethod.PUT, path, cliente.token(), Map.of("idEspacio", barraId), Map.class);
+        assertThat(sinLugar.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getEspacio().getId()).isEqualTo(salonId);
+
+        ResponseEntity<Map> movida = api.send(HttpMethod.PUT, path, cliente.token(),
+                Map.of("idEspacio", barraId, "cantidad", 3), Map.class);
+        assertThat(movida.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(movida.getBody()).containsEntry("espacioNombre", "Barra").containsEntry("estadoReserva", "PENDIENTE");
+        assertThat(reservaRepo.findById(reservaId).orElseThrow().getEspacio().getId()).isEqualTo(barraId);
+    }
+
+    @Test
+    void noSePuedeDesactivarUnEspacioConReservasFuturas() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
+        api.reservar(cliente, encargado.restaurantId(), patioId, LocalDate.now().plusDays(6), 2);
+
+        ResponseEntity<Map> resp = api.send(HttpMethod.PATCH, "/api/restaurantes/me/espacios/" + patioId + "/activo",
+                encargado.token(), Map.of("activo", false), Map.class);
+        assertThat(mensaje(resp)).contains("reservas");
+        assertThat(espacioRepo.findById(patioId).orElseThrow().getActivo()).isTrue();
+
+        ResponseEntity<Map> achicar = api.send(HttpMethod.PUT, "/api/restaurantes/me/espacios/" + patioId,
+                encargado.token(), Map.of("tipo", "PATIO", "nombre", "Patio", "capacidad", 1), Map.class);
+        assertThat(mensaje(achicar)).contains("No podés bajar la capacidad");
+    }
+
+    @Test
+    void elPanelYMisReservasMuestranElEspacio() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
+        api.reservar(cliente, encargado.restaurantId(), patioId, LocalDate.now().plusDays(2), 2);
+
+        ResponseEntity<List> panel = api.send(HttpMethod.GET, "/api/restaurantes/me/reservas", encargado.token(), null, List.class);
+        assertThat(panel.getBody()).extracting(r -> ((Map<?, ?>) r).get("espacioNombre")).containsExactly("Patio");
+
+        ResponseEntity<List> mias = api.send(HttpMethod.GET, "/api/reservas/usuario/" + cliente.id(), cliente.token(), null, List.class);
+        assertThat(mias.getBody()).extracting(r -> ((Map<?, ?>) r).get("espacioNombre")).containsExactly("Patio");
+        assertThat(mias.getBody()).extracting(r -> ((Map<?, ?>) r).get("idEspacio")).containsExactly(patioId.intValue());
+    }
+
+    // ---- B4: cupos especiales por espacio y fecha ----
+
+    @Test
+    void elCupoEspecialAplicaSoloAlEspacioIndicado() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        LocalDate fecha = LocalDate.now().plusDays(7);
+        Long salonId = salonPrincipal(encargado).getId();
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
+
+        ResponseEntity<Map> patioCerrado = api.send(HttpMethod.PUT, cupoPath(patioId, fecha), encargado.token(),
+                Map.of("cupo", 0, "motivo", "Lluvia"), Map.class);
+        assertThat(patioCerrado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(patioCerrado.getBody()).containsEntry("espacioNombre", "Patio")
+                .containsEntry("idEspacio", patioId.intValue()).containsEntry("cupo", 0);
+        // El mismo día el salón también puede tener su propio cupo especial.
+        assertThat(api.send(HttpMethod.PUT, cupoPath(salonId, fecha), encargado.token(), Map.of("cupo", 6), Map.class)
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 1).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 6).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 1).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        // Otro día el patio vuelve a su capacidad normal.
+        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha.plusDays(1), 4).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<List> lista = api.send(HttpMethod.GET, "/api/restaurantes/me/cupos-especiales",
+                encargado.token(), null, List.class);
+        assertThat(lista.getBody()).extracting(c -> ((Map<?, ?>) c).get("espacioNombre"))
+                .containsExactlyInAnyOrder("Patio", "Salón principal");
+        assertThat(lista.getBody()).extracting(c -> ((Map<?, ?>) c).get("reservadas"))
+                .containsExactlyInAnyOrder(0, 6);
+
+        assertThat(api.status(HttpMethod.DELETE, cupoPath(patioId, fecha), encargado.token(), null))
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 4).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void elCupoEspecialNoSuperaLaCapacidadDelEspacioYEsSoloDelRestaurante() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Encargado otro = api.nuevoEncargado();
+        LocalDate fecha = LocalDate.now().plusDays(8);
+        Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
+
+        ResponseEntity<Map> excede = api.send(HttpMethod.PUT, cupoPath(patioId, fecha), encargado.token(),
+                Map.of("cupo", 5), Map.class);
+        assertThat(mensaje(excede)).contains("(4)");
+
+        assertThat(api.status(HttpMethod.PUT, cupoPath(salonPrincipal(otro).getId(), fecha), encargado.token(),
+                Map.of("cupo", 1))).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(cupoRepo.findAll()).noneMatch(c -> c.getEspacio() != null
+                && c.getEspacio().getId().equals(salonPrincipal(otro).getId()));
+    }
+
     // ---- helpers ----
+
+    private static String cupoPath(Long espacioId, LocalDate fecha) {
+        return "/api/restaurantes/me/espacios/" + espacioId + "/cupos-especiales/" + fecha;
+    }
+
+    private Long crearEspacio(AutorizacionTestSupport.Encargado encargado, String tipo, String nombre, int capacidad) {
+        ResponseEntity<Map> resp = api.send(HttpMethod.POST, "/api/restaurantes/me/espacios", encargado.token(),
+                Map.of("tipo", tipo, "nombre", nombre, "capacidad", capacidad), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        return ((Number) resp.getBody().get("id")).longValue();
+    }
+
+    private static String estado(ResponseEntity<Map> resp) {
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return resp.getBody().get("estadoReserva").toString();
+    }
 
     private int cupoMaximo(AutorizacionTestSupport.Encargado encargado) {
         return restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getCupoMaximo();

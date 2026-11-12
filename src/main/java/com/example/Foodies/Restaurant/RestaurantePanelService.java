@@ -128,12 +128,12 @@ public class RestaurantePanelService {
         return cupoEspecialService.listarProximos(miRestaurante());
     }
 
-    public CupoEspecialDTO guardarCupoEspecial(LocalDate fecha, CupoEspecialRequestDTO request) {
-        return cupoEspecialService.guardar(miRestaurante(), fecha, request);
+    public CupoEspecialDTO guardarCupoEspecial(Long espacioId, LocalDate fecha, CupoEspecialRequestDTO request) {
+        return cupoEspecialService.guardar(miRestaurante(), espacioId, fecha, request);
     }
 
-    public void eliminarCupoEspecial(LocalDate fecha) {
-        cupoEspecialService.eliminar(miRestaurante(), fecha);
+    public void eliminarCupoEspecial(Long espacioId, LocalDate fecha) {
+        cupoEspecialService.eliminar(miRestaurante(), espacioId, fecha);
     }
 
     public List<FotoDTO> getFotos() {

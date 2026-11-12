@@ -15,4 +15,6 @@ public class ReservaRequesDTO {
     private String horarioLlegada;
     private Long idUsuario;
     private Long idRestaurant;
+    /** Espacio elegido (salón, patio o barra). Obligatorio. */
+    private Long idEspacio;
 }

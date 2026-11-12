@@ -12,12 +12,13 @@ import lombok.ToString;
 import java.time.LocalDate;
 
 /**
- * Capacidad reducida de un restaurante para un día puntual (por ejemplo, un evento privado).
- * Ese día reemplaza a {@link Restaurant#getCupoMaximo()}; los demás días no cambian.
+ * Capacidad reducida de un espacio para un día puntual (por ejemplo, el patio cerrado por lluvia).
+ * Ese día reemplaza a la capacidad del espacio; los demás días y los demás espacios no cambian.
+ * {@code restaurant} se mantiene para listar los cupos del restaurante sin recorrer sus espacios.
  */
 @Entity
 @Table(name = "CuposEspeciales",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"restaurant_id", "fecha"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"espacio_id", "fecha"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

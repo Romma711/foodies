@@ -118,7 +118,8 @@ class FlujoCompletoTest {
                     "fechaReserva", fecha,
                     "horarioLlegada", "19:30",
                     "idUsuario", clienteId,
-                    "idRestaurant", restaurantId), clientHeaders);
+                    "idRestaurant", restaurantId,
+                    "idEspacio", primerEspacio(restaurantId)), clientHeaders);
 
             ResponseEntity<ReservaDetailDTO> reservaResp = rest.exchange(
                     "/api/reservas",
@@ -140,5 +141,11 @@ class FlujoCompletoTest {
             assertThat(reservasDelUsuario.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(reservasDelUsuario.getBody()).hasSize(1);
         }
+    }
+
+    private Long primerEspacio(Long restaurantId) {
+        ResponseEntity<List> resp = rest.getForEntity("/api/restaurantes/{id}/espacios", List.class, restaurantId);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return ((Number) ((Map<?, ?>) resp.getBody().get(0)).get("id")).longValue();
     }
 }

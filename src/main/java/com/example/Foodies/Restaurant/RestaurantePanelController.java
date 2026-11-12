@@ -86,25 +86,27 @@ public class RestaurantePanelController {
         return panelService.cambiarActivoEspacio(id, request == null ? null : request.activo());
     }
 
-    /** Próximos días con capacidad reducida del restaurante del encargado. */
+    /** Próximos días con capacidad reducida en los espacios del restaurante del encargado. */
     @GetMapping("/me/cupos-especiales")
     public List<CupoEspecialDTO> getCuposEspeciales() {
         return panelService.getCuposEspeciales();
     }
 
-    /** Crea o modifica el cupo especial de un día (`yyyy-MM-dd`). */
-    @PutMapping("/me/cupos-especiales/{fecha}")
+    /** Crea o modifica el cupo especial de un espacio un día (`yyyy-MM-dd`). */
+    @PutMapping("/me/espacios/{espacioId}/cupos-especiales/{fecha}")
     public CupoEspecialDTO guardarCupoEspecial(
+            @PathVariable Long espacioId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
             @RequestBody CupoEspecialRequestDTO request) {
-        return panelService.guardarCupoEspecial(fecha, request);
+        return panelService.guardarCupoEspecial(espacioId, fecha, request);
     }
 
-    /** Ese día vuelve a regir la capacidad normal. */
-    @DeleteMapping("/me/cupos-especiales/{fecha}")
+    /** Ese día el espacio vuelve a su capacidad normal. */
+    @DeleteMapping("/me/espacios/{espacioId}/cupos-especiales/{fecha}")
     public ResponseEntity<Void> eliminarCupoEspecial(
+            @PathVariable Long espacioId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
-        panelService.eliminarCupoEspecial(fecha);
+        panelService.eliminarCupoEspecial(espacioId, fecha);
         return ResponseEntity.noContent().build();
     }
 

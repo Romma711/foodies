@@ -43,6 +43,9 @@ import static org.mockito.Mockito.verify;
 class NotificacionesEmailTest {
 
     @Autowired
+    private com.example.Foodies.Espacio.EspacioRepository espacioRepo;
+
+    @Autowired
     private TestRestTemplate rest;
     @Autowired
     private RestaurantRepository restaurantRepo;
@@ -117,7 +120,8 @@ class NotificacionesEmailTest {
                 "fechaReserva", LocalDate.now().plusDays(2).toString(),
                 "horarioLlegada", "20:30",
                 "idUsuario", cliente.id(),
-                "idRestaurant", restaurantId), Map.class);
+                "idRestaurant", restaurantId,
+                "idEspacio", primerEspacio(restaurantId)), Map.class);
 
         assertThat(reserva.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(reserva.getBody()).containsEntry("estadoReserva", "ACEPTADA");
@@ -163,7 +167,8 @@ class NotificacionesEmailTest {
                 "fechaReserva", fecha,
                 "horarioLlegada", "20:30",
                 "idUsuario", cliente.id(),
-                "idRestaurant", restaurantId), Map.class);
+                "idRestaurant", restaurantId,
+                "idEspacio", primerEspacio(restaurantId)), Map.class);
         assertThat(reserva.getStatusCode()).isEqualTo(HttpStatus.OK);
         Long reservaId = ((Number) reserva.getBody().get("id")).longValue();
         clearInvocations(mailSender);
@@ -250,5 +255,9 @@ class NotificacionesEmailTest {
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
         return rest.exchange(url, method, new HttpEntity<>(body, headers), type);
+    }
+
+    private Long primerEspacio(Long restaurantId) {
+        return espacioRepo.findAllByRestaurant_IdOrderByIdAsc(restaurantId).get(0).getId();
     }
 }

@@ -179,7 +179,13 @@ public class EspacioService {
         return Date.from(fecha.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
-    private Espacio delRestaurante(Restaurant restaurant, Long espacioId) {
+    /**
+     * Espacio del restaurante, activo o no.
+     *
+     * @throws EntityNotFoundException si no existe o es de otro restaurante
+     */
+    @Transactional(readOnly = true)
+    public Espacio delRestaurante(Restaurant restaurant, Long espacioId) {
         return espacioRepo.findById(espacioId)
                 .filter(e -> e.getRestaurant().getId().equals(restaurant.getId()))
                 .orElseThrow(() -> new EntityNotFoundException("Espacio no encontrado"));

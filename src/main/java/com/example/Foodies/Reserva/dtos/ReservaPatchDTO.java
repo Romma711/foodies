@@ -17,4 +17,6 @@ public class ReservaPatchDTO {
     private String fechaReserva;
     /** New arrival time, {@code HH:mm}; null keeps the current one. */
     private String horarioLlegada;
+    /** New espacio of the same restaurant; null keeps the current one. */
+    private Long idEspacio;
 }

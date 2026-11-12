@@ -34,6 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EntidadesControllerTest {
 
     @Autowired
+    private com.example.Foodies.Espacio.EspacioRepository espacioRepo;
+
+    @Autowired
     private TestRestTemplate rest;
     @Autowired
     private RestaurantRepository restaurantRepo;
@@ -242,7 +245,8 @@ class EntidadesControllerTest {
                 "fechaReserva", LocalDate.now().plusDays(1).toString(),
                 "horarioLlegada", "20:00",
                 "idUsuario", cliente.id(),
-                "idRestaurant", restaurantId);
+                "idRestaurant", restaurantId,
+                "idEspacio", primerEspacio(restaurantId));
     }
 
     private Map<?, ?> buscar(List<?> filas, String campo, Object valor) {
@@ -309,5 +313,9 @@ class EntidadesControllerTest {
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
         return rest.exchange(url, method, new HttpEntity<>(body, headers), type);
+    }
+
+    private Long primerEspacio(Long restaurantId) {
+        return espacioRepo.findAllByRestaurant_IdOrderByIdAsc(restaurantId).get(0).getId();
     }
 }

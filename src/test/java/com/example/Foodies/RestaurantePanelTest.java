@@ -283,7 +283,7 @@ class RestaurantePanelTest {
         Encargado otro = nuevoEncargado();
         Cliente cliente = nuevoCliente();
         LocalDate fecha = LocalDate.now().plusDays(8);
-        String path = "/api/restaurantes/me/cupos-especiales/" + fecha;
+        String path = cuposPath(encargado) + fecha;
 
         assertThat(send(HttpMethod.PUT, path, null, Map.of("cupo", 4)).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(send(HttpMethod.PUT, path, cliente.token(), Map.of("cupo", 4)).getStatusCode())
@@ -312,7 +312,7 @@ class RestaurantePanelTest {
     @Test
     void elCupoEspecialSeValida() {
         Encargado encargado = nuevoEncargado();
-        String base = "/api/restaurantes/me/cupos-especiales/";
+        String base = cuposPath(encargado);
         LocalDate fecha = LocalDate.now().plusDays(9);
 
         assertThat(send(HttpMethod.PUT, base + fecha, encargado.token(), Map.of("cupo", -1)).getStatusCode())
@@ -330,7 +330,7 @@ class RestaurantePanelTest {
         Encargado encargado = nuevoEncargado();
         Cliente cliente = nuevoCliente();
         LocalDate fecha = LocalDate.now().plusDays(10);
-        String path = "/api/restaurantes/me/cupos-especiales/" + fecha;
+        String path = cuposPath(encargado) + fecha;
         assertThat(reservar(cliente, encargado.restaurantId(), fecha, 6).getStatusCode()).isEqualTo(HttpStatus.OK);
 
         ResponseEntity<Map> rechazado = send(HttpMethod.PUT, path, encargado.token(), Map.of("cupo", 5));
@@ -349,7 +349,7 @@ class RestaurantePanelTest {
         Encargado encargado = nuevoEncargado();
         Cliente cliente = nuevoCliente();
         LocalDate fecha = LocalDate.now().plusDays(11);
-        send(HttpMethod.PUT, "/api/restaurantes/me/cupos-especiales/" + fecha, encargado.token(), Map.of("cupo", 4));
+        send(HttpMethod.PUT, cuposPath(encargado) + fecha, encargado.token(), Map.of("cupo", 4));
 
         assertThat(reservar(cliente, encargado.restaurantId(), fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
         ResponseEntity<Map> sinLugar = reservar(cliente, encargado.restaurantId(), fecha, 1);
@@ -368,7 +368,7 @@ class RestaurantePanelTest {
         LocalDate fecha = LocalDate.now().plusDays(12);
         // 50% de un cupo especial de 4: se aceptan solas hasta 2 personas.
         send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 50));
-        send(HttpMethod.PUT, "/api/restaurantes/me/cupos-especiales/" + fecha, encargado.token(), Map.of("cupo", 4));
+        send(HttpMethod.PUT, cuposPath(encargado) + fecha, encargado.token(), Map.of("cupo", 4));
 
         assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
         assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
@@ -580,7 +580,8 @@ class RestaurantePanelTest {
                 "fechaReserva", fecha.toString(),
                 "horarioLlegada", "20:00",
                 "idUsuario", cliente.id(),
-                "idRestaurant", restaurantId));
+                "idRestaurant", restaurantId,
+                "idEspacio", primerEspacio(restaurantId)));
     }
 
     private static String estado(ResponseEntity<Map> reserva) {
@@ -682,8 +683,20 @@ class RestaurantePanelTest {
                 "fechaReserva", fecha.toString(),
                 "horarioLlegada", "20:00",
                 "idUsuario", cliente.id(),
-                "idRestaurant", restaurantId));
+                "idRestaurant", restaurantId,
+                "idEspacio", primerEspacio(restaurantId)));
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         return ((Number) resp.getBody().get("id")).longValue();
+    }
+
+    private Long primerEspacio(Long restaurantId) {
+        ResponseEntity<List> resp = rest.getForEntity("/api/restaurantes/{id}/espacios", List.class, restaurantId);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return ((Number) ((Map<?, ?>) resp.getBody().get(0)).get("id")).longValue();
+    }
+
+    /** Base path of the cupos especiales of the restaurant's "Salón principal". */
+    private String cuposPath(Encargado encargado) {
+        return "/api/restaurantes/me/espacios/" + primerEspacio(encargado.restaurantId()) + "/cupos-especiales/";
     }
 }
