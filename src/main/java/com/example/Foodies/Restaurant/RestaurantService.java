@@ -7,6 +7,7 @@ import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
+import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Dtos.RestaurantDetailDTO;
@@ -77,7 +78,7 @@ public class RestaurantService {
             restaurant.setNombre(patchDTO.getNombre());
         }
         if (patchDTO.getCupoMaximo() != null) {
-            restaurant.setCupoMaximo(patchDTO.getCupoMaximo());
+            throw new BusinessException(RestaurantPatchDTO.CAPACIDAD_POR_ESPACIOS);
         }
         if (patchDTO.getUbicacion() != null) {
             restaurant.setUbicacion(patchDTO.getUbicacion());

@@ -74,15 +74,15 @@ class RestaurantePanelTest {
         Encargado encargado = nuevoEncargado();
 
         ResponseEntity<Map> updated = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
-                Map.of("nombre", "Nuevo nombre", "cupoMaximo", 25));
+                Map.of("nombre", "Nuevo nombre", "porcentajeAutoAceptacion", 50));
         assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updated.getBody()).containsEntry("nombre", "Nuevo nombre").containsEntry("cupoMaximo", 25);
-        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getCupoMaximo()).isEqualTo(25);
+        assertThat(updated.getBody()).containsEntry("nombre", "Nuevo nombre")
+                .containsEntry("porcentajeAutoAceptacion", 50).containsEntry("cupoMaximo", 10);
 
         ResponseEntity<Map> invalid = send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
-                Map.of("cupoMaximo", 0));
+                Map.of("nombre", " "));
         assertThat(invalid.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getCupoMaximo()).isEqualTo(25);
+        assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getNombre()).isEqualTo("Nuevo nombre");
     }
 
     @Test

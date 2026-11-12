@@ -1,6 +1,7 @@
 package com.example.Foodies.Reserva;
 
 import com.example.Foodies.Enums.EstadoReserva;
+import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Usuario.Usuario;
 import jakarta.persistence.*;
@@ -43,4 +44,9 @@ public class Reserva {
     @ManyToOne
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
+
+    /** Espacio elegido por el cliente. Nullable en la base solo por las filas previas al backfill. */
+    @ManyToOne
+    @JoinColumn(name = "espacio_id")
+    private Espacio espacio;
 }

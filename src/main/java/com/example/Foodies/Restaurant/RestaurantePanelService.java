@@ -62,9 +62,6 @@ public class RestaurantePanelService {
         if (patch.getUbicacion() != null) {
             restaurant.setUbicacion(patch.getUbicacion().strip());
         }
-        if (patch.getCupoMaximo() != null) {
-            restaurant.setCupoMaximo(patch.getCupoMaximo());
-        }
         if (patch.getEspecialidad() != null) {
             restaurant.setEspecialidad(patch.getEspecialidad());
         }
@@ -159,8 +156,8 @@ public class RestaurantePanelService {
         if (patch.getUbicacion() != null && patch.getUbicacion().isBlank()) {
             throw new BusinessException("La ubicación no puede estar vacía");
         }
-        if (patch.getCupoMaximo() != null && patch.getCupoMaximo() < 1) {
-            throw new BusinessException("El cupo máximo debe ser al menos 1");
+        if (patch.getCupoMaximo() != null) {
+            throw new BusinessException(RestaurantPatchDTO.CAPACIDAD_POR_ESPACIOS);
         }
         Integer porcentaje = patch.getPorcentajeAutoAceptacion();
         if (porcentaje != null && (porcentaje < 0 || porcentaje > 100)) {

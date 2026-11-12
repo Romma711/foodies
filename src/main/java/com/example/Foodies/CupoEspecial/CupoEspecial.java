@@ -1,5 +1,6 @@
 package com.example.Foodies.CupoEspecial;
 
+import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -31,6 +32,13 @@ public class CupoEspecial {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Restaurant restaurant;
+
+    /** Espacio al que aplica. Nullable en la base solo por las filas previas al backfill. */
+    @ManyToOne
+    @JoinColumn(name = "espacio_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Espacio espacio;
 
     @Column(nullable = false)
     private LocalDate fecha;
