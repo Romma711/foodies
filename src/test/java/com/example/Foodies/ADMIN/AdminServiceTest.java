@@ -67,19 +67,30 @@ class AdminServiceTest {
     void resenasRecientesUsaElLimitePedido() {
         List<ResenaModeracionDTO> recientes =
                 List.of(new ResenaModeracionDTO(9L, "Muy rico", 5, "Ana Gómez", 5L, "Ochiwan"));
-        when(moderacionRepo.resenasRecientes(PageRequest.of(0, 10))).thenReturn(recientes);
+        when(moderacionRepo.resenasRecientes(null, null, null, PageRequest.of(0, 10))).thenReturn(recientes);
 
-        assertThat(servicioEn(2026, 10, 26).resenasRecientes(10)).isEqualTo(recientes);
+        assertThat(servicioEn(2026, 10, 26).resenasRecientes(10, 0, null, null, null)).isEqualTo(recientes);
     }
 
     @Test
     void resenasRecientesAcotaElLimiteEntreUnoYCincuenta() {
         AdminService servicio = servicioEn(2026, 10, 26);
 
-        servicio.resenasRecientes(0);
-        servicio.resenasRecientes(500);
+        servicio.resenasRecientes(0, 0, null, null, null);
+        servicio.resenasRecientes(500, 0, null, null, null);
 
-        verify(moderacionRepo).resenasRecientes(PageRequest.of(0, 1));
-        verify(moderacionRepo).resenasRecientes(PageRequest.of(0, 50));
+        verify(moderacionRepo).resenasRecientes(null, null, null, PageRequest.of(0, 1));
+        verify(moderacionRepo).resenasRecientes(null, null, null, PageRequest.of(0, 50));
+    }
+
+    @Test
+    void resenasRecientesArmaElPatronDeTextoYPasaLosFiltrosYLaPagina() {
+        AdminService servicio = servicioEn(2026, 10, 26);
+
+        servicio.resenasRecientes(20, 2, "  SuShi ", 4, 7L);
+        servicio.resenasRecientes(20, 0, "   ", null, null);
+
+        verify(moderacionRepo).resenasRecientes("%sushi%", 4, 7L, PageRequest.of(2, 20));
+        verify(moderacionRepo).resenasRecientes(null, null, null, PageRequest.of(0, 20));
     }
 }

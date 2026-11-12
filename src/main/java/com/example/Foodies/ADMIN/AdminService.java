@@ -1,5 +1,6 @@
 package com.example.Foodies.ADMIN;
 
+import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.ADMIN.dtos.MetricasAdminDTO;
 import com.example.Foodies.ADMIN.dtos.ResenaModeracionDTO;
 import com.example.Foodies.Enums.EstadoReserva;
@@ -82,12 +83,26 @@ public class AdminService {
      * El límite se acota entre {@value #LIMITE_MINIMO} y {@value #LIMITE_MAXIMO}: un valor fuera de
      * rango no da error, se ajusta al extremo más cercano.
      *
-     * @param limite cantidad de reseñas pedida por el panel
+     * @param limite        cantidad de reseñas pedida por el panel
+     * @param pagina        página, desde 0
+     * @param texto         texto a buscar en el comentario, el autor o el restaurante, sin distinguir
+     *                      mayúsculas; vacío o {@code null} no filtra
+     * @param calificacion  calificación exacta (1 a 5); {@code null} no filtra
+     * @param restauranteId solo reseñas de ese restaurante; {@code null} no filtra
      * @return reseñas de la más nueva a la más vieja
+     * @throws BusinessException si la calificación no está entre 1 y 5 o la página es negativa
      */
     @Transactional(readOnly = true)
-    public List<ResenaModeracionDTO> resenasRecientes(int limite) {
+    public List<ResenaModeracionDTO> resenasRecientes(int limite, int pagina, String texto,
+                                                      Integer calificacion, Long restauranteId) {
+        if (calificacion != null && (calificacion < 1 || calificacion > 5)) {
+            throw new BusinessException("La calificación debe estar entre 1 y 5");
+        }
+        if (pagina < 0) {
+            throw new BusinessException("La página no puede ser negativa");
+        }
         int acotado = Math.clamp(limite, LIMITE_MINIMO, LIMITE_MAXIMO);
-        return moderacionRepo.resenasRecientes(PageRequest.of(0, acotado));
+        String patron = texto == null || texto.isBlank() ? null : "%" + texto.strip().toLowerCase() + "%";
+        return moderacionRepo.resenasRecientes(patron, calificacion, restauranteId, PageRequest.of(pagina, acotado));
     }
 }
