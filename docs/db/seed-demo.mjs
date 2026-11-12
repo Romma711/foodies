@@ -5,6 +5,8 @@
 // - Missing accounts are created; existing ones are reused, reactivated and their restaurant data restored.
 // - Every reservation and review of the demo restaurants is deleted and created again,
 //   so whatever was done during a rehearsal disappears.
+// - Each restaurant's espacios (salones, patios, barras) are restored: the first one is the
+//   "Salón principal" created at sign-up; missing ones are created and extra ones deactivated.
 // - Strikes cannot be reset through the API; they keep accumulating across runs.
 // Data that does not belong to the demo restaurants is never touched.
 // Every demo account uses DEMO_PASSWORD.
@@ -17,14 +19,23 @@ const ADMIN = { email: 'admin@foodies.com', password: 'admin123' };
 const DOMINIO = 'demo.foodies.com';
 
 // Fictional restaurants on real Mar del Plata streets; coordinates are approximate.
+// `espacios[0]` is the "Salón principal" created at sign-up with its capacity.
+const salon = (capacidad) => ({ tipo: 'SALON', nombre: 'Salón principal', capacidad });
 const RESTAURANTES = [
-  { nombre: 'La Brasa de Güemes', especialidad: 'PARRILLA', direccion: 'Güemes 2850, Mar del Plata', telefono: '223 451-2850', cupo: 60, latitud: -38.0141, longitud: -57.5434 },
-  { nombre: 'Don Ramón Parrilla', especialidad: 'PARRILLA', direccion: 'Av. Constitución 5230, Mar del Plata', telefono: '223 479-5230', cupo: 80, latitud: -37.9843, longitud: -57.5698 },
-  { nombre: 'Kaiyō Sushi Bar', especialidad: 'ASIATICA', direccion: 'Alem 3650, Mar del Plata', telefono: '223 486-3650', cupo: 40, latitud: -38.0262, longitud: -57.5338 },
-  { nombre: 'Trattoria Nonna Rosa', especialidad: 'PASTAS', direccion: 'Olavarría 2710, Mar del Plata', telefono: '223 492-2710', cupo: 50, latitud: -38.0135, longitud: -57.5452 },
-  { nombre: 'Cantina del Puerto', especialidad: 'PESCADOS', direccion: 'Av. Martínez de Hoz 258, Mar del Plata', telefono: '223 480-0258', cupo: 90, latitud: -38.0447, longitud: -57.5371 },
-  { nombre: 'Café de la Rambla', especialidad: 'CAFE', direccion: 'Bv. Marítimo 2290, Mar del Plata', telefono: '223 494-2290', cupo: 30, latitud: -38.0005, longitud: -57.5432 },
-  { nombre: 'El Rincón de Mirta', especialidad: 'MINUTAS', direccion: 'Av. Colón 3120, Mar del Plata', telefono: '223 473-3120', cupo: 35, latitud: -38.0063, longitud: -57.5562 },
+  { nombre: 'La Brasa de Güemes', especialidad: 'PARRILLA', direccion: 'Güemes 2850, Mar del Plata', telefono: '223 451-2850', latitud: -38.0141, longitud: -57.5434,
+    espacios: [salon(40), { tipo: 'PATIO', nombre: 'Patio cervecero', capacidad: 20 }] },
+  { nombre: 'Don Ramón Parrilla', especialidad: 'PARRILLA', direccion: 'Av. Constitución 5230, Mar del Plata', telefono: '223 479-5230', latitud: -37.9843, longitud: -57.5698,
+    espacios: [salon(50), { tipo: 'SALON', nombre: 'Salón de eventos', capacidad: 30 }] },
+  { nombre: 'Kaiyō Sushi Bar', especialidad: 'ASIATICA', direccion: 'Alem 3650, Mar del Plata', telefono: '223 486-3650', latitud: -38.0262, longitud: -57.5338,
+    espacios: [salon(28), { tipo: 'BARRA', nombre: 'Barra de sushi', capacidad: 12 }] },
+  { nombre: 'Trattoria Nonna Rosa', especialidad: 'PASTAS', direccion: 'Olavarría 2710, Mar del Plata', telefono: '223 492-2710', latitud: -38.0135, longitud: -57.5452,
+    espacios: [salon(35), { tipo: 'PATIO', nombre: 'Patio interno', capacidad: 15 }] },
+  { nombre: 'Cantina del Puerto', especialidad: 'PESCADOS', direccion: 'Av. Martínez de Hoz 258, Mar del Plata', telefono: '223 480-0258', latitud: -38.0447, longitud: -57.5371,
+    espacios: [salon(60), { tipo: 'PATIO', nombre: 'Terraza al puerto', capacidad: 22 }, { tipo: 'BARRA', nombre: 'Barra', capacidad: 8 }] },
+  { nombre: 'Café de la Rambla', especialidad: 'CAFE', direccion: 'Bv. Marítimo 2290, Mar del Plata', telefono: '223 494-2290', latitud: -38.0005, longitud: -57.5432,
+    espacios: [salon(18), { tipo: 'PATIO', nombre: 'Vereda', capacidad: 12 }] },
+  { nombre: 'El Rincón de Mirta', especialidad: 'MINUTAS', direccion: 'Av. Colón 3120, Mar del Plata', telefono: '223 473-3120', latitud: -38.0063, longitud: -57.5562,
+    espacios: [salon(35)] },
 ];
 
 // The last client is the one used live during the demo: no reviews and no reservations.
@@ -53,21 +64,21 @@ const RESENAS = [
   [7, 6, 2, 'Pésima atención, el mozo nos trató de mala manera. No vuelvo nunca más, son unos inútiles.'],
 ];
 
-// [client index, restaurant index, days from today, time, people, final state]
+// [client index, restaurant index, espacio index, days from today, time, people, final state]
 // ACEPTADA is set by the restaurant manager; CANCELADA by the client, as the ownership rules require.
 const RESERVAS = [
-  [0, 0, 1, '21:00', 4, 'PENDIENTE'],
-  [1, 0, 2, '13:30', 2, 'ACEPTADA'],
-  [2, 0, 3, '21:30', 6, 'CANCELADA'],
-  [3, 1, 1, '20:30', 5, 'ACEPTADA'],
-  [4, 1, 4, '13:00', 3, 'PENDIENTE'],
-  [5, 2, 2, '21:00', 2, 'ACEPTADA'],
-  [6, 2, 5, '20:00', 2, 'PENDIENTE'],
-  [7, 3, 3, '13:30', 4, 'PENDIENTE'],
-  [0, 3, 6, '21:00', 2, 'CANCELADA'],
-  [1, 4, 2, '12:30', 6, 'ACEPTADA'],
-  [2, 5, 1, '10:00', 2, 'PENDIENTE'],
-  [3, 6, 4, '13:00', 3, 'ACEPTADA'],
+  [0, 0, 0, 1, '21:00', 4, 'PENDIENTE'],
+  [1, 0, 1, 2, '13:30', 2, 'ACEPTADA'],
+  [2, 0, 0, 3, '21:30', 6, 'CANCELADA'],
+  [3, 1, 0, 1, '20:30', 5, 'ACEPTADA'],
+  [4, 1, 1, 4, '13:00', 3, 'PENDIENTE'],
+  [5, 2, 1, 2, '21:00', 2, 'ACEPTADA'],
+  [6, 2, 0, 5, '20:00', 2, 'PENDIENTE'],
+  [7, 3, 0, 3, '13:30', 4, 'PENDIENTE'],
+  [0, 3, 1, 6, '21:00', 2, 'CANCELADA'],
+  [1, 4, 1, 2, '12:30', 6, 'ACEPTADA'],
+  [2, 5, 1, 1, '10:00', 2, 'PENDIENTE'],
+  [3, 6, 0, 4, '13:00', 3, 'ACEPTADA'],
 ];
 
 async function call(method, path, body, token) {
@@ -213,7 +224,7 @@ async function prepararRestaurantes(admin) {
       direccion: r.direccion,
       telefono: r.telefono,
       especialidadDeComida: r.especialidad,
-      cupoMaximo: r.cupo,
+      cupoMaximo: r.espacios[0].capacidad,
     }));
   }
 
@@ -232,13 +243,44 @@ async function prepararRestaurantes(admin) {
     await call('PATCH', '/restaurantes/me', {
       nombre: r.nombre,
       ubicacion: r.direccion,
-      cupoMaximo: r.cupo,
       especialidad: r.especialidad,
       porcentajeAutoAceptacion: 0,
     }, token);
-    restaurantes.push({ id: entidad.id, token });
+    restaurantes.push({ id: entidad.id, token, espacios: r.espacios });
   }
   return restaurantes;
+}
+
+/**
+ * Leaves each restaurant with exactly its demo espacios, active and with their capacity. Runs after
+ * the cleanup, because an espacio with future reservations cannot shrink or be deactivated.
+ * The first existing espacio is the "Salón principal" even if it was renamed during a rehearsal.
+ */
+async function prepararEspacios(restaurantes) {
+  console.log('Espacios');
+  for (const restaurante of restaurantes) {
+    const existentes = lista(await call('GET', '/restaurantes/me/espacios', null, restaurante.token));
+    const usados = new Set();
+    restaurante.espacioIds = [];
+    for (const [i, deseado] of restaurante.espacios.entries()) {
+      const actual = i === 0
+        ? existentes[0]
+        : existentes.find((e) => !usados.has(e.id) && e.nombre.toLowerCase() === deseado.nombre.toLowerCase());
+      let id;
+      if (actual) {
+        if (!actual.activo) await call('PATCH', `/restaurantes/me/espacios/${actual.id}/activo`, { activo: true }, restaurante.token);
+        await call('PUT', `/restaurantes/me/espacios/${actual.id}`, deseado, restaurante.token);
+        id = actual.id;
+      } else {
+        id = (await call('POST', '/restaurantes/me/espacios', deseado, restaurante.token)).id;
+      }
+      usados.add(id);
+      restaurante.espacioIds.push(id);
+    }
+    for (const sobrante of existentes.filter((e) => !usados.has(e.id) && e.activo)) {
+      await call('PATCH', `/restaurantes/me/espacios/${sobrante.id}/activo`, { activo: false }, restaurante.token);
+    }
+  }
 }
 
 async function prepararClientes(admin) {
@@ -286,6 +328,7 @@ async function main() {
   const restaurantes = await prepararRestaurantes(admin);
   const clientes = await prepararClientes(admin);
   await limpiar(admin, restaurantes);
+  await prepararEspacios(restaurantes);
 
   console.log('Reseñas');
   for (const [c, r, calificacion, comentario] of RESENAS) {
@@ -293,7 +336,7 @@ async function main() {
   }
 
   console.log('Reservas');
-  for (const [c, r, dias, horarioLlegada, cantidad, estado] of RESERVAS) {
+  for (const [c, r, e, dias, horarioLlegada, cantidad, estado] of RESERVAS) {
     const cliente = clientes[c];
     const reserva = await call('POST', '/reservas', {
       cantidad,
@@ -301,6 +344,7 @@ async function main() {
       horarioLlegada,
       idUsuario: Number(cliente.id),
       idRestaurant: restaurantes[r].id,
+      idEspacio: restaurantes[r].espacioIds[e],
     }, cliente.token);
     if (estado === 'ACEPTADA') {
       await call('PATCH', `/reservas/${reserva.id}/estado`, { estado: 'ACEPTADA' }, restaurantes[r].token);

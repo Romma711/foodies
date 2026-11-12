@@ -1,5 +1,6 @@
 package com.example.Foodies.CupoEspecial;
 
+import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Restaurant.Restaurant;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,12 +12,13 @@ import lombok.ToString;
 import java.time.LocalDate;
 
 /**
- * Capacidad reducida de un restaurante para un día puntual (por ejemplo, un evento privado).
- * Ese día reemplaza a {@link Restaurant#getCupoMaximo()}; los demás días no cambian.
+ * Capacidad reducida de un espacio para un día puntual (por ejemplo, el patio cerrado por lluvia).
+ * Ese día reemplaza a la capacidad del espacio; los demás días y los demás espacios no cambian.
+ * {@code restaurant} se mantiene para listar los cupos del restaurante sin recorrer sus espacios.
  */
 @Entity
 @Table(name = "CuposEspeciales",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"restaurant_id", "fecha"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"espacio_id", "fecha"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,6 +33,13 @@ public class CupoEspecial {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Restaurant restaurant;
+
+    /** Espacio al que aplica. Nullable en la base solo por las filas previas al backfill. */
+    @ManyToOne
+    @JoinColumn(name = "espacio_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Espacio espacio;
 
     @Column(nullable = false)
     private LocalDate fecha;

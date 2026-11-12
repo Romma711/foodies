@@ -5,6 +5,7 @@ import com.example.Foodies.Foto.FotoRestaurante;
 import com.example.Foodies.Carta.Carta;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.EstadoRestaurante;
+import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Resena.Resena;
 import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Usuario.Usuario;
@@ -35,6 +36,10 @@ public class Restaurant {
     @NotBlank(message = "Nombre de restaurant es obliglatorio")
     private String nombre;
 
+    /**
+     * Capacidad total por día: la suma de los espacios activos. Se recalcula al cambiar un espacio
+     * ({@code EspacioService.recalcularCapacidadTotal}) y no se edita a mano.
+     */
     @Column(nullable = false)
     @Min(value = 1,message = "El cupo debe ser mayor a 1")
     private Integer cupoMaximo;
@@ -95,6 +100,9 @@ public class Restaurant {
 
      @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<CupoEspecial> cuposEspeciales = new ArrayList<>();
+
+     @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
+     private List<Espacio> espacios = new ArrayList<>();
 
      @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<FotoRestaurante> fotos = new ArrayList<>();

@@ -66,6 +66,7 @@ public class SecurityConfig {
                                 "/api/restaurantes/*",
                                 "/api/restaurantes/*/carta",
                                 "/api/restaurantes/*/fotos",
+                                "/api/restaurantes/*/espacios",
                                 "/api/carta/*",
                                 "/api/files/**",
                                 // Interactive API docs (Swagger UI + OpenAPI JSON)

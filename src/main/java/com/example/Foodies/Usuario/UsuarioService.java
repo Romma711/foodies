@@ -12,6 +12,7 @@ import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
 import com.example.Foodies.Exception.NotApprovedException;
 import com.example.Foodies.Restaurant.Dtos.RegistroRestauranteRequestDTO;
+import com.example.Foodies.Espacio.EspacioService;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Usuario.dtos.RegistroClienteDTO;
@@ -33,6 +34,8 @@ import java.util.List;
 
 @Service
 public class UsuarioService implements UserDetailsService {
+    @Autowired
+    private EspacioService espacioService;
     @Autowired
     private UsuarioRepository usuarioRepo;
     @Autowired
@@ -160,6 +163,7 @@ public class UsuarioService implements UserDetailsService {
 
         rest.setUsuario(usuario);
         restaurantRepo.saveAndFlush(rest);
+        espacioService.crearSalonPrincipal(rest, r.getCupoMaximo());
         fotoService.guardarRegistro(rest, fotos, portada);
 
 

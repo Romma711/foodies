@@ -11,5 +11,8 @@ public record ReservaListDTO(
         Date fechaReserva,
         LocalTime horariollegada,
         EstadoReserva estadoReserva,
-        String nombreResto
+        String nombreResto,
+        Long idRestaurant,
+        Long idEspacio,
+        String espacioNombre
 ) { }

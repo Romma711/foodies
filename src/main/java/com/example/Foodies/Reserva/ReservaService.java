@@ -1,7 +1,8 @@
 package com.example.Foodies.Reserva;
 
 import com.example.Foodies.Config.CurrentUser;
-import com.example.Foodies.CupoEspecial.CupoEspecialService;
+import com.example.Foodies.Espacio.Espacio;
+import com.example.Foodies.Espacio.EspacioService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.*;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -35,7 +36,7 @@ public class ReservaService {
     @Autowired
     private RestaurantRepository restauranteRepo;
     @Autowired
-    private CupoEspecialService cupoEspecialService;
+    private EspacioService espacioService;
     @Autowired
     private CurrentUser currentUser;
 
@@ -67,10 +68,11 @@ public class ReservaService {
         ReservaValidations.validateDate(reserva.getFechaReserva());
 
         Date fecha = parseFecha(reserva.getFechaReserva());
-        //Aca valida si el cupo del dia no esta lleno, contando solo las reservas no canceladas de este restaurante
-        //El cupo del dia es el cupo especial si el restaurante cargo uno, si no su capacidad normal
-        int cupoDelDia = cupoEspecialService.cupoDelDia(restaurante, LocalDate.parse(reserva.getFechaReserva()));
-        List<Reserva> reservasDelDia = reservaRepo.findAllByRestaurant_IdAndFechaReserva(restaurante.getId(), fecha);
+        // El cupo se valida en el espacio elegido, contando solo sus reservas no canceladas.
+        // El cupo del día es el cupo especial del espacio si lo tiene, si no su capacidad.
+        Espacio espacio = espacioService.paraReservar(restaurante, reserva.getIdEspacio());
+        int cupoDelDia = espacioService.cupoDelDia(espacio, LocalDate.parse(reserva.getFechaReserva()));
+        List<Reserva> reservasDelDia = reservaRepo.findAllByEspacio_IdAndFechaReserva(espacio.getId(), fecha);
         ReservaValidations.validateCupo(
                 reserva.getCantidad(),
                 personas(reservasDelDia, estado -> estado != EstadoReserva.CANCELADA),
@@ -87,6 +89,7 @@ public class ReservaService {
                 personas(reservasDelDia, estado -> estado == EstadoReserva.ACEPTADA)));
         reservanueva.setUsuario(usuario);
         reservanueva.setRestaurant(restaurante);
+        reservanueva.setEspacio(espacio);
         reservanueva = reservaRepo.save(reservanueva);
 
         return toDetail(reservanueva);
@@ -162,7 +165,8 @@ public class ReservaService {
             r.setEstadoReserva(EstadoReserva.CANCELADA);
             return toDetail(reservaRepo.save(r));
         }
-        if (dto.getCantidad() == null && dto.getFechaReserva() == null && dto.getHorarioLlegada() == null) {
+        if (dto.getCantidad() == null && dto.getFechaReserva() == null && dto.getHorarioLlegada() == null
+                && dto.getIdEspacio() == null) {
             throw new BusinessException("No hay datos para modificar");
         }
 
@@ -182,11 +186,17 @@ public class ReservaService {
         }
         ReservaValidations.validateNotPast(fecha, hora);
 
-        // Capacity of the new day, without counting this same reservation.
+        // Capacity of the (new) espacio on the new day, without counting this same reservation.
+        Espacio espacio = dto.getIdEspacio() != null
+                ? espacioService.paraReservar(r.getRestaurant(), dto.getIdEspacio())
+                : r.getEspacio();
+        if (espacio == null) {
+            throw new BusinessException("Elegí en qué espacio querés reservar");
+        }
         Date fechaReserva = parseFecha(fechaTexto);
-        int cupoDelDia = cupoEspecialService.cupoDelDia(r.getRestaurant(), fecha);
+        int cupoDelDia = espacioService.cupoDelDia(espacio, fecha);
         List<Reserva> otrasDelDia = reservaRepo
-                .findAllByRestaurant_IdAndFechaReserva(r.getRestaurant().getId(), fechaReserva).stream()
+                .findAllByEspacio_IdAndFechaReserva(espacio.getId(), fechaReserva).stream()
                 .filter(otra -> !otra.getId().equals(r.getId()))
                 .toList();
         ReservaValidations.validateCupo(
@@ -197,6 +207,7 @@ public class ReservaService {
         r.setCantidad(cantidad);
         r.setFechaReserva(fechaReserva);
         r.setHorariollegada(hora);
+        r.setEspacio(espacio);
         r.setEstadoReserva(EstadoReserva.PENDIENTE);
         return toDetail(reservaRepo.save(r));
     }
@@ -269,7 +280,9 @@ public class ReservaService {
                 r.getHorariollegada(),
                 r.getEstadoReserva(),
                 r.getUsuario().getNombre(),
-                r.getRestaurant().getNombre()
+                r.getRestaurant().getNombre(),
+                r.getEspacio() == null ? null : r.getEspacio().getId(),
+                r.getEspacio() == null ? null : r.getEspacio().getNombre()
         );
     }
 
@@ -280,7 +293,10 @@ public class ReservaService {
                 r.getFechaReserva(),
                 r.getHorariollegada(),
                 r.getEstadoReserva(),
-                r.getRestaurant().getNombre()
+                r.getRestaurant().getNombre(),
+                r.getRestaurant().getId(),
+                r.getEspacio() == null ? null : r.getEspacio().getId(),
+                r.getEspacio() == null ? null : r.getEspacio().getNombre()
         );
     }
 }

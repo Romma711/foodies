@@ -6,6 +6,9 @@ import com.example.Foodies.Config.CurrentUser;
 import com.example.Foodies.CupoEspecial.CupoEspecialService;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
+import com.example.Foodies.Espacio.Dtos.EspacioDTO;
+import com.example.Foodies.Espacio.Dtos.EspacioRequestDTO;
+import com.example.Foodies.Espacio.EspacioService;
 import com.example.Foodies.Foto.Dtos.FotoDTO;
 import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Enums.EstadoReserva;
@@ -34,16 +37,19 @@ public class RestaurantePanelService {
     private final CartaService cartaService;
     private final CupoEspecialService cupoEspecialService;
     private final FotoService fotoService;
+    private final EspacioService espacioService;
     private final CurrentUser currentUser;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
                                    CartaService cartaService, CupoEspecialService cupoEspecialService,
-                                   FotoService fotoService, CurrentUser currentUser) {
+                                   FotoService fotoService, EspacioService espacioService,
+                                   CurrentUser currentUser) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
         this.cupoEspecialService = cupoEspecialService;
         this.fotoService = fotoService;
+        this.espacioService = espacioService;
         this.currentUser = currentUser;
     }
 
@@ -61,9 +67,6 @@ public class RestaurantePanelService {
         }
         if (patch.getUbicacion() != null) {
             restaurant.setUbicacion(patch.getUbicacion().strip());
-        }
-        if (patch.getCupoMaximo() != null) {
-            restaurant.setCupoMaximo(patch.getCupoMaximo());
         }
         if (patch.getEspecialidad() != null) {
             restaurant.setEspecialidad(patch.getEspecialidad());
@@ -105,16 +108,32 @@ public class RestaurantePanelService {
         return ReservaPanelDTO.from(reservaRepo.save(reserva));
     }
 
+    public List<EspacioDTO> getEspacios() {
+        return espacioService.listar(miRestaurante());
+    }
+
+    public EspacioDTO crearEspacio(EspacioRequestDTO request) {
+        return espacioService.crear(miRestaurante(), request);
+    }
+
+    public EspacioDTO actualizarEspacio(Long espacioId, EspacioRequestDTO request) {
+        return espacioService.actualizar(miRestaurante(), espacioId, request);
+    }
+
+    public EspacioDTO cambiarActivoEspacio(Long espacioId, Boolean activo) {
+        return espacioService.cambiarActivo(miRestaurante(), espacioId, activo);
+    }
+
     public List<CupoEspecialDTO> getCuposEspeciales() {
         return cupoEspecialService.listarProximos(miRestaurante());
     }
 
-    public CupoEspecialDTO guardarCupoEspecial(LocalDate fecha, CupoEspecialRequestDTO request) {
-        return cupoEspecialService.guardar(miRestaurante(), fecha, request);
+    public CupoEspecialDTO guardarCupoEspecial(Long espacioId, LocalDate fecha, CupoEspecialRequestDTO request) {
+        return cupoEspecialService.guardar(miRestaurante(), espacioId, fecha, request);
     }
 
-    public void eliminarCupoEspecial(LocalDate fecha) {
-        cupoEspecialService.eliminar(miRestaurante(), fecha);
+    public void eliminarCupoEspecial(Long espacioId, LocalDate fecha) {
+        cupoEspecialService.eliminar(miRestaurante(), espacioId, fecha);
     }
 
     public List<FotoDTO> getFotos() {
@@ -159,8 +178,8 @@ public class RestaurantePanelService {
         if (patch.getUbicacion() != null && patch.getUbicacion().isBlank()) {
             throw new BusinessException("La ubicación no puede estar vacía");
         }
-        if (patch.getCupoMaximo() != null && patch.getCupoMaximo() < 1) {
-            throw new BusinessException("El cupo máximo debe ser al menos 1");
+        if (patch.getCupoMaximo() != null) {
+            throw new BusinessException(RestaurantPatchDTO.CAPACIDAD_POR_ESPACIOS);
         }
         Integer porcentaje = patch.getPorcentajeAutoAceptacion();
         if (porcentaje != null && (porcentaje < 0 || porcentaje > 100)) {

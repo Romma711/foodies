@@ -8,6 +8,7 @@ import org.springframework.http.*;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -77,8 +78,14 @@ final class AutorizacionTestSupport {
         return new Encargado(login(email, "secret1"), restaurantId);
     }
 
+    /** Reserves in the first active espacio of the restaurant (its "Salón principal"). */
     ResponseEntity<Map> reservar(Cliente cliente, Long restaurantId, LocalDate fecha, int cantidad) {
+        return reservar(cliente, restaurantId, primerEspacio(restaurantId), fecha, cantidad);
+    }
+
+    ResponseEntity<Map> reservar(Cliente cliente, Long restaurantId, Long espacioId, LocalDate fecha, int cantidad) {
         Map<String, Object> body = new HashMap<>();
+        body.put("idEspacio", espacioId);
         body.put("cantidad", cantidad);
         body.put("fechaReserva", fecha.toString());
         body.put("horarioLlegada", "20:00");
@@ -91,6 +98,13 @@ final class AutorizacionTestSupport {
         ResponseEntity<Map> resp = reservar(cliente, restaurantId, fecha, cantidad);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         return ((Number) resp.getBody().get("id")).longValue();
+    }
+
+    /** Id of the first active espacio, read from the public list. */
+    Long primerEspacio(Long restaurantId) {
+        ResponseEntity<List> resp = rest.getForEntity("/api/restaurantes/{id}/espacios", List.class, restaurantId);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return ((Number) ((Map<?, ?>) resp.getBody().get(0)).get("id")).longValue();
     }
 
     HttpStatusCode status(HttpMethod method, String path, String token, Object body) {

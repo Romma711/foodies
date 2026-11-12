@@ -123,7 +123,8 @@ class ReservaAutorizacionTest {
                 "cantidad", 2,
                 "fechaReserva", MANIANA.toString(),
                 "horarioLlegada", "20:00",
-                "idRestaurant", encargado.restaurantId()), Map.class);
+                "idRestaurant", encargado.restaurantId(),
+                "idEspacio", api.primerEspacio(encargado.restaurantId())), Map.class);
         assertThat(sinUsuario.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(reservaRepo.findAllByUsuario_Id(cliente.id())).hasSize(1);
     }

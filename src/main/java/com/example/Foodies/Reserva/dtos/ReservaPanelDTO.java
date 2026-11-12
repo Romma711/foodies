@@ -17,7 +17,9 @@ public record ReservaPanelDTO(
         LocalTime horarioLlegada,
         EstadoReserva estado,
         String nombreCliente,
-        String telefonoCliente
+        String telefonoCliente,
+        Long idEspacio,
+        String espacioNombre
 ) {
 
     public static ReservaPanelDTO from(Reserva reserva) {
@@ -30,7 +32,9 @@ public record ReservaPanelDTO(
                 reserva.getHorariollegada(),
                 reserva.getEstadoReserva(),
                 nombre,
-                cliente == null ? null : cliente.getTelefono());
+                cliente == null ? null : cliente.getTelefono(),
+                reserva.getEspacio() == null ? null : reserva.getEspacio().getId(),
+                reserva.getEspacio() == null ? null : reserva.getEspacio().getNombre());
     }
 
     /** `fechaReserva` may come back from JPA as `java.sql.Date`/`Timestamp`, whose `toInstant` is not portable. */

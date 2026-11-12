@@ -10,7 +10,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RestaurantPatchDTO {
 
+    public static final String CAPACIDAD_POR_ESPACIOS =
+            "La capacidad se configura por espacio desde la sección Espacios";
+
     private String nombre;
+    /** Ya no se edita: la capacidad total se deriva de los espacios. Si llega, se rechaza con 400. */
     private Integer cupoMaximo;
     /** 0-100. Null = no cambiar; 0 = apagar la auto-aceptación. */
     private Integer porcentajeAutoAceptacion;

@@ -8,7 +8,10 @@ import java.util.Optional;
 
 public interface CupoEspecialRepository extends JpaRepository<CupoEspecial, Long> {
 
-    Optional<CupoEspecial> findByRestaurant_IdAndFecha(Long restaurantId, LocalDate fecha);
+    Optional<CupoEspecial> findByEspacio_IdAndFecha(Long espacioId, LocalDate fecha);
+
+    List<CupoEspecial> findAllByEspacio_IdAndFechaGreaterThanEqualAndCupoGreaterThan(
+            Long espacioId, LocalDate desde, Integer cupo);
 
     List<CupoEspecial> findAllByRestaurant_IdAndFechaGreaterThanEqualOrderByFechaAsc(Long restaurantId, LocalDate desde);
 }
