@@ -9,6 +9,8 @@
 // Data that does not belong to the demo restaurants is never touched.
 // Every demo account uses DEMO_PASSWORD.
 
+import zlib from 'node:zlib';
+
 const API = (process.argv[2] ?? 'http://localhost:8080') + '/api';
 const DEMO_PASSWORD = 'demo1234';
 const ADMIN = { email: 'admin@foodies.com', password: 'admin123' };
@@ -97,19 +99,87 @@ const slug = (texto) => texto.normalize('NFD').replace(/[^\w]/g, '').toLowerCase
 const emailRestaurante = (r) => `${slug(r.nombre)}@${DOMINIO}`;
 const emailCliente = ([nombre, apellido]) => `${slug(nombre)}.${slug(apellido)}@${DOMINIO}`;
 
-// Restaurant sign-up is multipart and needs 3 to 5 photos: three 1x1 PNGs in warm tones.
-const FOTOS_DEMO = [
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGN40RUHAAQuAdF9dnbFAAAAAElFTkSuQmCC',
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4dHIaAAUCAlLeoKX0AAAAAElFTkSuQmCC',
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPYkOAAAAMUAVEONchDAAAAAElFTkSuQmCC',
-];
+// Restaurant sign-up is multipart and needs 3 to 5 photos. The seed draws three 960x600 PNG
+// covers per restaurant (a diagonal gradient with soft light spots) in its cuisine's palette,
+// so the demo shows real covers instead of empty squares without shipping image files.
+const PALETAS = {
+  PARRILLA: ['#5a1f0c', '#e0703a'],
+  ASIATICA: ['#1f3b4d', '#d9534f'],
+  PASTAS: ['#7a4a14', '#f2c14e'],
+  PESCADOS: ['#0f4c5c', '#5fa8d3'],
+  CAFE: ['#3e2723', '#c08a5b'],
+  MINUTAS: ['#5d4037', '#f4a259'],
+};
+const PALETA_DEFAULT = ['#3f3a33', '#f26b3a'];
+const FOTOS_POR_RESTAURANTE = 3;
+
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+/** Small deterministic PRNG, so every run draws the same covers. */
+function prng(semilla) {
+  let s = semilla >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 2 ** 32;
+  };
+}
+
+function chunkPng(tipo, datos) {
+  const largo = Buffer.alloc(4);
+  largo.writeUInt32BE(datos.length);
+  const cuerpo = Buffer.concat([Buffer.from(tipo, 'ascii'), datos]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(zlib.crc32(cuerpo));
+  return Buffer.concat([largo, cuerpo, crc]);
+}
+
+function portadaPng(especialidad, variante, ancho = 960, alto = 600) {
+  const [oscuro, claro] = (PALETAS[especialidad] ?? PALETA_DEFAULT).map(rgb);
+  const azar = prng(especialidad.length * 7919 + variante * 104729);
+  const angulo = azar() * Math.PI;
+  const [dx, dy] = [Math.cos(angulo), Math.sin(angulo)];
+  const luces = Array.from({ length: 6 }, () => ({
+    x: azar() * ancho,
+    y: azar() * alto,
+    r: 60 + azar() * 160,
+    fuerza: 0.12 + azar() * 0.18,
+  }));
+  const fila = ancho * 3 + 1;
+  const crudo = Buffer.alloc(fila * alto);
+  for (let y = 0; y < alto; y++) {
+    crudo[y * fila] = 0; // PNG filter type "none"
+    for (let x = 0; x < ancho; x++) {
+      const t = Math.min(1, Math.max(0, ((x / ancho - 0.5) * dx + (y / alto - 0.5) * dy) + 0.5));
+      let luz = 0;
+      for (const l of luces) {
+        const d2 = ((x - l.x) ** 2 + (y - l.y) ** 2) / (l.r * l.r);
+        luz += l.fuerza * Math.exp(-d2);
+      }
+      for (let c = 0; c < 3; c++) {
+        const base = oscuro[c] + (claro[c] - oscuro[c]) * t;
+        crudo[y * fila + 1 + x * 3 + c] = Math.round(Math.min(255, base + (255 - base) * luz));
+      }
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(ancho, 0);
+  ihdr.writeUInt32BE(alto, 4);
+  ihdr.set([8, 2, 0, 0, 0], 8); // 8-bit RGB, no interlace
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunkPng('IHDR', ihdr),
+    chunkPng('IDAT', zlib.deflateSync(crudo, { level: 9 })),
+    chunkPng('IEND', Buffer.alloc(0)),
+  ]);
+}
 
 async function registrarRestaurante(body) {
   const form = new FormData();
   form.append('datos', new Blob([JSON.stringify(body)], { type: 'application/json' }));
-  FOTOS_DEMO.forEach((foto, i) =>
-    form.append('fotos', new Blob([Buffer.from(foto, 'base64')], { type: 'image/png' }), `foto-${i}.png`),
-  );
+  for (let i = 0; i < FOTOS_POR_RESTAURANTE; i++) {
+    const foto = portadaPng(body.especialidadDeComida, i);
+    form.append('fotos', new Blob([foto], { type: 'image/png' }), `foto-${i}.png`);
+  }
   form.append('portada', '0');
   const res = await fetch(API + '/auth/register/restaurante', { method: 'POST', body: form });
   const text = await res.text();
