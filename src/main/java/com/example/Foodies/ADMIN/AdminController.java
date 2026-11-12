@@ -44,12 +44,20 @@ public class AdminController {
      * <p>
      * Para eliminar una reseña el panel usa {@code DELETE /api/resenas/{id}}, que ya autoriza al admin.
      *
-     * @param limite cantidad de reseñas (por defecto 20, se acota entre 1 y 50)
-     * @return 200 con las reseñas de la más nueva a la más vieja
+     * @param limite        cantidad de reseñas (por defecto 20, se acota entre 1 y 50)
+     * @param pagina        página desde 0 (por defecto 0), para "Cargar más"
+     * @param texto         busca en el comentario, el autor y el restaurante, sin distinguir mayúsculas
+     * @param calificacion  calificación exacta, de 1 a 5
+     * @param restauranteId solo reseñas de ese restaurante
+     * @return 200 con las reseñas de la más nueva a la más vieja; 400 con una calificación o página inválida
      */
     @GetMapping("/resenas")
     public ResponseEntity<List<ResenaModeracionDTO>> resenasRecientes(
-            @RequestParam(defaultValue = "20") int limite) {
-        return ResponseEntity.ok(adminService.resenasRecientes(limite));
+            @RequestParam(defaultValue = "20") int limite,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(required = false) String texto,
+            @RequestParam(required = false) Integer calificacion,
+            @RequestParam(required = false) Long restauranteId) {
+        return ResponseEntity.ok(adminService.resenasRecientes(limite, pagina, texto, calificacion, restauranteId));
     }
 }

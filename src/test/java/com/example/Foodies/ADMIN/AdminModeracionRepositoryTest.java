@@ -36,7 +36,7 @@ class AdminModeracionRepositoryTest {
         Resena segunda = resena(ochiwan, ana, "Segunda visita", 4);
         Resena tercera = resena(ochiwan, ana, "Tercera visita", 5);
 
-        List<ResenaModeracionDTO> recientes = repo.resenasRecientes(PageRequest.of(0, 2));
+        List<ResenaModeracionDTO> recientes = repo.resenasRecientes(null, null, null, PageRequest.of(0, 2));
 
         assertThat(recientes).extracting(ResenaModeracionDTO::id)
                 .containsExactly(tercera.getId(), segunda.getId());
@@ -54,9 +54,44 @@ class AdminModeracionRepositoryTest {
         Usuario sinNombre = usuario(null, null);
         resena(restaurante("Ochiwan"), sinNombre, "Comentario anónimo", 2);
 
-        ResenaModeracionDTO resena = repo.resenasRecientes(PageRequest.of(0, 5)).get(0);
+        ResenaModeracionDTO resena = repo.resenasRecientes(null, null, null, PageRequest.of(0, 5)).get(0);
 
         assertThat(resena.nombreUsuario()).isBlank();
+    }
+
+    @Test
+    void resenasRecientesFiltraPorTextoEnComentarioAutorORestauranteSinDistinguirMayusculas() {
+        Usuario ana = usuario("Ana", "Gómez");
+        Usuario bruno = usuario("Bruno", "Díaz");
+        Restaurant ochiwan = restaurante("Ochiwan");
+        Restaurant trattoria = restaurante("La Trattoria");
+        Resena porComentario = resena(trattoria, bruno, "El SUSHI estaba frío", 2);
+        Resena porAutor = resena(trattoria, ana, "Muy rico", 5);
+        Resena porRestaurante = resena(ochiwan, bruno, "Volvería", 4);
+
+        assertThat(repo.resenasRecientes("%sushi%", null, null, PageRequest.of(0, 10)))
+                .extracting(ResenaModeracionDTO::id).containsExactly(porComentario.getId());
+        assertThat(repo.resenasRecientes("%ana gó%", null, null, PageRequest.of(0, 10)))
+                .extracting(ResenaModeracionDTO::id).containsExactly(porAutor.getId());
+        assertThat(repo.resenasRecientes("%ochiwan%", null, null, PageRequest.of(0, 10)))
+                .extracting(ResenaModeracionDTO::id).containsExactly(porRestaurante.getId());
+    }
+
+    @Test
+    void resenasRecientesFiltraPorCalificacionYRestauranteYPagina() {
+        Usuario ana = usuario("Ana", "Gómez");
+        Restaurant ochiwan = restaurante("Ochiwan");
+        Restaurant trattoria = restaurante("La Trattoria");
+        Resena unaEstrella = resena(ochiwan, ana, "Malo", 1);
+        resena(trattoria, ana, "Malo también", 1);
+        Resena cinco = resena(ochiwan, ana, "Excelente", 5);
+
+        assertThat(repo.resenasRecientes(null, 1, ochiwan.getId(), PageRequest.of(0, 10)))
+                .extracting(ResenaModeracionDTO::id).containsExactly(unaEstrella.getId());
+        assertThat(repo.resenasRecientes(null, null, ochiwan.getId(), PageRequest.of(0, 1)))
+                .extracting(ResenaModeracionDTO::id).containsExactly(cinco.getId());
+        assertThat(repo.resenasRecientes(null, null, ochiwan.getId(), PageRequest.of(1, 1)))
+                .extracting(ResenaModeracionDTO::id).containsExactly(unaEstrella.getId());
     }
 
     private Usuario usuario(String nombre, String apellido) {

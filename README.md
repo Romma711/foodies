@@ -473,9 +473,10 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 
 >`GET`
 >
->`/api/admin/resenas?limite=20`
+>`/api/admin/resenas?limite=20&pagina=0&texto=sushi&calificacion=1&restauranteId=5`
 >
 >- Reseñas más recientes de todos los restaurantes para moderar (límite entre 1 y 50, por defecto 20). Para eliminar se usa `DELETE /api/resenas/{id}`
+>- Filtros opcionales: `texto` busca en el comentario, el autor y el restaurante sin distinguir mayúsculas; `calificacion` exacta (1 a 5); `restauranteId`. `pagina` (desde 0) sirve para "Cargar más". Calificación fuera de 1-5 o página negativa: `400`
 ```json
 [{ "id": 9, "comentario": "Muy rico", "calificacion": 5, "nombreUsuario": "Ana Gómez", "restauranteId": 5, "nombreRestaurante": "Ochiwan" }]
 ```

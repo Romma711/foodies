@@ -4,6 +4,7 @@ import com.example.Foodies.ADMIN.dtos.ResenaModeracionDTO;
 import com.example.Foodies.Resena.Resena;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.repository.Repository;
 
 import java.util.List;
@@ -26,7 +27,11 @@ public interface AdminModeracionRepository extends Repository<Resena, Long> {
      * arma con {@code trim(concat(coalesce(nombre, ''), ' ', coalesce(apellido, '')))} para que un
      * usuario sin nombre ni apellido no rompa la concatenación y llegue como texto vacío.
      *
-     * @param pagina cantidad de filas a devolver (Spring Data lo traduce a {@code LIMIT})
+     * @param texto         patrón {@code like} en minúsculas (por ejemplo {@code %sushi%}) que se busca en
+     *                      el comentario, el autor y el restaurante; {@code null} no filtra
+     * @param calificacion  calificación exacta (1 a 5); {@code null} no filtra
+     * @param restauranteId solo reseñas de ese restaurante; {@code null} no filtra
+     * @param pagina        página y cantidad de filas (Spring Data lo traduce a {@code LIMIT/OFFSET})
      * @return reseñas recientes con autor y restaurante
      */
     @Query("""
@@ -40,7 +45,16 @@ public interface AdminModeracionRepository extends Repository<Resena, Long> {
             from Resena r
             join r.usuario u
             join r.restaurant rest
+            where (:texto is null
+                   or lower(r.comentario) like :texto
+                   or lower(trim(concat(coalesce(u.nombre, ''), ' ', coalesce(u.apellido, '')))) like :texto
+                   or lower(rest.nombre) like :texto)
+              and (:calificacion is null or r.calificacion = :calificacion)
+              and (:restauranteId is null or rest.id = :restauranteId)
             order by r.id desc
             """)
-    List<ResenaModeracionDTO> resenasRecientes(Pageable pagina);
+    List<ResenaModeracionDTO> resenasRecientes(@Param("texto") String texto,
+                                               @Param("calificacion") Integer calificacion,
+                                               @Param("restauranteId") Long restauranteId,
+                                               Pageable pagina);
 }

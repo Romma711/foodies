@@ -88,6 +88,24 @@ class AdminControllerTest {
     }
 
     @Test
+    void lasResenasSeFiltranPorParametrosYUnaCalificacionInvalidaResponde400() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(login("admin@foodies.com", "admin123"));
+
+        ResponseEntity<java.util.List> filtradas = rest.exchange(
+                "/api/admin/resenas?texto=no-existe-xyz&calificacion=5&restauranteId=999999&pagina=0",
+                HttpMethod.GET, new HttpEntity<>(headers), java.util.List.class);
+        assertThat(filtradas.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(filtradas.getBody()).isEmpty();
+
+        for (String invalido : new String[]{"calificacion=6", "calificacion=0", "pagina=-1"}) {
+            ResponseEntity<Map> resp = rest.exchange("/api/admin/resenas?" + invalido, HttpMethod.GET,
+                    new HttpEntity<>(headers), Map.class);
+            assertThat(resp.getStatusCode()).as(invalido).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Test
     void unClienteNoPuedeVerLaModeracion() {
         rest.postForEntity("/api/auth/register/cliente", Map.of(
                 "nombre", "Moderacion",
