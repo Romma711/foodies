@@ -6,6 +6,9 @@ import com.example.Foodies.Config.CurrentUser;
 import com.example.Foodies.CupoEspecial.CupoEspecialService;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
+import com.example.Foodies.Espacio.Dtos.EspacioDTO;
+import com.example.Foodies.Espacio.Dtos.EspacioRequestDTO;
+import com.example.Foodies.Espacio.EspacioService;
 import com.example.Foodies.Foto.Dtos.FotoDTO;
 import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Enums.EstadoReserva;
@@ -34,16 +37,19 @@ public class RestaurantePanelService {
     private final CartaService cartaService;
     private final CupoEspecialService cupoEspecialService;
     private final FotoService fotoService;
+    private final EspacioService espacioService;
     private final CurrentUser currentUser;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
                                    CartaService cartaService, CupoEspecialService cupoEspecialService,
-                                   FotoService fotoService, CurrentUser currentUser) {
+                                   FotoService fotoService, EspacioService espacioService,
+                                   CurrentUser currentUser) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
         this.cupoEspecialService = cupoEspecialService;
         this.fotoService = fotoService;
+        this.espacioService = espacioService;
         this.currentUser = currentUser;
     }
 
@@ -100,6 +106,22 @@ public class RestaurantePanelService {
         }
         reserva.setEstadoReserva(estado);
         return ReservaPanelDTO.from(reservaRepo.save(reserva));
+    }
+
+    public List<EspacioDTO> getEspacios() {
+        return espacioService.listar(miRestaurante());
+    }
+
+    public EspacioDTO crearEspacio(EspacioRequestDTO request) {
+        return espacioService.crear(miRestaurante(), request);
+    }
+
+    public EspacioDTO actualizarEspacio(Long espacioId, EspacioRequestDTO request) {
+        return espacioService.actualizar(miRestaurante(), espacioId, request);
+    }
+
+    public EspacioDTO cambiarActivoEspacio(Long espacioId, Boolean activo) {
+        return espacioService.cambiarActivo(miRestaurante(), espacioId, activo);
     }
 
     public List<CupoEspecialDTO> getCuposEspeciales() {

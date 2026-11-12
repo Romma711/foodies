@@ -121,7 +121,140 @@ class EspaciosTest {
         assertThat(restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getCupoMaximo()).isEqualTo(10);
     }
 
+    // ---- B2: CRUD desde el panel y listado público ----
+
+    @Test
+    void elEncargadoAdministraSusEspaciosYLaCapacidadTotalSeRecalcula() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        String token = encargado.token();
+
+        ResponseEntity<List> inicial = api.send(HttpMethod.GET, "/api/restaurantes/me/espacios", token, null, List.class);
+        assertThat(inicial.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(inicial.getBody()).hasSize(1);
+
+        ResponseEntity<Map> patio = api.send(HttpMethod.POST, "/api/restaurantes/me/espacios", token,
+                Map.of("tipo", "PATIO", "nombre", "Patio trasero", "capacidad", 20), Map.class);
+        assertThat(patio.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(patio.getBody()).containsEntry("tipo", "PATIO").containsEntry("nombre", "Patio trasero")
+                .containsEntry("capacidad", 20).containsEntry("activo", true);
+        Long patioId = ((Number) patio.getBody().get("id")).longValue();
+        assertThat(cupoMaximo(encargado)).isEqualTo(30);
+
+        ResponseEntity<Map> editado = api.send(HttpMethod.PUT, "/api/restaurantes/me/espacios/" + patioId, token,
+                Map.of("tipo", "PATIO", "nombre", "Patio", "capacidad", 15), Map.class);
+        assertThat(editado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(editado.getBody()).containsEntry("nombre", "Patio").containsEntry("capacidad", 15);
+        assertThat(cupoMaximo(encargado)).isEqualTo(25);
+
+        ResponseEntity<Map> desactivado = api.send(HttpMethod.PATCH, "/api/restaurantes/me/espacios/" + patioId + "/activo",
+                token, Map.of("activo", false), Map.class);
+        assertThat(desactivado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(desactivado.getBody()).containsEntry("activo", false);
+        assertThat(cupoMaximo(encargado)).isEqualTo(10);
+
+        api.send(HttpMethod.PATCH, "/api/restaurantes/me/espacios/" + patioId + "/activo", token, Map.of("activo", true), Map.class);
+        assertThat(cupoMaximo(encargado)).isEqualTo(25);
+    }
+
+    @Test
+    void losDatosDelEspacioSeValidan() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        String path = "/api/restaurantes/me/espacios";
+
+        assertThat(mensaje(api.send(HttpMethod.POST, path, encargado.token(),
+                Map.of("tipo", "SALON", "nombre", "salón PRINCIPAL", "capacidad", 5), Map.class)))
+                .contains("Ya tenés un espacio con ese nombre");
+        assertThat(mensaje(api.send(HttpMethod.POST, path, encargado.token(),
+                Map.of("tipo", "BARRA", "nombre", "Barra", "capacidad", 0), Map.class)))
+                .contains("capacidad");
+        assertThat(mensaje(api.send(HttpMethod.POST, path, encargado.token(),
+                Map.of("nombre", "Barra", "capacidad", 4), Map.class)))
+                .contains("tipo");
+        assertThat(mensaje(api.send(HttpMethod.POST, path, encargado.token(),
+                Map.of("tipo", "BARRA", "nombre", " ", "capacidad", 4), Map.class)))
+                .contains("nombre");
+        assertThat(mensaje(api.send(HttpMethod.POST, path, encargado.token(),
+                Map.of("tipo", "BARRA", "nombre", "x".repeat(61), "capacidad", 4), Map.class)))
+                .contains("60");
+        assertThat(mensaje(api.send(HttpMethod.POST, path, encargado.token(),
+                Map.of("tipo", "TERRAZA", "nombre", "Terraza", "capacidad", 4), Map.class)))
+                .isNotBlank();
+        assertThat(espacioRepo.findAllByRestaurant_IdOrderByIdAsc(encargado.restaurantId())).hasSize(1);
+    }
+
+    @Test
+    void noSePuedeDesactivarElUltimoEspacioActivo() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        Long salonId = salonPrincipal(encargado).getId();
+
+        ResponseEntity<Map> resp = api.send(HttpMethod.PATCH, "/api/restaurantes/me/espacios/" + salonId + "/activo",
+                encargado.token(), Map.of("activo", false), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(mensaje(resp)).contains("al menos un espacio activo");
+        assertThat(espacioRepo.findById(salonId).orElseThrow().getActivo()).isTrue();
+    }
+
+    @Test
+    void losEspaciosSonSoloDeSuRestaurante() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Encargado otro = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        Long ajeno = salonPrincipal(otro).getId();
+
+        assertThat(api.status(HttpMethod.PUT, "/api/restaurantes/me/espacios/" + ajeno, encargado.token(),
+                Map.of("tipo", "SALON", "nombre", "Robado", "capacidad", 3))).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(api.status(HttpMethod.PATCH, "/api/restaurantes/me/espacios/" + ajeno + "/activo", encargado.token(),
+                Map.of("activo", false))).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(api.status(HttpMethod.GET, "/api/restaurantes/me/espacios", null, null)).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(api.status(HttpMethod.GET, "/api/restaurantes/me/espacios", cliente.token(), null)).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(espacioRepo.findById(ajeno).orElseThrow().getNombre()).isEqualTo("Salón principal");
+    }
+
+    @Test
+    void elListadoPublicoMuestraEspaciosActivosConLugarSinRevelarLaCapacidad() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        ResponseEntity<Map> barra = api.send(HttpMethod.POST, "/api/restaurantes/me/espacios", encargado.token(),
+                Map.of("tipo", "BARRA", "nombre", "Barra", "capacidad", 4), Map.class);
+        Long barraId = ((Number) barra.getBody().get("id")).longValue();
+        api.send(HttpMethod.POST, "/api/restaurantes/me/espacios", encargado.token(),
+                Map.of("tipo", "PATIO", "nombre", "Patio cerrado", "capacidad", 6), Map.class);
+        Long patioId = espacioRepo.findAllByRestaurant_IdOrderByIdAsc(encargado.restaurantId()).get(2).getId();
+        api.send(HttpMethod.PATCH, "/api/restaurantes/me/espacios/" + patioId + "/activo", encargado.token(),
+                Map.of("activo", false), Map.class);
+        String base = "/api/restaurantes/" + encargado.restaurantId() + "/espacios";
+
+        ResponseEntity<List> lista = api.send(HttpMethod.GET, base, null, null, List.class);
+        assertThat(lista.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(lista.getBody()).hasSize(2);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> primero = (Map<String, Object>) lista.getBody().get(0);
+        assertThat(primero).containsEntry("nombre", "Salón principal").containsEntry("tipo", "SALON")
+                .doesNotContainKey("capacidad").containsEntry("hayLugar", null);
+
+        String fecha = LocalDate.now().plusDays(2).toString();
+        ResponseEntity<List> conLugar = api.send(HttpMethod.GET, base + "?fecha=" + fecha + "&cantidad=5", null, null, List.class);
+        assertThat(conLugar.getBody()).extracting(e -> ((Map<?, ?>) e).get("hayLugar")).containsExactly(true, false);
+        assertThat(((Map<?, ?>) conLugar.getBody().get(1)).get("id")).isEqualTo(barraId.intValue());
+
+        assertThat(api.status(HttpMethod.GET, base + "?fecha=" + fecha, null, null)).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api.status(HttpMethod.GET, "/api/restaurantes/999999/espacios", null, null)).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     // ---- helpers ----
+
+    private int cupoMaximo(AutorizacionTestSupport.Encargado encargado) {
+        return restaurantRepo.findById(encargado.restaurantId()).orElseThrow().getCupoMaximo();
+    }
+
+    private Espacio salonPrincipal(AutorizacionTestSupport.Encargado encargado) {
+        return espacioRepo.findAllByRestaurant_IdOrderByIdAsc(encargado.restaurantId()).get(0);
+    }
+
+    private static String mensaje(ResponseEntity<Map> resp) {
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        Object mensaje = resp.getBody() == null ? null : resp.getBody().get("mensaje");
+        return mensaje == null ? String.valueOf(resp.getBody()) : mensaje.toString();
+    }
 
     private Restaurant restauranteSinEspacios(int cupoMaximo) {
         String suffix = UUID.randomUUID().toString().substring(0, 8);

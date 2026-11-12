@@ -4,12 +4,16 @@ import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Carta.Dtos.CartaDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialDTO;
 import com.example.Foodies.CupoEspecial.Dtos.CupoEspecialRequestDTO;
+import com.example.Foodies.Espacio.Dtos.EspacioActivoDTO;
+import com.example.Foodies.Espacio.Dtos.EspacioDTO;
+import com.example.Foodies.Espacio.Dtos.EspacioRequestDTO;
 import com.example.Foodies.Foto.Dtos.FotoDTO;
 import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
 import com.example.Foodies.Restaurant.Dtos.MiRestauranteDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -58,6 +62,28 @@ public class RestaurantePanelController {
     @GetMapping("/me/reservas")
     public List<ReservaPanelDTO> getReservas() {
         return panelService.getReservas();
+    }
+
+    /** Espacios del restaurante (activos e inactivos) con su capacidad. */
+    @GetMapping("/me/espacios")
+    public List<EspacioDTO> getEspacios() {
+        return panelService.getEspacios();
+    }
+
+    @PostMapping("/me/espacios")
+    public ResponseEntity<EspacioDTO> crearEspacio(@RequestBody EspacioRequestDTO request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(panelService.crearEspacio(request));
+    }
+
+    @PutMapping("/me/espacios/{id}")
+    public EspacioDTO actualizarEspacio(@PathVariable Long id, @RequestBody EspacioRequestDTO request) {
+        return panelService.actualizarEspacio(id, request);
+    }
+
+    /** Activa o desactiva un espacio. Los espacios no se borran para no perder sus reservas. */
+    @PatchMapping("/me/espacios/{id}/activo")
+    public EspacioDTO cambiarActivoEspacio(@PathVariable Long id, @RequestBody EspacioActivoDTO request) {
+        return panelService.cambiarActivoEspacio(id, request == null ? null : request.activo());
     }
 
     /** Próximos días con capacidad reducida del restaurante del encargado. */
