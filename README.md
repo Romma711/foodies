@@ -134,6 +134,13 @@ Para probar endpoints protegidos, hacé login en `POST /api/auth/login`, copiá 
 >`/api/restaurantes/{id}`
 >- Buscar restaurante por ID
 ###
+>`GET` (público)
+>
+>`/api/restaurantes/{id}/espacios?fecha=2026-12-24&cantidad=4`
+>- Espacios activos donde se puede reservar: `[{ "id", "tipo": "SALON" | "PATIO" | "BARRA", "nombre", "hayLugar" }]`
+>- `fecha` y `cantidad` son opcionales pero van juntos (si llega uno solo, `400`). Con ellos, `hayLugar` dice si entran esas personas ese día en ese espacio; sin ellos es `null`. Nunca se muestra la capacidad
+>- Restaurante pendiente, rechazado o dado de baja: `404`
+###
 >`DELETE`
 >
 >`/api/restaurantes/{id}`
@@ -148,12 +155,12 @@ Para probar endpoints protegidos, hacé login en `POST /api/auth/login`, copiá 
 > Body
 {
   "nombre": "",
-  "cupoMaximo": 0,
   "ubicacion": "",
   "especialidad": ""
 }
 ```
 >- Actualizar datos
+>- `cupoMaximo` ya no se edita: es la suma de los espacios activos. Si llega, responde `400`
 ###
 ## 🧑‍🍳 PANEL DEL ENCARGADO (`ROLE_ENCARGADO`)
 Todos los endpoints trabajan sobre el restaurante del usuario logueado (se resuelve por el email del token), así un encargado nunca puede tocar el restaurante de otro.
@@ -166,11 +173,48 @@ Todos los endpoints trabajan sobre el restaurante del usuario logueado (se resue
 > Body (solo se cambian los campos enviados)
 {
   "nombre": "",
-  "cupoMaximo": 1,
   "ubicacion": "",
-  "especialidad": "PARRILLA"
+  "especialidad": "PARRILLA",
+  "porcentajeAutoAceptacion": 60
 }
 ```
+>- `porcentajeAutoAceptacion` (0-100): las reservas se aceptan solas mientras las personas aceptadas del día en ese espacio no superen ese porcentaje de su cupo. `0` apaga la auto-aceptación
+>- `cupoMaximo` (capacidad total) es de solo lectura: se calcula con los espacios. Si llega, responde `400`
+###
+### Espacios
+Cada restaurante tiene uno o más espacios (salones, patios, barras) con su capacidad por día. Al registrarse se crea "Salón principal" con la capacidad indicada. El cliente elige el espacio al reservar y el cupo se valida en ese espacio.
+
+>`GET` `/api/restaurantes/me/espacios`
+>- Todos los espacios, activos e inactivos: `[{ "id", "tipo", "nombre", "capacidad", "activo" }]`
+###
+>`POST` `/api/restaurantes/me/espacios` (`201`) y `PUT` `/api/restaurantes/me/espacios/{id}`
+```
+> Body
+{ "tipo": "PATIO", "nombre": "Patio trasero", "capacidad": 20 }
+```
+>- `tipo`: `SALON`, `PATIO` o `BARRA`. `nombre` hasta 60 caracteres y sin repetir dentro del restaurante. `capacidad` al menos 1
+>- La capacidad no puede quedar por debajo de las personas ya reservadas en un mismo día futuro (`400`)
+>- Un espacio de otro restaurante responde `404`
+###
+>`PATCH` `/api/restaurantes/me/espacios/{id}/activo`
+```
+> Body
+{ "activo": false }
+```
+>- Los espacios no se borran: se desactivan. No se puede desactivar el último espacio activo ni uno con reservas pendientes o aceptadas para los próximos días (`400`)
+###
+>`GET` `/api/restaurantes/me/cupos-especiales`
+>- Próximos cupos especiales de todos los espacios: `[{ "fecha", "cupo", "motivo", "reservadas", "idEspacio", "espacioNombre" }]`
+###
+>`PUT` `/api/restaurantes/me/espacios/{espacioId}/cupos-especiales/{fecha}`
+```
+> Body
+{ "cupo": 0, "motivo": "Patio cerrado por lluvia" }
+```
+>- Ese día el espacio usa este cupo en lugar de su capacidad. Entre 0 y la capacidad del espacio, no en días pasados, y no menos que lo ya reservado ese día en ese espacio (`400`)
+###
+>`DELETE` `/api/restaurantes/me/espacios/{espacioId}/cupos-especiales/{fecha}`
+>- Ese día el espacio vuelve a su capacidad normal (`204`)
 ###
 >`PUT` `/api/restaurantes/me/carta`
 ```
@@ -183,7 +227,7 @@ archivo type=file (PDF, máximo 10 MB)
 >- Elimina la carta y su archivo
 ###
 >`GET` `/api/restaurantes/me/reservas`
->- Reservas del restaurante ordenadas por fecha y hora (`[]` si no hay)
+>- Reservas del restaurante ordenadas por fecha y hora (`[]` si no hay), con `idEspacio` y `espacioNombre`
 ###
 >`PATCH` `/api/reservas/{id}/estado`
 ```
@@ -229,11 +273,14 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
   "fechaReserva": "",
   "horarioLlegada": "",
   "idUsuario": 0,
-  "idRestaurant": 0
+  "idRestaurant": 0,
+  "idEspacio": 0
 }
 ```
 
 >- Crear nueva reserva. La reserva queda a nombre del usuario del token: `idUsuario` es opcional y, si es de otro usuario, responde `403`
+>- `idEspacio` es obligatorio: un espacio activo de ese restaurante (si no, `400`). El cupo del día se valida en ese espacio (su cupo especial o su capacidad), sin revelar la capacidad
+>- Las respuestas de reservas incluyen `idEspacio` y `espacioNombre`
 ###
 >`GET`
 >
@@ -273,13 +320,14 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
   "cantidad": 4,
   "fechaReserva": "2026-12-24",
   "horarioLlegada": "21:30",
+  "idEspacio": 3,
   "estadoReserva": "CANCELADA"
 }
 ```
 
 >- Solo el dueño de la reserva (si no, `403`)
 >- Con `estadoReserva` solo se acepta `CANCELADA` (cancela la reserva e ignora los demás campos); otro valor responde `400`
->- Si cambia fecha, hora o cantidad, la reserva vuelve a `PENDIENTE`. Se valida: cantidad mayor a 0, fecha y hora no anteriores a ahora (y hasta 3 meses), y cupo del día sin contar esta misma reserva. Los errores responden `400` con `{ "error", "mensaje" }`
+>- Si cambia fecha, hora, cantidad o espacio, la reserva vuelve a `PENDIENTE`. Se valida: cantidad mayor a 0, fecha y hora no anteriores a ahora (y hasta 3 meses), y cupo del día en el espacio (el nuevo, si cambia) sin contar esta misma reserva. Los errores responden `400` con `{ "error", "mensaje" }`
 >- Una reserva `CANCELADA` no se puede modificar (`400`)
 ###
 
