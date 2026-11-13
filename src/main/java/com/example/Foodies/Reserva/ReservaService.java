@@ -3,6 +3,7 @@ package com.example.Foodies.Reserva;
 import com.example.Foodies.Config.CurrentUser;
 import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Espacio.EspacioService;
+import com.example.Foodies.Horario.HorarioAtencionService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.*;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -38,6 +39,8 @@ public class ReservaService {
     @Autowired
     private EspacioService espacioService;
     @Autowired
+    private HorarioAtencionService horarioService;
+    @Autowired
     private CurrentUser currentUser;
 
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
@@ -68,6 +71,7 @@ public class ReservaService {
         ReservaValidations.validateDate(reserva.getFechaReserva());
 
         Date fecha = parseFecha(reserva.getFechaReserva());
+        horarioService.validarLlegada(restaurante, LocalDate.parse(reserva.getFechaReserva()), horaParseada);
         // El cupo se valida en el espacio elegido, contando solo sus reservas no canceladas.
         // El cupo del día es el cupo especial del espacio si lo tiene, si no su capacidad.
         Espacio espacio = espacioService.paraReservar(restaurante, reserva.getIdEspacio());
@@ -185,6 +189,7 @@ public class ReservaService {
             hora = LocalTime.parse(dto.getHorarioLlegada().trim());
         }
         ReservaValidations.validateNotPast(fecha, hora);
+        horarioService.validarLlegada(r.getRestaurant(), fecha, hora);
 
         // Capacity of the (new) espacio on the new day, without counting this same reservation.
         Espacio espacio = dto.getIdEspacio() != null

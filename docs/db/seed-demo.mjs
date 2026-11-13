@@ -7,6 +7,7 @@
 //   so whatever was done during a rehearsal disappears.
 // - Each restaurant's espacios (salones, patios, barras) are restored: the first one is the
 //   "Salón principal" created at sign-up; missing ones are created and extra ones deactivated.
+// - Each restaurant's opening hours are replaced by the demo week.
 // - Strikes cannot be reset through the API; they keep accumulating across runs.
 // Data that does not belong to the demo restaurants is never touched.
 // Every demo account uses DEMO_PASSWORD.
@@ -21,20 +22,25 @@ const DOMINIO = 'demo.foodies.com';
 // Fictional restaurants on real Mar del Plata streets; coordinates are approximate.
 // `espacios[0]` is the "Salón principal" created at sign-up with its capacity.
 const salon = (capacidad) => ({ tipo: 'SALON', nombre: 'Salón principal', capacidad });
+// Opening hours: the same franjas every day, so no seed reservation falls on a closed day.
+const DIAS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+const todosLosDias = (...franjas) =>
+  DIAS.flatMap((dia) => franjas.map(([apertura, cierre]) => ({ dia, apertura, cierre })));
+const ALMUERZO_Y_CENA = todosLosDias(['12:00', '16:00'], ['20:00', '00:00']);
 const RESTAURANTES = [
-  { nombre: 'La Brasa de Güemes', especialidad: 'PARRILLA', direccion: 'Güemes 2850, Mar del Plata', telefono: '223 451-2850', latitud: -38.0141, longitud: -57.5434,
+  { nombre: 'La Brasa de Güemes', horarios: ALMUERZO_Y_CENA, especialidad: 'PARRILLA', direccion: 'Güemes 2850, Mar del Plata', telefono: '223 451-2850', latitud: -38.0141, longitud: -57.5434,
     espacios: [salon(40), { tipo: 'PATIO', nombre: 'Patio cervecero', capacidad: 20 }] },
-  { nombre: 'Don Ramón Parrilla', especialidad: 'PARRILLA', direccion: 'Av. Constitución 5230, Mar del Plata', telefono: '223 479-5230', latitud: -37.9843, longitud: -57.5698,
+  { nombre: 'Don Ramón Parrilla', horarios: ALMUERZO_Y_CENA, especialidad: 'PARRILLA', direccion: 'Av. Constitución 5230, Mar del Plata', telefono: '223 479-5230', latitud: -37.9843, longitud: -57.5698,
     espacios: [salon(50), { tipo: 'SALON', nombre: 'Salón de eventos', capacidad: 30 }] },
-  { nombre: 'Kaiyō Sushi Bar', especialidad: 'ASIATICA', direccion: 'Alem 3650, Mar del Plata', telefono: '223 486-3650', latitud: -38.0262, longitud: -57.5338,
+  { nombre: 'Kaiyō Sushi Bar', horarios: todosLosDias(['19:30', '00:00']), especialidad: 'ASIATICA', direccion: 'Alem 3650, Mar del Plata', telefono: '223 486-3650', latitud: -38.0262, longitud: -57.5338,
     espacios: [salon(28), { tipo: 'BARRA', nombre: 'Barra de sushi', capacidad: 12 }] },
-  { nombre: 'Trattoria Nonna Rosa', especialidad: 'PASTAS', direccion: 'Olavarría 2710, Mar del Plata', telefono: '223 492-2710', latitud: -38.0135, longitud: -57.5452,
+  { nombre: 'Trattoria Nonna Rosa', horarios: ALMUERZO_Y_CENA, especialidad: 'PASTAS', direccion: 'Olavarría 2710, Mar del Plata', telefono: '223 492-2710', latitud: -38.0135, longitud: -57.5452,
     espacios: [salon(35), { tipo: 'PATIO', nombre: 'Patio interno', capacidad: 15 }] },
-  { nombre: 'Cantina del Puerto', especialidad: 'PESCADOS', direccion: 'Av. Martínez de Hoz 258, Mar del Plata', telefono: '223 480-0258', latitud: -38.0447, longitud: -57.5371,
+  { nombre: 'Cantina del Puerto', horarios: ALMUERZO_Y_CENA, especialidad: 'PESCADOS', direccion: 'Av. Martínez de Hoz 258, Mar del Plata', telefono: '223 480-0258', latitud: -38.0447, longitud: -57.5371,
     espacios: [salon(60), { tipo: 'PATIO', nombre: 'Terraza al puerto', capacidad: 22 }, { tipo: 'BARRA', nombre: 'Barra', capacidad: 8 }] },
-  { nombre: 'Café de la Rambla', especialidad: 'CAFE', direccion: 'Bv. Marítimo 2290, Mar del Plata', telefono: '223 494-2290', latitud: -38.0005, longitud: -57.5432,
+  { nombre: 'Café de la Rambla', horarios: todosLosDias(['08:00', '20:00']), especialidad: 'CAFE', direccion: 'Bv. Marítimo 2290, Mar del Plata', telefono: '223 494-2290', latitud: -38.0005, longitud: -57.5432,
     espacios: [salon(18), { tipo: 'PATIO', nombre: 'Vereda', capacidad: 12 }] },
-  { nombre: 'El Rincón de Mirta', especialidad: 'MINUTAS', direccion: 'Av. Colón 3120, Mar del Plata', telefono: '223 473-3120', latitud: -38.0063, longitud: -57.5562,
+  { nombre: 'El Rincón de Mirta', horarios: ALMUERZO_Y_CENA, especialidad: 'MINUTAS', direccion: 'Av. Colón 3120, Mar del Plata', telefono: '223 473-3120', latitud: -38.0063, longitud: -57.5562,
     espacios: [salon(35)] },
 ];
 
@@ -246,6 +252,7 @@ async function prepararRestaurantes(admin) {
       especialidad: r.especialidad,
       porcentajeAutoAceptacion: 0,
     }, token);
+    await call('PUT', '/restaurantes/me/horarios', r.horarios, token);
     restaurantes.push({ id: entidad.id, token, espacios: r.espacios });
   }
   return restaurantes;
