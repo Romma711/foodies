@@ -204,6 +204,23 @@ Cada restaurante tiene uno o más espacios (salones, patios, barras) con su capa
 ```
 >- Los espacios no se borran: se desactivan. No se puede desactivar el último espacio activo ni uno con reservas pendientes o aceptadas para los próximos días (`400`)
 ###
+### Horario de atención
+Franjas por día de la semana en las que el restaurante recibe llegadas. Sin horario cargado no hay restricción.
+
+>`GET` `/api/restaurantes/me/horarios` y `GET` `/api/restaurantes/{id}/horarios` (público)
+>- `[{ "dia": "SATURDAY", "apertura": "12:00", "cierre": "16:00" }]`, ordenadas por día y apertura
+###
+>`PUT` `/api/restaurantes/me/horarios`
+```
+> Body (reemplaza la semana completa; [] quita el horario)
+[
+  { "dia": "SATURDAY", "apertura": "12:00", "cierre": "16:00" },
+  { "dia": "SATURDAY", "apertura": "20:00", "cierre": "00:00" }
+]
+```
+>- `dia`: `MONDAY` … `SUNDAY`. Horas `HH:mm`; `cierre` `00:00` es medianoche. Hasta 3 franjas por día, sin superponerse (`400`)
+>- Al crear o modificar una reserva, la hora de llegada tiene que caer en una franja de ese día (desde la apertura y antes del cierre). Si no: `400` "Ese día el restaurante está cerrado…" o "Ese día el restaurante recibe reservas de 20:00 a 00:00…"
+###
 >`GET` `/api/restaurantes/me/cupos-especiales`
 >- Próximos cupos especiales de todos los espacios: `[{ "fecha", "cupo", "motivo", "reservadas", "idEspacio", "espacioNombre" }]`
 ###

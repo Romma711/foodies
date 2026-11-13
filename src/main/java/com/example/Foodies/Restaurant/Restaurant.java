@@ -6,6 +6,7 @@ import com.example.Foodies.Carta.Carta;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.EstadoRestaurante;
 import com.example.Foodies.Espacio.Espacio;
+import com.example.Foodies.Horario.HorarioAtencion;
 import com.example.Foodies.Resena.Resena;
 import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Usuario.Usuario;
@@ -103,6 +104,9 @@ public class Restaurant {
 
      @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<Espacio> espacios = new ArrayList<>();
+
+     @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
+     private List<HorarioAtencion> horarios = new ArrayList<>();
 
      @OneToMany(mappedBy = "restaurant", orphanRemoval = true, cascade = CascadeType.ALL)
      private List<FotoRestaurante> fotos = new ArrayList<>();
