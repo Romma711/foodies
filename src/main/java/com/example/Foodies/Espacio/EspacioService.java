@@ -165,13 +165,21 @@ public class EspacioService {
                 .orElse(espacio.getCapacidad());
     }
 
-    /** Personas con reservas activas (pendientes o aceptadas) en ese espacio ese día. */
+    /**
+     * Personas con reservas activas (pendientes o aceptadas) en ese espacio ese día. Con turnos, la
+     * del turno más lleno, porque el cupo rige por turno.
+     */
     @Transactional(readOnly = true)
     public int personasReservadas(Espacio espacio, LocalDate fecha) {
         return reservaRepo.findAllByEspacio_IdAndFechaReserva(espacio.getId(), comoFechaReserva(fecha)).stream()
                 .filter(r -> r.getEstadoReserva().esActiva())
-                .mapToInt(Reserva::getCantidad)
-                .sum();
+                .collect(Collectors.groupingBy(EspacioService::turnoDe, Collectors.summingInt(Reserva::getCantidad)))
+                .values().stream().mapToInt(Integer::intValue).max().orElse(0);
+    }
+
+    /** Capacity pool of a reservation inside its day: its shift, or the whole day (-1). */
+    private static Long turnoDe(Reserva reserva) {
+        return reserva.getTurno() == null ? -1L : reserva.getTurno().getId();
     }
 
     /**
@@ -202,13 +210,14 @@ public class EspacioService {
                 .orElseThrow(() -> new EntityNotFoundException("Espacio no encontrado"));
     }
 
-    /** Mayor cantidad de personas con reservas activas en un mismo día, de hoy en adelante. */
+    /** Mayor cantidad de personas con reservas activas en un mismo día y turno, de hoy en adelante. */
     private int maximoReservadoFuturo(Espacio espacio) {
-        Map<Date, Integer> porDia = reservaRepo
+        Map<String, Integer> porDia = reservaRepo
                 .findAllByEspacio_IdAndFechaReservaGreaterThanEqual(espacio.getId(), comoFechaReserva(LocalDate.now()))
                 .stream()
                 .filter(r -> r.getEstadoReserva().esActiva())
-                .collect(Collectors.groupingBy(Reserva::getFechaReserva, Collectors.summingInt(Reserva::getCantidad)));
+                .collect(Collectors.groupingBy(r -> r.getFechaReserva().getTime() + "/" + turnoDe(r),
+                        Collectors.summingInt(Reserva::getCantidad)));
         return porDia.values().stream().mapToInt(Integer::intValue).max().orElse(0);
     }
 

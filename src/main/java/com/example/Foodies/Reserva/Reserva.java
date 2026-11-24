@@ -3,6 +3,7 @@ package com.example.Foodies.Reserva;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Restaurant.Restaurant;
+import com.example.Foodies.Turno.Turno;
 import com.example.Foodies.Usuario.Usuario;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -57,6 +58,11 @@ public class Reserva {
     @ManyToOne
     @JoinColumn(name = "espacio_id")
     private Espacio espacio;
+
+    /** Shift of the reservation (RF24); null for restaurants without shifts and older rows. */
+    @ManyToOne
+    @JoinColumn(name = "turno_id")
+    private Turno turno;
 
     /** {@code fechaReserva} as a date; JPA may return {@code java.sql.Date}/{@code Timestamp}. */
     public LocalDate fechaLocal() {

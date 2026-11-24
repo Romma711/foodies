@@ -112,6 +112,24 @@ public class HorarioAtencionService {
         }
     }
 
+    /**
+     * A shift must start and end inside one opening range of its day (D11 with shifts). Nothing to
+     * check when the restaurant has no opening hours.
+     */
+    @Transactional(readOnly = true)
+    public void validarTurno(Restaurant restaurant, java.time.DayOfWeek dia, LocalTime inicio, int finEnMinutos) {
+        List<HorarioAtencion> franjas = franjas(restaurant.getId());
+        if (franjas.isEmpty()) {
+            return;
+        }
+        boolean entra = franjas.stream()
+                .filter(f -> f.getDia() == dia)
+                .anyMatch(f -> !inicio.isBefore(f.getApertura()) && finEnMinutos <= f.cierreEnMinutos());
+        if (!entra) {
+            throw new BusinessException("El turno tiene que empezar y terminar dentro del horario de atención de ese día");
+        }
+    }
+
     private List<HorarioAtencion> franjas(Long restaurantId) {
         return horarioRepo.findAllByRestaurant_Id(restaurantId).stream().sorted(ORDEN).toList();
     }

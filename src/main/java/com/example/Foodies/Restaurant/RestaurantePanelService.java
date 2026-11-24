@@ -163,8 +163,8 @@ public class RestaurantePanelService {
                     throw new BusinessException("La reserva ya está aceptada");
                 }
                 if (reserva.getEspacio() != null) {
-                    cupoReservas.validar(reserva.getEspacio(), reserva.fechaLocal(), reserva.getCantidad(),
-                            reserva.getId());
+                    cupoReservas.validar(reserva.getEspacio(), reserva.fechaLocal(), reserva.getTurno(),
+                            reserva.getCantidad(), reserva.getId());
                 }
             }
             if (estado == EstadoReserva.RECHAZADA && actual != EstadoReserva.PENDIENTE) {

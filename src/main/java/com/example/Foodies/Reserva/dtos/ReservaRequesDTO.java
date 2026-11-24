@@ -17,4 +17,6 @@ public class ReservaRequesDTO {
     private Long idRestaurant;
     /** Espacio elegido (salón, patio o barra). Obligatorio. */
     private Long idEspacio;
+    /** Shift (RF24). Optional: without it the shift starting at horarioLlegada is used. */
+    private Long idTurno;
 }

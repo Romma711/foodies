@@ -12,6 +12,8 @@ import com.example.Foodies.Moderacion.ModeracionService;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Reserva.dtos.*;
+import com.example.Foodies.Turno.Turno;
+import com.example.Foodies.Turno.TurnoService;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
@@ -58,6 +60,8 @@ public class ReservaService {
     private Clock clock;
     @Autowired
     private AvisosReserva avisos;
+    @Autowired
+    private TurnoService turnoService;
 
     @Transactional
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
@@ -86,20 +90,25 @@ public class ReservaService {
         ReservaValidations.validateTime(reserva.getHorarioLlegada());
 
         //Esto formatea de string a respectivos tipos de datos de tiempo (tanto la fecha, como la hora)
-        LocalTime horaParseada = LocalTime.parse(reserva.getHorarioLlegada().trim());
+        LocalTime horaPedida = LocalTime.parse(reserva.getHorarioLlegada().trim());
 
         //Valida la fecha si es antes o despues de la fecha de hoy
         ReservaValidations.validateDate(reserva.getFechaReserva(), LocalDate.now(clock));
 
         Date fecha = parseFecha(reserva.getFechaReserva());
         LocalDate dia = LocalDate.parse(reserva.getFechaReserva().trim());
+        // With shifts (RF24) the arrival is the shift start and the shift must fit the opening hours.
+        Turno turno = turnoService.resolver(restaurante, dia, reserva.getIdTurno(), horaPedida).orElse(null);
+        LocalTime horaParseada = turno == null ? horaPedida : turno.getInicio();
         ReservaValidations.validateNotPast(dia, horaParseada, LocalDateTime.now(clock));
-        horarioService.validarLlegada(restaurante, dia, horaParseada);
+        if (turno == null) {
+            horarioService.validarLlegada(restaurante, dia, horaParseada);
+        }
         validarSinDuplicados(usuario, restaurante, dia, horaParseada, null);
         // El cupo se valida en el espacio elegido, contando solo sus reservas activas.
         // El cupo del día es el cupo especial del espacio si lo tiene, si no su capacidad.
         Espacio espacio = espacioService.paraReservar(restaurante, reserva.getIdEspacio());
-        cupoReservas.validar(espacio, dia, reserva.getCantidad(), null);
+        cupoReservas.validar(espacio, dia, turno, reserva.getCantidad(), null);
 
         Reserva reservanueva = new Reserva();
         reservanueva.setCantidad(reserva.getCantidad());
@@ -109,10 +118,11 @@ public class ReservaService {
                 restaurante,
                 cupoReservas.cupo(espacio, dia),
                 reserva.getCantidad(),
-                cupoReservas.aceptadas(espacio, dia, null)));
+                cupoReservas.aceptadas(espacio, dia, turno, null)));
         reservanueva.setUsuario(usuario);
         reservanueva.setRestaurant(restaurante);
         reservanueva.setEspacio(espacio);
+        reservanueva.setTurno(turno);
         reservanueva = reservaRepo.save(reservanueva);
         avisos.nuevaReserva(reservanueva);
 
@@ -195,7 +205,7 @@ public class ReservaService {
             return toDetail(cancelada);
         }
         if (dto.getCantidad() == null && dto.getFechaReserva() == null && dto.getHorarioLlegada() == null
-                && dto.getIdEspacio() == null) {
+                && dto.getIdEspacio() == null && dto.getIdTurno() == null) {
             throw new BusinessException("No hay datos para modificar");
         }
 
@@ -213,8 +223,20 @@ public class ReservaService {
             ReservaValidations.validateTime(dto.getHorarioLlegada());
             hora = LocalTime.parse(dto.getHorarioLlegada().trim());
         }
+        // Keeps the current shift when only other fields change and the weekday is the same.
+        Long idTurno = dto.getIdTurno();
+        if (idTurno == null && dto.getHorarioLlegada() == null && r.getTurno() != null
+                && r.getTurno().getDia() == fecha.getDayOfWeek()) {
+            idTurno = r.getTurno().getId();
+        }
+        Turno turno = turnoService.resolver(r.getRestaurant(), fecha, idTurno, hora).orElse(null);
+        if (turno != null) {
+            hora = turno.getInicio();
+        }
         ReservaValidations.validateNotPast(fecha, hora, LocalDateTime.now(clock));
-        horarioService.validarLlegada(r.getRestaurant(), fecha, hora);
+        if (turno == null) {
+            horarioService.validarLlegada(r.getRestaurant(), fecha, hora);
+        }
         validarSinDuplicados(r.getUsuario(), r.getRestaurant(), fecha, hora, r.getId());
 
         // Capacity of the (new) espacio on the new day, without counting this same reservation.
@@ -225,15 +247,16 @@ public class ReservaService {
             throw new BusinessException("Elegí en qué espacio querés reservar");
         }
         Date fechaReserva = parseFecha(fechaTexto);
-        cupoReservas.validar(espacio, fecha, cantidad, r.getId());
+        cupoReservas.validar(espacio, fecha, turno, cantidad, r.getId());
 
         r.setCantidad(cantidad);
         r.setFechaReserva(fechaReserva);
         r.setHorariollegada(hora);
         r.setEspacio(espacio);
+        r.setTurno(turno);
         // Modifying re-evaluates auto-acceptance; otherwise the restaurant confirms it again.
         r.setEstadoReserva(estadoInicial(r.getRestaurant(), cupoReservas.cupo(espacio, fecha), cantidad,
-                cupoReservas.aceptadas(espacio, fecha, r.getId())));
+                cupoReservas.aceptadas(espacio, fecha, turno, r.getId())));
         return toDetail(reservaRepo.save(r));
     }
 
@@ -342,7 +365,8 @@ public class ReservaService {
                 r.getUsuario().getNombre(),
                 r.getRestaurant().getNombre(),
                 r.getEspacio() == null ? null : r.getEspacio().getId(),
-                r.getEspacio() == null ? null : r.getEspacio().getNombre()
+                r.getEspacio() == null ? null : r.getEspacio().getNombre(),
+                r.getTurno() == null ? null : r.getTurno().getId()
         );
     }
 
@@ -356,7 +380,8 @@ public class ReservaService {
                 r.getRestaurant().getNombre(),
                 r.getRestaurant().getId(),
                 r.getEspacio() == null ? null : r.getEspacio().getId(),
-                r.getEspacio() == null ? null : r.getEspacio().getNombre()
+                r.getEspacio() == null ? null : r.getEspacio().getNombre(),
+                r.getTurno() == null ? null : r.getTurno().getId()
         );
     }
 }

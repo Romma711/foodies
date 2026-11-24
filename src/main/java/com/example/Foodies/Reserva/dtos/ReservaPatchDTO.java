@@ -19,4 +19,6 @@ public class ReservaPatchDTO {
     private String horarioLlegada;
     /** New espacio of the same restaurant; null keeps the current one. */
     private Long idEspacio;
+    /** New shift of the same restaurant (RF24); null keeps it or picks the one starting at horarioLlegada. */
+    private Long idTurno;
 }
