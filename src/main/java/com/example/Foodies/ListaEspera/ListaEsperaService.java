@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -82,9 +83,11 @@ public class ListaEsperaService {
         this.clock = clock;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public EntradaListaEsperaDTO anotar(ListaEsperaRequestDTO pedido) {
-        Usuario usuario = usuarioActual();
+        // Same lock order as a booking: the client, then the restaurant.
+        Usuario usuario = usuarioRepo.bloquearPorEmail(currentUser.email())
+                .orElseThrow(() -> new ForbiddenException("No hay un usuario autenticado"));
         if (usuario.getRol() != Role.ROLE_CLIENTE) {
             throw new ForbiddenException("Solo los clientes pueden anotarse en una lista de espera");
         }

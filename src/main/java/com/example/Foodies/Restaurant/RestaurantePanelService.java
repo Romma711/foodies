@@ -25,6 +25,7 @@ import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
 import com.example.Foodies.Restaurant.Dtos.MiRestauranteDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -128,7 +129,7 @@ public class RestaurantePanelService {
      * </ul>
      * Final states never change.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservaPanelDTO cambiarEstadoReserva(Long reservaId, EstadoReserva estado) {
         if (estado == null || !ESTADOS_DEL_RESTAURANTE.contains(estado)) {
             throw new BusinessException("El estado debe ser ACEPTADA, RECHAZADA, CANCELADA, ASISTIO o NO_ASISTIO");

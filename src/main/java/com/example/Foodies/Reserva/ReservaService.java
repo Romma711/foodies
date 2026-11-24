@@ -17,7 +17,8 @@ import com.example.Foodies.Turno.Turno;
 import com.example.Foodies.Turno.TurnoService;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -66,10 +67,16 @@ public class ReservaService {
     @Autowired
     private ListaEsperaService listaEspera;
 
-    @Transactional
+    /**
+     * READ COMMITTED: after waiting for the locks, the duplicate and capacity checks must see the rows
+     * the previous lock holder committed (MySQL defaults to REPEATABLE READ, whose snapshot would hide them).
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
         // The owner is always the authenticated user; a different idUsuario in the body is rejected.
-        Usuario usuario = usuarioActual();
+        // Locked first (then the restaurant): the same client's parallel requests run one at a time.
+        Usuario usuario = usuarioRepo.bloquearPorEmail(currentUser.email())
+                .orElseThrow(() -> new ForbiddenException("No hay un usuario autenticado"));
         if (usuario.getRol() != Role.ROLE_CLIENTE) {
             throw new ForbiddenException("Solo los clientes pueden hacer reservas");
         }
@@ -178,12 +185,14 @@ public class ReservaService {
      * {@value #MINUTOS_LIMITE_CLIENTE} minutes before arrival. A modified reservation is accepted again
      * only if auto-acceptance covers it; otherwise it goes back to {@code PENDIENTE}.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservaDetailDTO updateReserva(Long id, ReservaPatchDTO dto) {
         Reserva r = buscarReserva(id);
         if (!esDuenio(r)) {
             throw new ForbiddenException("Solo podés modificar tus propias reservas");
         }
+        // Same lock order as createReserva: the client, then the restaurant.
+        usuarioRepo.bloquearPorEmail(currentUser.email());
         cupoReservas.bloquear(r.getRestaurant().getId());
         if (dto == null) {
             throw new BusinessException("No hay datos para modificar");
