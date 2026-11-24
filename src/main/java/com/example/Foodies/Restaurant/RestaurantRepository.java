@@ -19,10 +19,14 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     List<Restaurant> findByEspecialidad(EspecialidadDeComida especialidadDeComida);
     /** Public listing by specialty: approved restaurants that were not deactivated by an admin (Phase 3). */
     List<Restaurant> findByEspecialidadAndAprobadoTrueAndActivoTrue(EspecialidadDeComida especialidadDeComida);
+    /** Public listing by specialty, also hiding restaurants whose manager account was deactivated. */
+    List<Restaurant> findByEspecialidadAndAprobadoTrueAndActivoTrueAndUsuario_ActivoTrue(EspecialidadDeComida especialidadDeComida);
 
     List<Restaurant> findByAprobadoTrue();
     /** Public catalog: approved restaurants that were not deactivated by an admin (Phase 3). */
     List<Restaurant> findByAprobadoTrueAndActivoTrue();
+    /** Public catalog, also hiding restaurants whose manager account was deactivated. */
+    List<Restaurant> findByAprobadoTrueAndActivoTrueAndUsuario_ActivoTrue();
     List<Restaurant> findByAprobadoFalse();
 
     Optional<Restaurant> findByUsuario_Email(String email);

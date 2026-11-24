@@ -6,6 +6,7 @@ import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Moderacion.dtos.EntidadClienteDTO;
 import com.example.Foodies.Moderacion.dtos.EntidadRestauranteDTO;
 import com.example.Foodies.Moderacion.dtos.EstadoActivoDTO;
+import com.example.Foodies.Reserva.CancelacionEnCascada;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Usuario.Usuario;
 import com.example.Foodies.Usuario.UsuarioRepository;
@@ -27,10 +28,13 @@ public class EntidadesService {
 
     private final UsuarioRepository usuarioRepo;
     private final ModeracionRestaurantRepository restaurantRepo;
+    private final CancelacionEnCascada cancelacionEnCascada;
 
-    public EntidadesService(UsuarioRepository usuarioRepo, ModeracionRestaurantRepository restaurantRepo) {
+    public EntidadesService(UsuarioRepository usuarioRepo, ModeracionRestaurantRepository restaurantRepo,
+                            CancelacionEnCascada cancelacionEnCascada) {
         this.usuarioRepo = usuarioRepo;
         this.restaurantRepo = restaurantRepo;
+        this.cancelacionEnCascada = cancelacionEnCascada;
     }
 
     /**
@@ -69,14 +73,19 @@ public class EntidadesService {
         if (usuario.getRol() == Role.ROLE_ADMIN) {
             throw new BusinessException("No se puede dar de baja a un administrador");
         }
+        boolean seDaDeBaja = !activo && !Boolean.FALSE.equals(usuario.getActivo());
         usuario.setActivo(activo);
+        if (seDaDeBaja) {
+            cancelarReservasDe(usuario);
+        }
         String nombre = usuario.getNombre() == null ? usuario.getEmail() : usuario.getNombre();
         return new EstadoActivoDTO(usuario.getId(), nombre, activo);
     }
 
     /**
-     * Da de baja o reactiva un restaurante. Dado de baja deja de aparecer en el catálogo público;
-     * la cuenta del encargado no cambia.
+     * Da de baja o reactiva un restaurante. Dado de baja deja de aparecer en el catálogo público,
+     * sus reservas futuras se cancelan y el panel queda en modo lectura; la cuenta del encargado no
+     * cambia.
      *
      * @param restaurantId id del restaurante
      * @param activo       {@code false} para dar de baja
@@ -87,7 +96,23 @@ public class EntidadesService {
     public EstadoActivoDTO cambiarActivoRestaurante(Long restaurantId, boolean activo) {
         Restaurant restaurant = restaurantRepo.findById(restaurantId)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
+        boolean seDaDeBaja = !activo && !Boolean.FALSE.equals(restaurant.getActivo());
         restaurant.setActivo(activo);
+        if (seDaDeBaja) {
+            cancelacionEnCascada.cancelarDelRestaurante(restaurant);
+        }
         return new EstadoActivoDTO(restaurant.getId(), restaurant.getNombre(), activo);
+    }
+
+    /**
+     * A deactivated client loses its future reservations; a deactivated manager takes the restaurant
+     * out of the catalog (see {@link Restaurant#isPublicado()}) and its future reservations with it.
+     */
+    private void cancelarReservasDe(Usuario usuario) {
+        if (usuario.getRol() == Role.ROLE_CLIENTE) {
+            cancelacionEnCascada.cancelarDelCliente(usuario);
+        } else if (usuario.getRestaurant() != null) {
+            cancelacionEnCascada.cancelarDelRestaurante(usuario.getRestaurant());
+        }
     }
 }

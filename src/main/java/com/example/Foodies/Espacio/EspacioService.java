@@ -129,7 +129,7 @@ public class EspacioService {
             throw new BusinessException("La cantidad de personas debe ser al menos 1");
         }
         restaurantRepo.findById(restaurantId)
-                .filter(r -> r.isAprobado() && !Boolean.FALSE.equals(r.getActivo()))
+                .filter(Restaurant::isPublicado)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
         return espacioRepo.findAllByRestaurant_IdAndActivoTrueOrderByIdAsc(restaurantId).stream()
                 .map(e -> new EspacioPublicoDTO(e.getId(), e.getTipo(), e.getNombre(),

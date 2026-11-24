@@ -49,7 +49,7 @@ public class HorarioAtencionService {
     @Transactional(readOnly = true)
     public List<FranjaHorariaDTO> listarPublico(Long restaurantId) {
         Restaurant restaurant = restaurantRepo.findById(restaurantId)
-                .filter(r -> r.isAprobado() && !Boolean.FALSE.equals(r.getActivo()))
+                .filter(Restaurant::isPublicado)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
         return listar(restaurant);
     }

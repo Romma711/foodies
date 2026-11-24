@@ -7,6 +7,10 @@ import com.example.Foodies.Config.JwtUtil;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
+import com.example.Foodies.Exception.ConflictException;
+import com.example.Foodies.Reserva.CancelacionEnCascada;
+import com.example.Foodies.Reserva.ReservaRepository;
+import com.example.Foodies.Resena.ResenaRepository;
 import com.example.Foodies.Exception.EmailDuplicadoException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
@@ -50,6 +54,12 @@ public class UsuarioService implements UserDetailsService {
     private JwtUtil jwtUtil;
     @Autowired
     private CurrentUser currentUser;
+    @Autowired
+    private CancelacionEnCascada cancelacionEnCascada;
+    @Autowired
+    private ReservaRepository reservaRepo;
+    @Autowired
+    private ResenaRepository resenaRepo;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -135,8 +145,24 @@ public class UsuarioService implements UserDetailsService {
         return usuarioMapper.toDTO(existente);
     }
 
+    /**
+     * A client deleting its own account is deactivated instead (its future reservations are
+     * cancelled and its history is kept). An admin physically deletes only an account without
+     * reservations or reviews.
+     */
+    @Transactional
     public void deleteCliente(Long id){
-        usuarioRepo.deleteById(id);
+        Usuario usuario = usuarioRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("El cliente no existe"));
+        if (!currentUser.isAdmin()) {
+            usuario.setActivo(false);
+            cancelacionEnCascada.cancelarDelCliente(usuario);
+            return;
+        }
+        if (!reservaRepo.findAllByUsuario_Id(id).isEmpty() || !resenaRepo.findByUsuario_Id(id).isEmpty()) {
+            throw new ConflictException("El cliente tiene reservas o reseñas: dalo de baja en lugar de borrarlo.");
+        }
+        usuarioRepo.delete(usuario);
     }
 
     @Transactional

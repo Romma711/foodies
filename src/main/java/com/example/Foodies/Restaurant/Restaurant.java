@@ -122,6 +122,15 @@ public class Restaurant {
      * </ul>
      * Un RECHAZADO con {@code aprobado = false} se respeta.
      */
+    /**
+     * Visible to clients and bookable: approved, not deactivated, and its manager account not
+     * deactivated either (a restaurant nobody can manage does not take reservations).
+     */
+    public boolean isPublicado() {
+        return aprobado && !Boolean.FALSE.equals(activo)
+                && (usuario == null || !Boolean.FALSE.equals(usuario.getActivo()));
+    }
+
     @PrePersist
     @PreUpdate
     void sincronizarEstado() {
