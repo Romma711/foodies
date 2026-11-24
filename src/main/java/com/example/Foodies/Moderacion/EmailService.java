@@ -73,6 +73,16 @@ public class EmailService {
                 PlantillaReservaConfirmada.cuerpo(reserva));
     }
 
+    /**
+     * Sends a plain reservation notice (new, rejected, cancelled, waitlist).
+     *
+     * @param descripcion what is sent, for the log
+     * @return {@code true} si el servidor de correo aceptó el mensaje
+     */
+    public boolean enviarAviso(String destinatario, String descripcion, String asunto, String cuerpo) {
+        return enviar(destinatario, descripcion, asunto, cuerpo);
+    }
+
     private boolean enviar(String destinatario, String descripcion, String asunto, String cuerpo) {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (sender == null) {

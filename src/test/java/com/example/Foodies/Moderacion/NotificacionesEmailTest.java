@@ -135,7 +135,11 @@ class NotificacionesEmailTest {
 
         cambiarEstado(escenario, "CANCELADA");
 
-        assertThat(mailsPara(escenario.cliente().email())).isEmpty();
+        // The client only hears about the cancellation (D10), never a confirmation.
+        assertThat(mailsPara(escenario.cliente().email()))
+                .extracting(SimpleMailMessage::getSubject)
+                .noneMatch(asunto -> asunto.contains("confirmada"))
+                .allMatch(asunto -> asunto.contains("canceló tu reserva"));
     }
 
     @Test

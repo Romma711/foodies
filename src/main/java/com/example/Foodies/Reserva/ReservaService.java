@@ -7,6 +7,7 @@ import com.example.Foodies.Horario.HorarioAtencionService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.*;
+import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Moderacion.ModeracionService;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -55,6 +56,8 @@ public class ReservaService {
     private CupoReservas cupoReservas;
     @Autowired
     private Clock clock;
+    @Autowired
+    private AvisosReserva avisos;
 
     @Transactional
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
@@ -111,6 +114,7 @@ public class ReservaService {
         reservanueva.setRestaurant(restaurante);
         reservanueva.setEspacio(espacio);
         reservanueva = reservaRepo.save(reservanueva);
+        avisos.nuevaReserva(reservanueva);
 
         return toDetail(reservanueva);
     }
@@ -186,7 +190,9 @@ public class ReservaService {
                 throw new BusinessException("Solo podés cancelar la reserva: el estado debe ser CANCELADA");
             }
             r.setEstadoReserva(EstadoReserva.CANCELADA);
-            return toDetail(reservaRepo.save(r));
+            Reserva cancelada = reservaRepo.save(r);
+            avisos.canceladaPorCliente(cancelada);
+            return toDetail(cancelada);
         }
         if (dto.getCantidad() == null && dto.getFechaReserva() == null && dto.getHorarioLlegada() == null
                 && dto.getIdEspacio() == null) {

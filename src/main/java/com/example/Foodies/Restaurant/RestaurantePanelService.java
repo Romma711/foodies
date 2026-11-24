@@ -15,6 +15,7 @@ import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
+import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Reserva.CupoReservas;
 import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Reserva.ReservaRepository;
@@ -51,11 +52,13 @@ public class RestaurantePanelService {
     private final CurrentUser currentUser;
     private final CupoReservas cupoReservas;
     private final Clock clock;
+    private final AvisosReserva avisos;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
                                    CartaService cartaService, CupoEspecialService cupoEspecialService,
                                    FotoService fotoService, EspacioService espacioService,
-                                   CurrentUser currentUser, CupoReservas cupoReservas, Clock clock) {
+                                   CurrentUser currentUser, CupoReservas cupoReservas, Clock clock,
+                                   AvisosReserva avisos) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
@@ -65,6 +68,7 @@ public class RestaurantePanelService {
         this.currentUser = currentUser;
         this.cupoReservas = cupoReservas;
         this.clock = clock;
+        this.avisos = avisos;
     }
 
     @Transactional(readOnly = true)
@@ -165,7 +169,13 @@ public class RestaurantePanelService {
             }
         }
         reserva.setEstadoReserva(estado);
-        return ReservaPanelDTO.from(reservaRepo.save(reserva));
+        Reserva guardada = reservaRepo.save(reserva);
+        if (estado == EstadoReserva.RECHAZADA) {
+            avisos.rechazada(guardada);
+        } else if (estado == EstadoReserva.CANCELADA) {
+            avisos.canceladaPorRestaurante(guardada);
+        }
+        return ReservaPanelDTO.from(guardada);
     }
 
     /** How a final state reads in an error message, e.g. "La reserva ya está cancelada". */

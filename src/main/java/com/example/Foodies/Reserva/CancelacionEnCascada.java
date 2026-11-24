@@ -1,6 +1,7 @@
 package com.example.Foodies.Reserva;
 
 import com.example.Foodies.Enums.EstadoReserva;
+import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Usuario.Usuario;
 import org.springframework.stereotype.Service;
@@ -20,22 +21,30 @@ public class CancelacionEnCascada {
 
     private final ReservaRepository reservaRepo;
     private final Clock clock;
+    private final AvisosReserva avisos;
 
-    public CancelacionEnCascada(ReservaRepository reservaRepo, Clock clock) {
+    public CancelacionEnCascada(ReservaRepository reservaRepo, Clock clock, AvisosReserva avisos) {
         this.reservaRepo = reservaRepo;
         this.clock = clock;
+        this.avisos = avisos;
     }
 
-    /** Future active reservations of the client, now cancelled. */
+    /** Future active reservations of the client, now cancelled; each restaurant is told by email. */
     @Transactional
     public List<Reserva> cancelarDelCliente(Usuario cliente) {
-        return cancelar(reservaRepo.findAllByUsuario_IdAndEstadoReservaIn(cliente.getId(), EstadoReserva.ACTIVOS));
+        List<Reserva> canceladas = cancelar(
+                reservaRepo.findAllByUsuario_IdAndEstadoReservaIn(cliente.getId(), EstadoReserva.ACTIVOS));
+        canceladas.forEach(avisos::canceladaPorBajaDelCliente);
+        return canceladas;
     }
 
-    /** Future active reservations of the restaurant, now cancelled. */
+    /** Future active reservations of the restaurant, now cancelled; each client is told by email. */
     @Transactional
     public List<Reserva> cancelarDelRestaurante(Restaurant restaurant) {
-        return cancelar(reservaRepo.findAllByRestaurant_IdAndEstadoReservaIn(restaurant.getId(), EstadoReserva.ACTIVOS));
+        List<Reserva> canceladas = cancelar(
+                reservaRepo.findAllByRestaurant_IdAndEstadoReservaIn(restaurant.getId(), EstadoReserva.ACTIVOS));
+        canceladas.forEach(avisos::canceladaPorBajaDelRestaurante);
+        return canceladas;
     }
 
     /** True when the restaurant still has active reservations whose arrival has not passed. */
