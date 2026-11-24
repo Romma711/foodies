@@ -1,5 +1,8 @@
 package com.example.Foodies.Resena;
 
+import com.example.Foodies.Enums.EstadoReserva;
+import com.example.Foodies.Reserva.ReservaRepository;
+
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
@@ -35,6 +38,9 @@ public class ResenaService {
     @Autowired
     private ResenaMapper resenaMapper;
 
+    @Autowired
+    private ReservaRepository reservaRepo;
+
     /** Newest first by creation date; reviews without a date (older rows) go last, newest id first. */
     private static final Comparator<Resena> MAS_RECIENTES = Comparator
             .comparing(Resena::getFechaCreacion, Comparator.nullsLast(Comparator.reverseOrder()))
@@ -45,7 +51,9 @@ public class ResenaService {
         Usuario usuario = usuarioRepo.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
 
+        // Only restaurants clients can see (approved, active, manager active) take reviews.
         Restaurant restaurante = restauranteRepo.findById(resena.getRestaurantId())
+                .filter(Restaurant::isPublicado)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
 
         boolean yaExiste = resenaRepo.existsByUsuario_IdAndRestaurant_Id(
@@ -58,6 +66,13 @@ public class ResenaService {
 
         if (resena.getCalificacion() < 1 || resena.getCalificacion() > 5) {
             throw new BusinessException("La calificación debe estar entre 1 y 5.");
+        }
+
+        // Verified review (D12): the restaurant marked the client as attended at least once.
+        if (!reservaRepo.existsByUsuario_IdAndRestaurant_IdAndEstadoReserva(
+                usuario.getId(), restaurante.getId(), EstadoReserva.ASISTIO)) {
+            throw new ForbiddenException(
+                    "Solo podés reseñar un restaurante después de asistir a una reserva en él");
         }
 
         Resena resenaNueva = resenaMapper.toEntity(resena);

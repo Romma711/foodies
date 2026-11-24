@@ -13,6 +13,8 @@ public interface ReservaRepository extends JpaRepository<Reserva,Long> {
 
     List<Reserva> findAllByUsuario_Id(Long usuarioId);
 
+    boolean existsByUsuario_IdAndRestaurant_IdAndEstadoReserva(Long usuarioId, Long restaurantId, EstadoReserva estado);
+
     List<Reserva> findAllByUsuario_IdAndEstadoReservaIn(Long usuarioId, Collection<EstadoReserva> estados);
 
     List<Reserva> findAllByRestaurant_IdAndEstadoReservaIn(Long restaurantId, Collection<EstadoReserva> estados);

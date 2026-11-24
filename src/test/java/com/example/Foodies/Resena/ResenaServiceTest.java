@@ -1,6 +1,8 @@
 package com.example.Foodies.Resena;
 
+import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
+import com.example.Foodies.Reserva.ReservaRepository;
 import com.example.Foodies.Exception.ForbiddenException;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -41,6 +43,9 @@ class ResenaServiceTest {
     @Mock
     private ResenaMapper resenaMapper;
 
+    @Mock
+    private ReservaRepository reservaRepo;
+
     @InjectMocks
     private ResenaService resenaService;
 
@@ -58,6 +63,7 @@ class ResenaServiceTest {
         restaurante = new Restaurant();
         restaurante.setId(5L);
         restaurante.setNombre("Ochiwan");
+        restaurante.setAprobado(true);
 
         resena = new Resena();
         resena.setId(1L);
@@ -73,6 +79,8 @@ class ResenaServiceTest {
         when(usuarioRepo.findByEmail("ana@foodies.com")).thenReturn(Optional.of(autora));
         when(restauranteRepo.findById(5L)).thenReturn(Optional.of(restaurante));
         when(resenaRepo.existsByUsuario_IdAndRestaurant_Id(7L, 5L)).thenReturn(false);
+        when(reservaRepo.existsByUsuario_IdAndRestaurant_IdAndEstadoReserva(7L, 5L, EstadoReserva.ASISTIO))
+                .thenReturn(true);
         when(resenaMapper.toEntity(dto)).thenReturn(new Resena());
         when(resenaRepo.save(any(Resena.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));

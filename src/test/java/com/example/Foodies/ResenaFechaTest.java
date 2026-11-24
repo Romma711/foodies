@@ -45,6 +45,12 @@ class ResenaFechaTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private com.example.Foodies.Reserva.ReservaRepository reservaRepo;
+
+    @Autowired
+    private com.example.Foodies.Usuario.UsuarioRepository usuarioRepo;
+
     private AutorizacionTestSupport api;
 
     @BeforeEach
@@ -88,6 +94,8 @@ class ResenaFechaTest {
     }
 
     private ResponseEntity<Map> resenar(Cliente cliente, Long restaurantId) {
+        // Only clients who attended can review (D12).
+        AsistenciaDePrueba.registrar(reservaRepo, usuarioRepo, restaurantRepo, cliente.id(), restaurantId);
         return api.send(HttpMethod.POST, "/api/resenas", cliente.token(), Map.of(
                 "comentario", "Muy rica la comida, volvería.",
                 "calificacion", 5,

@@ -167,6 +167,39 @@ public class ModeracionService {
         }
     }
 
+    /** No-shows that add one automatic strike (D5). */
+    public static final int AUSENCIAS_POR_STRIKE = 3;
+
+    /**
+     * Counts a no-show marked by a restaurant. The third one adds a strike (unless the account is
+     * deactivated or already at the limit) and restarts the count; the client is told by email after
+     * the commit.
+     *
+     * @return {@code true} if this no-show added a strike
+     */
+    @Transactional
+    public boolean registrarAusencia(Usuario cliente) {
+        int ausencias = (cliente.getAusencias() == null ? 0 : cliente.getAusencias()) + 1;
+        if (ausencias < AUSENCIAS_POR_STRIKE) {
+            cliente.setAusencias(ausencias);
+            return false;
+        }
+        cliente.setAusencias(0);
+        int strikes = cliente.getStrikes() == null ? 0 : cliente.getStrikes();
+        if (Boolean.FALSE.equals(cliente.getActivo()) || strikes >= LIMITE_STRIKES) {
+            return false;
+        }
+        cliente.setStrikes(strikes + 1);
+        String email = cliente.getEmail();
+        String nombre = Stream.of(cliente.getNombre(), cliente.getApellido())
+                .filter(parte -> parte != null && !parte.isBlank())
+                .collect(Collectors.joining(" "));
+        int total = cliente.getStrikes();
+        String motivo = "No asististe a %d reservas sin avisar.".formatted(AUSENCIAS_POR_STRIKE);
+        DespuesDelCommit.ejecutar(() -> emailService.enviarAvisoSancion(email, nombre, total, LIMITE_STRIKES, motivo));
+        return true;
+    }
+
     private void validarLimite(int strikes) {
         if (strikes >= LIMITE_STRIKES) {
             throw new BusinessException(

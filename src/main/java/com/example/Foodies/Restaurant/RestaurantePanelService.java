@@ -16,6 +16,7 @@ import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
 import com.example.Foodies.Moderacion.AvisosReserva;
+import com.example.Foodies.Moderacion.ModeracionService;
 import com.example.Foodies.Reserva.CupoReservas;
 import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Reserva.ReservaRepository;
@@ -53,12 +54,13 @@ public class RestaurantePanelService {
     private final CupoReservas cupoReservas;
     private final Clock clock;
     private final AvisosReserva avisos;
+    private final ModeracionService moderacionService;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
                                    CartaService cartaService, CupoEspecialService cupoEspecialService,
                                    FotoService fotoService, EspacioService espacioService,
                                    CurrentUser currentUser, CupoReservas cupoReservas, Clock clock,
-                                   AvisosReserva avisos) {
+                                   AvisosReserva avisos, ModeracionService moderacionService) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
@@ -69,6 +71,7 @@ public class RestaurantePanelService {
         this.cupoReservas = cupoReservas;
         this.clock = clock;
         this.avisos = avisos;
+        this.moderacionService = moderacionService;
     }
 
     @Transactional(readOnly = true)
@@ -170,7 +173,9 @@ public class RestaurantePanelService {
         }
         reserva.setEstadoReserva(estado);
         Reserva guardada = reservaRepo.save(reserva);
-        if (estado == EstadoReserva.RECHAZADA) {
+        if (estado == EstadoReserva.NO_ASISTIO && guardada.getUsuario() != null) {
+            moderacionService.registrarAusencia(guardada.getUsuario());
+        } else if (estado == EstadoReserva.RECHAZADA) {
             avisos.rechazada(guardada);
         } else if (estado == EstadoReserva.CANCELADA) {
             avisos.canceladaPorRestaurante(guardada);

@@ -58,6 +58,14 @@ public class Usuario {
     @Column(nullable = false)
     private Integer strikes = 0;
 
+    /**
+     * No-shows (NO_ASISTIO) since the last automatic strike. At 3 the account gets a strike and the
+     * count starts again (D5).
+     */
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private Integer ausencias = 0;
+
     /** Baja lógica: {@code false} deshabilita la cuenta sin borrar sus reservas ni reseñas. */
     @ColumnDefault("true")
     @Column(nullable = false)
