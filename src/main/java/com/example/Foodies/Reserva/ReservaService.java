@@ -5,7 +5,9 @@ import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Espacio.EspacioService;
 import com.example.Foodies.Horario.HorarioAtencionService;
 import com.example.Foodies.Enums.EstadoReserva;
+import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.*;
+import com.example.Foodies.Moderacion.ModeracionService;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
 import com.example.Foodies.Reserva.dtos.*;
@@ -20,6 +22,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -28,6 +31,11 @@ import java.util.List;
 
 @Service
 public class ReservaService {
+
+    /** The client cancels or modifies until this many minutes before arrival. */
+    public static final int MINUTOS_LIMITE_CLIENTE = 30;
+    /** Minimum gap between two active reservations of a client at different restaurants. */
+    public static final int HORAS_ENTRE_RESERVAS = 2;
 
     @Autowired
     private ReservaRepository reservaRepo;
@@ -52,9 +60,13 @@ public class ReservaService {
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
         // The owner is always the authenticated user; a different idUsuario in the body is rejected.
         Usuario usuario = usuarioActual();
+        if (usuario.getRol() != Role.ROLE_CLIENTE) {
+            throw new ForbiddenException("Solo los clientes pueden hacer reservas");
+        }
         if (reserva.getIdUsuario() != null && !reserva.getIdUsuario().equals(usuario.getId())) {
             throw new ForbiddenException("Solo podés crear reservas a tu nombre");
         }
+        validarSinBloqueoPorStrikes(usuario);
         if (reserva.getCantidad() == null || reserva.getCantidad() <= 0) {
             throw new BusinessException("La cantidad de personas debe ser mayor a 0");
         }
@@ -80,6 +92,7 @@ public class ReservaService {
         LocalDate dia = LocalDate.parse(reserva.getFechaReserva().trim());
         ReservaValidations.validateNotPast(dia, horaParseada, LocalDateTime.now(clock));
         horarioService.validarLlegada(restaurante, dia, horaParseada);
+        validarSinDuplicados(usuario, restaurante, dia, horaParseada, null);
         // El cupo se valida en el espacio elegido, contando solo sus reservas activas.
         // El cupo del día es el cupo especial del espacio si lo tiene, si no su capacidad.
         Espacio espacio = espacioService.paraReservar(restaurante, reserva.getIdEspacio());
@@ -143,8 +156,9 @@ public class ReservaService {
     }
 
     /**
-     * The owner changes date, arrival time and party size, or cancels the reservation.
-     * A modified reservation goes back to {@code PENDIENTE} so the restaurant confirms it again.
+     * The owner changes date, arrival time and party size, or cancels the reservation, until
+     * {@value #MINUTOS_LIMITE_CLIENTE} minutes before arrival. A modified reservation is accepted again
+     * only if auto-acceptance covers it; otherwise it goes back to {@code PENDIENTE}.
      */
     @Transactional
     public ReservaDetailDTO updateReserva(Long id, ReservaPatchDTO dto) {
@@ -158,6 +172,14 @@ public class ReservaService {
         }
         if (r.getEstadoReserva() == EstadoReserva.CANCELADA) {
             throw new BusinessException("La reserva está cancelada y no se puede modificar");
+        }
+        if (r.getEstadoReserva().esFinal()) {
+            throw new BusinessException("La reserva ya está cerrada y no se puede modificar");
+        }
+        if (LocalDateTime.now(clock).isAfter(r.llegada().minusMinutes(MINUTOS_LIMITE_CLIENTE))) {
+            throw new BusinessException(("Solo podés cancelar o modificar la reserva hasta %d minutos antes de la "
+                    + "llegada. Para cambios de último momento, comunicate con el restaurante.")
+                    .formatted(MINUTOS_LIMITE_CLIENTE));
         }
         if (dto.getEstadoReserva() != null) {
             if (dto.getEstadoReserva() != EstadoReserva.CANCELADA) {
@@ -187,6 +209,7 @@ public class ReservaService {
         }
         ReservaValidations.validateNotPast(fecha, hora, LocalDateTime.now(clock));
         horarioService.validarLlegada(r.getRestaurant(), fecha, hora);
+        validarSinDuplicados(r.getUsuario(), r.getRestaurant(), fecha, hora, r.getId());
 
         // Capacity of the (new) espacio on the new day, without counting this same reservation.
         Espacio espacio = dto.getIdEspacio() != null
@@ -202,15 +225,17 @@ public class ReservaService {
         r.setFechaReserva(fechaReserva);
         r.setHorariollegada(hora);
         r.setEspacio(espacio);
-        r.setEstadoReserva(EstadoReserva.PENDIENTE);
+        // Modifying re-evaluates auto-acceptance; otherwise the restaurant confirms it again.
+        r.setEstadoReserva(estadoInicial(r.getRestaurant(), cupoReservas.cupo(espacio, fecha), cantidad,
+                cupoReservas.aceptadas(espacio, fecha, r.getId())));
         return toDetail(reservaRepo.save(r));
     }
 
-    /** The owner or an admin. */
+    /** Admin only: clients cancel, so the restaurant and the history keep the reservation. */
     public void deleteReserva(Long id) {
-        Reserva reserva = buscarReserva(id);
-        if (!currentUser.isAdmin() && !esDuenio(reserva)) {
-            throw new ForbiddenException("Solo podés borrar tus propias reservas");
+        buscarReserva(id);
+        if (!currentUser.isAdmin()) {
+            throw new ForbiddenException("Las reservas no se borran: cancelala para liberar el lugar");
         }
         reservaRepo.deleteById(id);
     }
@@ -243,6 +268,41 @@ public class ReservaService {
             throw  new ListNoContentException("Este usuario no tiene reservas");
         }
         return resevas;
+    }
+
+    /** With {@value ModeracionService#LIMITE_STRIKES} strikes the client keeps its account but cannot book. */
+    public static void validarSinBloqueoPorStrikes(Usuario usuario) {
+        if (usuario.getStrikes() != null && usuario.getStrikes() >= ModeracionService.LIMITE_STRIKES) {
+            throw new ForbiddenException(("Tu cuenta tiene %d strikes: no podés hacer reservas nuevas. "
+                    + "Escribinos si creés que es un error.").formatted(ModeracionService.LIMITE_STRIKES));
+        }
+    }
+
+    /**
+     * A client holds at most one active reservation per restaurant and day, and two active reservations
+     * at different restaurants start at least {@value #HORAS_ENTRE_RESERVAS} hours apart.
+     */
+    public void validarSinDuplicados(Usuario usuario, Restaurant restaurante, LocalDate fecha, LocalTime hora,
+                                     Long excluirId) {
+        List<Reserva> activas = reservaRepo.findAllByUsuario_IdAndEstadoReservaIn(usuario.getId(), EstadoReserva.ACTIVOS)
+                .stream()
+                .filter(otra -> excluirId == null || !excluirId.equals(otra.getId()))
+                .toList();
+        boolean mismoRestaurante = activas.stream().anyMatch(otra -> otra.getRestaurant() != null
+                && otra.getRestaurant().getId().equals(restaurante.getId()) && fecha.equals(otra.fechaLocal()));
+        if (mismoRestaurante) {
+            throw new ConflictException(
+                    "Ya tenés una reserva activa en este restaurante ese día. Modificala si necesitás cambiarla.");
+        }
+        LocalDateTime llegada = LocalDateTime.of(fecha, hora);
+        boolean cerca = activas.stream()
+                .map(Reserva::llegada)
+                .anyMatch(otra -> otra != null
+                        && Math.abs(Duration.between(otra, llegada).toMinutes()) < HORAS_ENTRE_RESERVAS * 60L);
+        if (cerca) {
+            throw new ConflictException("Ya tenés otra reserva activa a menos de %d horas de este horario."
+                    .formatted(HORAS_ENTRE_RESERVAS));
+        }
     }
 
     private Reserva buscarReserva(Long id) {

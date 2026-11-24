@@ -201,11 +201,11 @@ class RestaurantePanelTest {
         LocalDate fecha = LocalDate.now().plusDays(5);
 
         // El otro restaurante llena su cupo (10) ese mismo día: no debe afectar al primero.
-        assertThat(reservar(cliente, otro.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
-        ResponseEntity<Map> llena = reservar(cliente, encargado.restaurantId(), fecha, 10);
+        assertThat(reservar(nuevoCliente(), otro.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> llena = reservar(nuevoCliente(), encargado.restaurantId(), fecha, 10);
         assertThat(llena.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        ResponseEntity<Map> sinLugar = reservar(cliente, encargado.restaurantId(), fecha, 1);
+        ResponseEntity<Map> sinLugar = reservar(nuevoCliente(), encargado.restaurantId(), fecha, 1);
         assertThat(sinLugar.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         // El cliente se entera de que no hay lugar, pero no de cuál es la capacidad.
         assertThat(sinLugar.getBody()).containsEntry("mensaje",
@@ -215,7 +215,7 @@ class RestaurantePanelTest {
         String estadoPath = "/api/reservas/" + ((Number) llena.getBody().get("id")).longValue() + "/estado";
         assertThat(send(HttpMethod.PATCH, estadoPath, encargado.token(), Map.of("estado", "CANCELADA")).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
-        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -258,14 +258,14 @@ class RestaurantePanelTest {
         // Cupo 10 al 60%: se aceptan solas hasta 6 personas.
         send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 60));
 
-        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
-        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
         // 4 aceptadas + 3 = 7 > 6: cruza el límite, queda pendiente.
-        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 3))).isEqualTo("PENDIENTE");
+        assertThat(estado(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 3))).isEqualTo("PENDIENTE");
         // 4 aceptadas + 2 = 6: justo en el límite, se acepta.
-        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
         // Ya hay 6 aceptadas: todo lo que sigue queda pendiente.
-        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
+        assertThat(estado(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
     }
 
     @Test
@@ -351,13 +351,13 @@ class RestaurantePanelTest {
         LocalDate fecha = LocalDate.now().plusDays(11);
         send(HttpMethod.PUT, cuposPath(encargado) + fecha, encargado.token(), Map.of("cupo", 4));
 
-        assertThat(reservar(cliente, encargado.restaurantId(), fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
-        ResponseEntity<Map> sinLugar = reservar(cliente, encargado.restaurantId(), fecha, 1);
+        assertThat(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> sinLugar = reservar(nuevoCliente(), encargado.restaurantId(), fecha, 1);
         assertThat(sinLugar.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat((String) sinLugar.getBody().get("mensaje")).startsWith("No hay lugar");
 
         // Los demás días siguen con la capacidad normal.
-        assertThat(reservar(cliente, encargado.restaurantId(), fecha.plusDays(1), 10).getStatusCode())
+        assertThat(reservar(nuevoCliente(), encargado.restaurantId(), fecha.plusDays(1), 10).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
     }
 
@@ -370,8 +370,8 @@ class RestaurantePanelTest {
         send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 50));
         send(HttpMethod.PUT, cuposPath(encargado) + fecha, encargado.token(), Map.of("cupo", 4));
 
-        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
-        assertThat(estado(reservar(cliente, encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
+        assertThat(estado(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(reservar(nuevoCliente(), encargado.restaurantId(), fecha, 1))).isEqualTo("PENDIENTE");
     }
 
     @Test

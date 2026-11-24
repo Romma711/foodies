@@ -61,12 +61,11 @@ class ReservaModificacionTest {
     @Test
     void elDuenioCambiaFechaHoraYCantidadYLaReservaVuelveAPendiente() {
         Encargado encargado = api.nuevoEncargado();
-        assertThat(api.status(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(),
-                Map.of("porcentajeAutoAceptacion", 100))).isEqualTo(HttpStatus.OK);
         Cliente cliente = api.nuevoCliente();
         ResponseEntity<Map> creada = api.reservar(cliente, encargado.restaurantId(), MANIANA, 2);
-        assertThat(creada.getBody()).containsEntry("estadoReserva", "ACEPTADA");
         Long id = ((Number) creada.getBody().get("id")).longValue();
+        assertThat(api.status(HttpMethod.PATCH, "/api/reservas/" + id + "/estado", encargado.token(),
+                Map.of("estado", "ACEPTADA"))).isEqualTo(HttpStatus.OK);
 
         ResponseEntity<Map> modificada = api.send(HttpMethod.PUT, "/api/reservas/" + id, cliente.token(), Map.of(
                 "fechaReserva", PASADO_MANIANA.toString(),

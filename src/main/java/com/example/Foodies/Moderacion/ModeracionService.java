@@ -120,6 +120,7 @@ public class ModeracionService {
         if (usuario.getRol() == Role.ROLE_ADMIN) {
             throw new BusinessException("No se puede sancionar a un administrador");
         }
+        validarActiva(usuario.getActivo());
         validarLimite(usuario.getStrikes());
         usuario.setStrikes(usuario.getStrikes() + 1);
         String nombre = Stream.of(usuario.getNombre(), usuario.getApellido())
@@ -139,6 +140,7 @@ public class ModeracionService {
     @Transactional
     public StrikeResultadoDTO strikeRestaurante(Long restaurantId, String motivo) {
         Restaurant restaurant = buscarRestaurante(restaurantId);
+        validarActiva(restaurant.getActivo());
         validarLimite(restaurant.getStrikes());
         restaurant.setStrikes(restaurant.getStrikes() + 1);
         return notificar(restaurant.getId(), restaurant.getNombre(), restaurant.getUsuario().getEmail(),
@@ -157,6 +159,12 @@ public class ModeracionService {
         Restaurant restaurant = buscarRestaurante(restaurantId);
         restaurant.setLatitud(ubicacion.latitud());
         restaurant.setLongitud(ubicacion.longitud());
+    }
+
+    private static void validarActiva(Boolean activo) {
+        if (Boolean.FALSE.equals(activo)) {
+            throw new BusinessException("No se puede sancionar una cuenta dada de baja");
+        }
     }
 
     private void validarLimite(int strikes) {
