@@ -19,6 +19,8 @@ public interface ReservaRepository extends JpaRepository<Reserva,Long> {
 
     List<Reserva> findAllByRestaurant_Id(Long restaurantId);
 
+    List<Reserva> findAllByEstadoReservaAndFechaReservaLessThanEqual(EstadoReserva estado, Date hasta);
+
     List<Reserva> findAllByEspacio_IdAndFechaReserva(Long espacioId, Date fechaReserva);
 
     List<Reserva> findAllByEspacio_IdAndFechaReservaGreaterThanEqual(Long espacioId, Date desde);
