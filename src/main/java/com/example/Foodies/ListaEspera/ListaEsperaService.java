@@ -89,24 +89,24 @@ public class ListaEsperaService {
         Usuario usuario = usuarioRepo.bloquearPorEmail(currentUser.email())
                 .orElseThrow(() -> new ForbiddenException("No hay un usuario autenticado"));
         if (usuario.getRol() != Role.ROLE_CLIENTE) {
-            throw new ForbiddenException("Solo los clientes pueden anotarse en una lista de espera");
+            throw new ForbiddenException("SOLO_CLIENTES_LISTA_ESPERA", java.util.Map.of(), "Solo los clientes pueden anotarse en una lista de espera");
         }
         if (usuario.getStrikes() != null && usuario.getStrikes() >= ModeracionService.LIMITE_STRIKES) {
-            throw new ForbiddenException(("Tu cuenta tiene %d strikes: no podés anotarte en listas de espera. "
+            throw new ForbiddenException("CUENTA_CON_STRIKES_LISTA_ESPERA", java.util.Map.of("limite", ModeracionService.LIMITE_STRIKES), ("Tu cuenta tiene %d strikes: no podés anotarte en listas de espera. "
                     + "Escribinos si creés que es un error.").formatted(ModeracionService.LIMITE_STRIKES));
         }
         if (pedido == null) {
-            throw new BusinessException("No hay datos para anotarte");
+            throw new BusinessException("SIN_DATOS", java.util.Map.of(), "No hay datos para anotarte");
         }
         if (pedido.cantidad() == null || pedido.cantidad() <= 0) {
-            throw new BusinessException("La cantidad de personas debe ser mayor a 0");
+            throw new BusinessException("CANTIDAD_INVALIDA", java.util.Map.of(), "La cantidad de personas debe ser mayor a 0");
         }
         if (pedido.idRestaurant() == null) {
-            throw new BusinessException("El restaurante es obligatorio");
+            throw new BusinessException("RESTAURANTE_OBLIGATORIO", java.util.Map.of(), "El restaurante es obligatorio");
         }
         Restaurant restaurant = cupoReservas.bloquear(pedido.idRestaurant());
         if (!restaurant.isPublicado()) {
-            throw new EntityNotFoundException("Restaurante no encontrado");
+            throw new EntityNotFoundException("RESTAURANTE_NO_ENCONTRADO", java.util.Map.of(), "Restaurante no encontrado");
         }
         LocalDateTime ahora = LocalDateTime.now(clock);
         ReservaValidations.validateDate(pedido.fechaReserva(), ahora.toLocalDate());
@@ -123,17 +123,17 @@ public class ListaEsperaService {
 
         if (!listaRepo.findAllByUsuario_IdAndRestaurant_IdAndFechaAndEstadoIn(usuario.getId(), restaurant.getId(),
                 fecha, ABIERTAS).isEmpty()) {
-            throw new ConflictException("Ya estás en la lista de espera de este restaurante ese día");
+            throw new ConflictException("YA_EN_LISTA_ESPERA", java.util.Map.of(), "Ya estás en la lista de espera de este restaurante ese día");
         }
         boolean yaReservo = reservaRepo.findAllByUsuario_IdAndEstadoReservaIn(usuario.getId(), EstadoReserva.ACTIVOS)
                 .stream()
                 .anyMatch(r -> r.getRestaurant() != null && r.getRestaurant().getId().equals(restaurant.getId())
                         && fecha.equals(r.fechaLocal()));
         if (yaReservo) {
-            throw new ConflictException("Ya tenés una reserva activa en este restaurante ese día");
+            throw new ConflictException("LISTA_ESPERA_CON_RESERVA", java.util.Map.of(), "Ya tenés una reserva activa en este restaurante ese día");
         }
         if (hayLugar(restaurant, fecha, turno, pedido.cantidad())) {
-            throw new ConflictException("Hay lugar en ese horario: reservá directamente");
+            throw new ConflictException("HAY_LUGAR", java.util.Map.of(), "Hay lugar en ese horario: reservá directamente");
         }
 
         EntradaListaEspera entrada = new EntradaListaEspera();
@@ -152,12 +152,12 @@ public class ListaEsperaService {
     @Transactional
     public void salir(Long entradaId) {
         EntradaListaEspera entrada = listaRepo.findById(entradaId)
-                .orElseThrow(() -> new EntityNotFoundException("Inscripción no encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("INSCRIPCION_NO_ENCONTRADA", java.util.Map.of(), "Inscripción no encontrada"));
         if (!entrada.getUsuario().getId().equals(usuarioActual().getId())) {
-            throw new ForbiddenException("Solo podés salir de tus propias listas de espera");
+            throw new ForbiddenException("INSCRIPCION_AJENA", java.util.Map.of(), "Solo podés salir de tus propias listas de espera");
         }
         if (!entrada.abierta()) {
-            throw new BusinessException("Esa inscripción ya está cerrada");
+            throw new BusinessException("INSCRIPCION_CERRADA", java.util.Map.of(), "Esa inscripción ya está cerrada");
         }
         entrada.setEstado(EstadoListaEspera.CANCELADA);
     }

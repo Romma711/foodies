@@ -160,7 +160,7 @@ public class UsuarioService implements UserDetailsService {
             return;
         }
         if (!reservaRepo.findAllByUsuario_Id(id).isEmpty() || !resenaRepo.findByUsuario_Id(id).isEmpty()) {
-            throw new ConflictException("El cliente tiene reservas o reseñas: dalo de baja en lugar de borrarlo.");
+            throw new ConflictException("CLIENTE_CON_HISTORIAL", java.util.Map.of(), "El cliente tiene reservas o reseñas: dalo de baja en lugar de borrarlo.");
         }
         usuarioRepo.delete(usuario);
     }

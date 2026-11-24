@@ -101,7 +101,7 @@ public class RestaurantService {
         Restaurant restaurant = restaurantRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("Restaurante no encontrado"));
         // Deleting would erase reservations clients still count on: deactivating cancels them and tells the clients.
         if (cancelacionEnCascada.tieneReservasFuturas(restaurant)) {
-            throw new ConflictException("El restaurante tiene reservas activas a futuro: "
+            throw new ConflictException("RESTAURANTE_CON_RESERVAS", java.util.Map.of(), "El restaurante tiene reservas activas a futuro: "
                     + "dalo de baja primero, así se cancelan y se avisa a los clientes.");
         }
         // The carta row goes away by cascade; its stored PDF has to be removed explicitly.

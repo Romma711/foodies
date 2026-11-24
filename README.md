@@ -391,6 +391,7 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 >- Una reserva `PENDIENTE` que nadie aceptó antes de su hora de llegada pasa a `VENCIDA` (tarea programada cada 5 minutos)
 >- Solo `PENDIENTE` y `ACEPTADA` ocupan cupo y cuentan como reserva activa
 >- Dar de baja un cliente, un restaurante o su encargado cancela sus reservas futuras activas y le avisa a la otra parte por mail. Un restaurante dado de baja (o con su encargado dado de baja) sale del catálogo y su panel queda en modo lectura
+>- Los errores de estas reglas suman `codigo` (estable, por ejemplo `RESERVA_DUPLICADA`, `PLAZO_VENCIDO`, `SIN_CUPO_TURNO`) y `params` (los valores del mensaje, por ejemplo `{ "minutos": 30 }`) además de `error` y `mensaje`, para que el front los traduzca. Los errores sin código responden como siempre
 >- Mails: reserva nueva → restaurante; aceptada, rechazada o cancelada por el restaurante → cliente; cancelada por el cliente → restaurante; bajas → parte afectada; lugar libre → primero de la lista de espera
 ###
 >`GET` `/api/restaurantes/{id}/turnos`

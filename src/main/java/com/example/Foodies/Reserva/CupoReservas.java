@@ -60,7 +60,8 @@ public class CupoReservas {
      * @throws com.example.Foodies.Exception.NotValidCupoException if {@code cantidad} does not fit
      */
     public void validar(Espacio espacio, LocalDate fecha, Turno turno, int cantidad, Long excluirId) {
-        ReservaValidations.validateCupo(cantidad, ocupadas(espacio, fecha, turno, excluirId), cupo(espacio, fecha));
+        ReservaValidations.validateCupo(cantidad, ocupadas(espacio, fecha, turno, excluirId), cupo(espacio, fecha),
+                turno != null);
     }
 
     private List<Reserva> otras(Espacio espacio, LocalDate fecha, Turno turno, Long excluirId) {

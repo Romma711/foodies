@@ -62,6 +62,8 @@ public class ReservaRestauranteActivoFilter extends OncePerRequestFilter {
             if (restauranteDelEncargadoDadoDeBaja()) {
                 escribir(response, HttpServletResponse.SC_FORBIDDEN, Map.of(
                         "error", "prohibido",
+                        "codigo", "RESTAURANTE_DADO_DE_BAJA",
+                        "params", Map.of(),
                         "mensaje", "Tu restaurante fue dado de baja: el panel queda en modo lectura. "
                                 + "Escribinos si creés que es un error."));
                 return;
@@ -74,6 +76,8 @@ public class ReservaRestauranteActivoFilter extends OncePerRequestFilter {
         if (restauranteNoPublicado(releible.cuerpo())) {
             escribir(response, HttpServletResponse.SC_NOT_FOUND, Map.of(
                     "error", "entidad no encontrada",
+                    "codigo", "RESTAURANTE_NO_ENCONTRADO",
+                    "params", Map.of(),
                     "mensaje", "Restaurante no encontrado"));
             return;
         }
@@ -119,7 +123,7 @@ public class ReservaRestauranteActivoFilter extends OncePerRequestFilter {
         }
     }
 
-    private void escribir(HttpServletResponse response, int status, Map<String, String> cuerpo) throws IOException {
+    private void escribir(HttpServletResponse response, int status, Map<String, ?> cuerpo) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());

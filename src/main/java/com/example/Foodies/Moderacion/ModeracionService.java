@@ -163,7 +163,7 @@ public class ModeracionService {
 
     private static void validarActiva(Boolean activo) {
         if (Boolean.FALSE.equals(activo)) {
-            throw new BusinessException("No se puede sancionar una cuenta dada de baja");
+            throw new BusinessException("CUENTA_DADA_DE_BAJA", java.util.Map.of(), "No se puede sancionar una cuenta dada de baja");
         }
     }
 

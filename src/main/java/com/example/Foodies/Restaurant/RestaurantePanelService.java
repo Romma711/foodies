@@ -132,40 +132,40 @@ public class RestaurantePanelService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservaPanelDTO cambiarEstadoReserva(Long reservaId, EstadoReserva estado) {
         if (estado == null || !ESTADOS_DEL_RESTAURANTE.contains(estado)) {
-            throw new BusinessException("El estado debe ser ACEPTADA, RECHAZADA, CANCELADA, ASISTIO o NO_ASISTIO");
+            throw new BusinessException("ESTADO_INVALIDO", java.util.Map.of(), "El estado debe ser ACEPTADA, RECHAZADA, CANCELADA, ASISTIO o NO_ASISTIO");
         }
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada"));
         Restaurant restaurant = miRestaurante();
         if (reserva.getRestaurant() == null || !reserva.getRestaurant().getId().equals(restaurant.getId())) {
-            throw new ForbiddenException("La reserva no pertenece a tu restaurante");
+            throw new ForbiddenException("RESERVA_DE_OTRO_RESTAURANTE", java.util.Map.of(), "La reserva no pertenece a tu restaurante");
         }
         cupoReservas.bloquear(restaurant.getId());
         EstadoReserva actual = reserva.getEstadoReserva();
         if (actual.esFinal()) {
-            throw new BusinessException("La reserva ya está %s y no se puede cambiar".formatted(descripcion(actual)));
+            throw new BusinessException("ESTADO_FINAL", java.util.Map.of("estado", actual.name()), "La reserva ya está %s y no se puede cambiar".formatted(descripcion(actual)));
         }
         LocalDateTime ahora = LocalDateTime.now(clock);
         LocalDateTime llegada = reserva.llegada();
         if (estado == EstadoReserva.ASISTIO || estado == EstadoReserva.NO_ASISTIO) {
             if (actual != EstadoReserva.ACEPTADA) {
-                throw new BusinessException("Solo podés marcar la asistencia de una reserva aceptada");
+                throw new BusinessException("ASISTENCIA_SIN_ACEPTAR", java.util.Map.of(), "Solo podés marcar la asistencia de una reserva aceptada");
             }
             if (ahora.isBefore(llegada)) {
-                throw new BusinessException("La asistencia se marca desde la hora de llegada de la reserva");
+                throw new BusinessException("ASISTENCIA_ANTICIPADA", java.util.Map.of(), "La asistencia se marca desde la hora de llegada de la reserva");
             }
             if (ahora.isAfter(llegada.plusHours(HORAS_PARA_MARCAR_ASISTENCIA))) {
-                throw new BusinessException("Pasaron más de %d horas de la reserva: ya no se puede marcar la asistencia"
+                throw new BusinessException("ASISTENCIA_FUERA_DE_PLAZO", java.util.Map.of("horas", HORAS_PARA_MARCAR_ASISTENCIA), "Pasaron más de %d horas de la reserva: ya no se puede marcar la asistencia"
                         .formatted(HORAS_PARA_MARCAR_ASISTENCIA));
             }
         } else {
             if (!ahora.isBefore(llegada)) {
-                throw new BusinessException(
+                throw new BusinessException("RESERVA_YA_PASO", java.util.Map.of(), 
                         "La hora de la reserva ya pasó: solo podés marcar si el cliente asistió o no");
             }
             if (estado == EstadoReserva.ACEPTADA) {
                 if (actual == EstadoReserva.ACEPTADA) {
-                    throw new BusinessException("La reserva ya está aceptada");
+                    throw new BusinessException("YA_ACEPTADA", java.util.Map.of(), "La reserva ya está aceptada");
                 }
                 if (reserva.getEspacio() != null) {
                     cupoReservas.validar(reserva.getEspacio(), reserva.fechaLocal(), reserva.getTurno(),
@@ -173,7 +173,7 @@ public class RestaurantePanelService {
                 }
             }
             if (estado == EstadoReserva.RECHAZADA && actual != EstadoReserva.PENDIENTE) {
-                throw new BusinessException("Solo podés rechazar una reserva pendiente; una aceptada se cancela");
+                throw new BusinessException("RECHAZO_INVALIDO", java.util.Map.of(), "Solo podés rechazar una reserva pendiente; una aceptada se cancela");
             }
         }
         reserva.setEstadoReserva(estado);

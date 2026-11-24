@@ -108,21 +108,21 @@ public class TurnoService {
     public Optional<Turno> resolver(Restaurant restaurant, LocalDate fecha, Long idTurno, LocalTime hora) {
         if (!turnoRepo.existsByRestaurant_IdAndActivoTrue(restaurant.getId())) {
             if (idTurno != null) {
-                throw new BusinessException("Este restaurante no trabaja con turnos: elegí solo el horario de llegada");
+                throw new BusinessException("SIN_TURNOS", java.util.Map.of(), "Este restaurante no trabaja con turnos: elegí solo el horario de llegada");
             }
             return Optional.empty();
         }
         List<Turno> delDia = turnoRepo.findAllByRestaurant_IdAndDiaAndActivoTrueOrderByInicioAsc(
                 restaurant.getId(), fecha.getDayOfWeek());
         if (delDia.isEmpty()) {
-            throw new BusinessException("Ese día el restaurante no tiene turnos. Elegí otra fecha.");
+            throw new BusinessException("DIA_SIN_TURNOS", java.util.Map.of(), "Ese día el restaurante no tiene turnos. Elegí otra fecha.");
         }
         Optional<Turno> elegido = idTurno != null
                 ? delDia.stream().filter(t -> t.getId().equals(idTurno)).findFirst()
                 : delDia.stream().filter(t -> t.getInicio().equals(hora)).findFirst();
         if (elegido.isEmpty()) {
             String inicios = delDia.stream().map(t -> t.getInicio().format(HORA)).collect(Collectors.joining(", "));
-            throw new BusinessException(
+            throw new BusinessException("TURNO_INVALIDO", java.util.Map.of("turnos", delDia.stream().map(t -> t.getInicio().format(HORA)).toList()), 
                     "Ese día el restaurante recibe reservas por turnos: %s. Elegí uno.".formatted(inicios));
         }
         Turno turno = elegido.get();
@@ -134,7 +134,7 @@ public class TurnoService {
     @Transactional(readOnly = true)
     public DisponibilidadDTO disponibilidad(Long restaurantId, LocalDate fecha) {
         if (fecha == null) {
-            throw new BusinessException("Indicá la fecha");
+            throw new BusinessException("FECHA_OBLIGATORIA", java.util.Map.of(), "Indicá la fecha");
         }
         Restaurant restaurant = publicado(restaurantId);
         List<Espacio> espacios = espacioRepo.findAllByRestaurant_IdAndActivoTrueOrderByIdAsc(restaurantId);
@@ -162,28 +162,28 @@ public class TurnoService {
 
     private void aplicar(Restaurant restaurant, Turno turno, TurnoRequestDTO request, Long turnoId) {
         if (request == null || request.dia() == null) {
-            throw new BusinessException("Indicá el día del turno");
+            throw new BusinessException("TURNO_SIN_DIA", java.util.Map.of(), "Indicá el día del turno");
         }
         LocalTime inicio;
         try {
             inicio = LocalTime.parse(request.inicio() == null ? "" : request.inicio().strip(), HORA);
         } catch (DateTimeParseException e) {
-            throw new BusinessException("La hora de inicio tiene que tener el formato HH:mm, por ejemplo 20:30");
+            throw new BusinessException("TURNO_HORA_INVALIDA", java.util.Map.of(), "La hora de inicio tiene que tener el formato HH:mm, por ejemplo 20:30");
         }
         int duracion = request.duracionMinutos() == null ? Turno.DURACION_POR_DEFECTO : request.duracionMinutos();
         if (duracion < DURACION_MINIMA || duracion > DURACION_MAXIMA) {
-            throw new BusinessException("La duración del turno tiene que estar entre %d y %d minutos"
+            throw new BusinessException("TURNO_DURACION_INVALIDA", java.util.Map.of("minimo", DURACION_MINIMA, "maximo", DURACION_MAXIMA), "La duración del turno tiene que estar entre %d y %d minutos"
                     .formatted(DURACION_MINIMA, DURACION_MAXIMA));
         }
         int fin = inicio.getHour() * 60 + inicio.getMinute() + duracion;
         if (fin > 24 * 60) {
-            throw new BusinessException("El turno tiene que terminar a la medianoche como máximo");
+            throw new BusinessException("TURNO_PASA_MEDIANOCHE", java.util.Map.of(), "El turno tiene que terminar a la medianoche como máximo");
         }
         boolean repetido = turnoRepo.findAllByRestaurant_IdAndDiaAndActivoTrueOrderByInicioAsc(restaurant.getId(),
                         request.dia()).stream()
                 .anyMatch(t -> !t.getId().equals(turnoId) && t.getInicio().equals(inicio));
         if (repetido) {
-            throw new ConflictException("Ya tenés un turno ese día a esa hora");
+            throw new ConflictException("TURNO_DUPLICADO", java.util.Map.of(), "Ya tenés un turno ese día a esa hora");
         }
         horarioService.validarTurno(restaurant, request.dia(), inicio, fin);
         turno.setDia(request.dia());
@@ -198,7 +198,7 @@ public class TurnoService {
                 .stream()
                 .anyMatch(r -> r.llegada() != null && r.llegada().isAfter(ahora));
         if (conReservas) {
-            throw new ConflictException("El turno tiene reservas activas a futuro: no se puede cambiar ni borrar. "
+            throw new ConflictException("TURNO_CON_RESERVAS", java.util.Map.of(), "El turno tiene reservas activas a futuro: no se puede cambiar ni borrar. "
                     + "Cancelalas primero.");
         }
     }
@@ -206,12 +206,12 @@ public class TurnoService {
     private Turno delRestaurante(Restaurant restaurant, Long turnoId) {
         return turnoRepo.findById(turnoId)
                 .filter(t -> t.getRestaurant().getId().equals(restaurant.getId()) && Boolean.TRUE.equals(t.getActivo()))
-                .orElseThrow(() -> new EntityNotFoundException("Turno no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("TURNO_NO_ENCONTRADO", java.util.Map.of(), "Turno no encontrado"));
     }
 
     private Restaurant publicado(Long restaurantId) {
         return restaurantRepo.findById(restaurantId)
                 .filter(Restaurant::isPublicado)
-                .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("RESTAURANTE_NO_ENCONTRADO", java.util.Map.of(), "Restaurante no encontrado"));
     }
 }

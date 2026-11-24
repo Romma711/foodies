@@ -96,18 +96,18 @@ public class HorarioAtencionService {
         }
         List<HorarioAtencion> delDia = franjas.stream().filter(f -> f.getDia() == fecha.getDayOfWeek()).toList();
         if (delDia.isEmpty()) {
-            throw new BusinessException("Ese día el restaurante está cerrado. Elegí otra fecha.");
+            throw new BusinessException("RESTAURANTE_CERRADO", java.util.Map.of(), "Ese día el restaurante está cerrado. Elegí otra fecha.");
         }
         if (delDia.stream().noneMatch(f -> f.incluye(hora))) {
             String rangos = delDia.stream()
                     .map(f -> "de %s a %s".formatted(f.getApertura().format(HORA), f.getCierre().format(HORA)))
                     .collect(Collectors.joining(" y "));
-            throw new BusinessException("Ese día el restaurante recibe reservas %s. Elegí otro horario.".formatted(rangos));
+            throw new BusinessException("FUERA_DE_HORARIO", java.util.Map.of("franjas", delDia.stream().map(f -> java.util.Map.of("apertura", f.getApertura().format(HORA), "cierre", f.getCierre().format(HORA))).toList()), "Ese día el restaurante recibe reservas %s. Elegí otro horario.".formatted(rangos));
         }
         HorarioAtencion franja = delDia.stream().filter(f -> f.incluye(hora)).findFirst().orElseThrow();
         LocalTime ultimaLlegada = franja.ultimaLlegada(MINUTOS_ULTIMA_LLEGADA);
         if (hora.isAfter(ultimaLlegada)) {
-            throw new BusinessException(("La última llegada es %d minutos antes del cierre: ese día podés llegar "
+            throw new BusinessException("ULTIMA_LLEGADA", java.util.Map.of("minutos", MINUTOS_ULTIMA_LLEGADA, "hora", ultimaLlegada.format(HORA)), ("La última llegada es %d minutos antes del cierre: ese día podés llegar "
                     + "hasta las %s.").formatted(MINUTOS_ULTIMA_LLEGADA, ultimaLlegada.format(HORA)));
         }
     }
@@ -126,7 +126,7 @@ public class HorarioAtencionService {
                 .filter(f -> f.getDia() == dia)
                 .anyMatch(f -> !inicio.isBefore(f.getApertura()) && finEnMinutos <= f.cierreEnMinutos());
         if (!entra) {
-            throw new BusinessException("El turno tiene que empezar y terminar dentro del horario de atención de ese día");
+            throw new BusinessException("TURNO_FUERA_DE_HORARIO", java.util.Map.of(), "El turno tiene que empezar y terminar dentro del horario de atención de ese día");
         }
     }
 
