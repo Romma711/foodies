@@ -7,6 +7,7 @@ import com.example.Foodies.Horario.HorarioAtencionService;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.*;
+import com.example.Foodies.ListaEspera.ListaEsperaService;
 import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Moderacion.ModeracionService;
 import com.example.Foodies.Restaurant.Restaurant;
@@ -62,6 +63,8 @@ public class ReservaService {
     private AvisosReserva avisos;
     @Autowired
     private TurnoService turnoService;
+    @Autowired
+    private ListaEsperaService listaEspera;
 
     @Transactional
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
@@ -125,6 +128,7 @@ public class ReservaService {
         reservanueva.setTurno(turno);
         reservanueva = reservaRepo.save(reservanueva);
         avisos.nuevaReserva(reservanueva);
+        listaEspera.cerrarAlReservar(usuario, restaurante, dia);
 
         return toDetail(reservanueva);
     }
@@ -202,6 +206,7 @@ public class ReservaService {
             r.setEstadoReserva(EstadoReserva.CANCELADA);
             Reserva cancelada = reservaRepo.save(r);
             avisos.canceladaPorCliente(cancelada);
+            listaEspera.lugarLiberado(cancelada);
             return toDetail(cancelada);
         }
         if (dto.getCantidad() == null && dto.getFechaReserva() == null && dto.getHorarioLlegada() == null

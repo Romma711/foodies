@@ -15,6 +15,7 @@ import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
+import com.example.Foodies.ListaEspera.ListaEsperaService;
 import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Moderacion.ModeracionService;
 import com.example.Foodies.Reserva.CupoReservas;
@@ -55,12 +56,14 @@ public class RestaurantePanelService {
     private final Clock clock;
     private final AvisosReserva avisos;
     private final ModeracionService moderacionService;
+    private final ListaEsperaService listaEspera;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
                                    CartaService cartaService, CupoEspecialService cupoEspecialService,
                                    FotoService fotoService, EspacioService espacioService,
                                    CurrentUser currentUser, CupoReservas cupoReservas, Clock clock,
-                                   AvisosReserva avisos, ModeracionService moderacionService) {
+                                   AvisosReserva avisos, ModeracionService moderacionService,
+                                   ListaEsperaService listaEspera) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
@@ -72,6 +75,7 @@ public class RestaurantePanelService {
         this.clock = clock;
         this.avisos = avisos;
         this.moderacionService = moderacionService;
+        this.listaEspera = listaEspera;
     }
 
     @Transactional(readOnly = true)
@@ -177,8 +181,10 @@ public class RestaurantePanelService {
             moderacionService.registrarAusencia(guardada.getUsuario());
         } else if (estado == EstadoReserva.RECHAZADA) {
             avisos.rechazada(guardada);
+            listaEspera.lugarLiberado(guardada);
         } else if (estado == EstadoReserva.CANCELADA) {
             avisos.canceladaPorRestaurante(guardada);
+            listaEspera.lugarLiberado(guardada);
         }
         return ReservaPanelDTO.from(guardada);
     }

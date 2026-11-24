@@ -1,6 +1,7 @@
 package com.example.Foodies.Reserva;
 
 import com.example.Foodies.Enums.EstadoReserva;
+import com.example.Foodies.ListaEspera.ListaEsperaService;
 import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Usuario.Usuario;
@@ -22,11 +23,14 @@ public class CancelacionEnCascada {
     private final ReservaRepository reservaRepo;
     private final Clock clock;
     private final AvisosReserva avisos;
+    private final ListaEsperaService listaEspera;
 
-    public CancelacionEnCascada(ReservaRepository reservaRepo, Clock clock, AvisosReserva avisos) {
+    public CancelacionEnCascada(ReservaRepository reservaRepo, Clock clock, AvisosReserva avisos,
+                                ListaEsperaService listaEspera) {
         this.reservaRepo = reservaRepo;
         this.clock = clock;
         this.avisos = avisos;
+        this.listaEspera = listaEspera;
     }
 
     /** Future active reservations of the client, now cancelled; each restaurant is told by email. */
@@ -35,6 +39,8 @@ public class CancelacionEnCascada {
         List<Reserva> canceladas = cancelar(
                 reservaRepo.findAllByUsuario_IdAndEstadoReservaIn(cliente.getId(), EstadoReserva.ACTIVOS));
         canceladas.forEach(avisos::canceladaPorBajaDelCliente);
+        // The freed seats go to the waitlist; a deactivated restaurant has no one to offer them to.
+        canceladas.forEach(listaEspera::lugarLiberado);
         return canceladas;
     }
 
