@@ -40,6 +40,8 @@ class HorariosTest {
     private TestRestTemplate rest;
     @Autowired
     private RestaurantRepository restaurantRepo;
+    @Autowired
+    private com.example.Foodies.Reserva.ReservaRepository reservaRepo;
 
     private AutorizacionTestSupport api;
 
@@ -154,7 +156,23 @@ class HorariosTest {
         assertThat(reservarA(cliente, id, proximo(DayOfWeek.SATURDAY), "16:00").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         assertThat(reservarA(cliente, id, proximo(DayOfWeek.SATURDAY), "12:00").getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(reservarA(cliente, id, proximo(DayOfWeek.TUESDAY), "23:30").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(reservarA(cliente, id, proximo(DayOfWeek.TUESDAY), "23:00").getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void bl22LaUltimaLlegadaEsUnaHoraAntesDelCierre() {
+        AutorizacionTestSupport.Encargado encargado = api.nuevoEncargado();
+        AutorizacionTestSupport.Cliente cliente = api.nuevoCliente();
+        api.send(HttpMethod.PUT, "/api/restaurantes/me/horarios", encargado.token(), semana(), List.class);
+        Long id = encargado.restaurantId();
+
+        ResponseEntity<Map> medianoche = reservarA(cliente, id, proximo(DayOfWeek.TUESDAY), "23:59");
+        assertThat(medianoche.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(mensaje(medianoche))
+                .isEqualTo("La última llegada es 60 minutos antes del cierre: ese día podés llegar hasta las 23:00.");
+        assertThat(mensaje(reservarA(cliente, id, proximo(DayOfWeek.SATURDAY), "15:30")))
+                .isEqualTo("La última llegada es 60 minutos antes del cierre: ese día podés llegar hasta las 15:00.");
+        assertThat(reservaRepo.findAllByRestaurant_Id(id)).isEmpty();
     }
 
     @Test

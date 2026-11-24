@@ -4,15 +4,11 @@ import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.NotApprovedException;
 import com.example.Foodies.Exception.NotValidCupoException;
 import com.example.Foodies.Restaurant.Restaurant;
-import org.springframework.data.jpa.convert.threeten.Jsr310JpaConverters;
 
-import javax.swing.text.DateFormatter;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
-import java.util.logging.SimpleFormatter;
 
 public class ReservaValidations {
 
@@ -33,13 +29,13 @@ public class ReservaValidations {
         }
     }
 
-    public static void validateDate(String fecha){
+    /** The date is not before {@code hoy} and at most 3 months ahead. */
+    public static void validateDate(String fecha, LocalDate hoy){
         if (fecha == null || fecha.isBlank()) {
             throw new BusinessException("La fecha es obligatoria");
         }
         try {
-            LocalDate fechaReserva = LocalDate.parse(fecha);
-            LocalDate hoy = LocalDate.now();
+            LocalDate fechaReserva = LocalDate.parse(fecha.trim());
 
             if (hoy.isAfter(fechaReserva)){
                 throw new BusinessException("Fecha no válida: No puede ser anterior al día de hoy");
@@ -55,9 +51,9 @@ public class ReservaValidations {
         }
     }
 
-    /** The reservation date and arrival time cannot be earlier than now. */
-    public static void validateNotPast(LocalDate fecha, java.time.LocalTime hora) {
-        if (java.time.LocalDateTime.of(fecha, hora).isBefore(java.time.LocalDateTime.now())) {
+    /** The reservation date and arrival time cannot be earlier than {@code ahora}. */
+    public static void validateNotPast(LocalDate fecha, LocalTime hora, LocalDateTime ahora) {
+        if (LocalDateTime.of(fecha, hora).isBefore(ahora)) {
             throw new BusinessException("La fecha y hora de la reserva no pueden ser anteriores a este momento");
         }
     }
@@ -69,7 +65,7 @@ public class ReservaValidations {
 
         try {
             // Esto validará que el formato sea HH:mm
-            java.time.LocalTime.parse(hora.trim());
+            LocalTime.parse(hora.trim());
         } catch (DateTimeParseException e) {
             throw new BusinessException("Formato de hora inválido. Debe ser HH:mm (ejemplo: 19:30)");
         }

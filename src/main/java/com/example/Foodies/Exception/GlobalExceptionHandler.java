@@ -71,6 +71,11 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<?> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "conflicto", "mensaje", ex.getMessage()));
+    }
+
     @ExceptionHandler(ListNoContentException.class)
     public ResponseEntity<?> handleListNoContent(ListNoContentException ex) {
         return ResponseEntity

@@ -2,7 +2,6 @@ package com.example.Foodies.Espacio;
 
 import com.example.Foodies.CupoEspecial.CupoEspecial;
 import com.example.Foodies.CupoEspecial.CupoEspecialRepository;
-import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Espacio.Dtos.EspacioDTO;
 import com.example.Foodies.Espacio.Dtos.EspacioPublicoDTO;
 import com.example.Foodies.Espacio.Dtos.EspacioRequestDTO;
@@ -166,11 +165,11 @@ public class EspacioService {
                 .orElse(espacio.getCapacidad());
     }
 
-    /** Personas con reservas no canceladas en ese espacio ese día. */
+    /** Personas con reservas activas (pendientes o aceptadas) en ese espacio ese día. */
     @Transactional(readOnly = true)
     public int personasReservadas(Espacio espacio, LocalDate fecha) {
         return reservaRepo.findAllByEspacio_IdAndFechaReserva(espacio.getId(), comoFechaReserva(fecha)).stream()
-                .filter(r -> r.getEstadoReserva() != EstadoReserva.CANCELADA)
+                .filter(r -> r.getEstadoReserva().esActiva())
                 .mapToInt(Reserva::getCantidad)
                 .sum();
     }
@@ -203,12 +202,12 @@ public class EspacioService {
                 .orElseThrow(() -> new EntityNotFoundException("Espacio no encontrado"));
     }
 
-    /** Mayor cantidad de personas reservadas (no canceladas) en un mismo día, de hoy en adelante. */
+    /** Mayor cantidad de personas con reservas activas en un mismo día, de hoy en adelante. */
     private int maximoReservadoFuturo(Espacio espacio) {
         Map<Date, Integer> porDia = reservaRepo
                 .findAllByEspacio_IdAndFechaReservaGreaterThanEqual(espacio.getId(), comoFechaReserva(LocalDate.now()))
                 .stream()
-                .filter(r -> r.getEstadoReserva() != EstadoReserva.CANCELADA)
+                .filter(r -> r.getEstadoReserva().esActiva())
                 .collect(Collectors.groupingBy(Reserva::getFechaReserva, Collectors.summingInt(Reserva::getCantidad)));
         return porDia.values().stream().mapToInt(Integer::intValue).max().orElse(0);
     }

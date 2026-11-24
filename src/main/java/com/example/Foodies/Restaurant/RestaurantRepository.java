@@ -1,7 +1,11 @@
 package com.example.Foodies.Restaurant;
 
 import com.example.Foodies.Enums.EspecialidadDeComida;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,5 +26,13 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     List<Restaurant> findByAprobadoFalse();
 
     Optional<Restaurant> findByUsuario_Email(String email);
+
+    /**
+     * Loads the restaurant with a pessimistic write lock until the transaction ends. Every capacity
+     * check of a restaurant takes it first, so two bookings cannot both see the same free seats.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from Restaurant r where r.id = :id")
+    Optional<Restaurant> bloquearParaReservar(@Param("id") Long id);
 
 }

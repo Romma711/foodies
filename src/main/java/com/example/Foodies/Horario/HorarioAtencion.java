@@ -47,4 +47,20 @@ public class HorarioAtencion {
     public boolean incluye(LocalTime hora) {
         return !hora.isBefore(apertura) && (cierre.equals(LocalTime.MIDNIGHT) || hora.isBefore(cierre));
     }
+
+    /**
+     * Latest arrival in this range: {@code minutos} before closing (midnight counts as 24:00). A range
+     * shorter than that only accepts its opening time.
+     */
+    public LocalTime ultimaLlegada(int minutos) {
+        int cierreMinutos = cierre.equals(LocalTime.MIDNIGHT) ? 24 * 60 : cierre.getHour() * 60 + cierre.getMinute();
+        int apertura = this.apertura.getHour() * 60 + this.apertura.getMinute();
+        int ultima = Math.max(apertura, cierreMinutos - minutos);
+        return LocalTime.of(ultima / 60, ultima % 60);
+    }
+
+    /** Minutes from midnight of the closing time; midnight counts as 24:00. */
+    public int cierreEnMinutos() {
+        return cierre.equals(LocalTime.MIDNIGHT) ? 24 * 60 : cierre.getHour() * 60 + cierre.getMinute();
+    }
 }

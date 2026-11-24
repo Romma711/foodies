@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 public class HorarioAtencionService {
 
     public static final int MAX_FRANJAS_POR_DIA = 3;
+    /** Latest arrival: this many minutes before the closing time of the range. */
+    public static final int MINUTOS_ULTIMA_LLEGADA = 60;
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
     private static final Comparator<HorarioAtencion> ORDEN =
             Comparator.comparing(HorarioAtencion::getDia).thenComparing(HorarioAtencion::getApertura);
@@ -101,6 +103,12 @@ public class HorarioAtencionService {
                     .map(f -> "de %s a %s".formatted(f.getApertura().format(HORA), f.getCierre().format(HORA)))
                     .collect(Collectors.joining(" y "));
             throw new BusinessException("Ese día el restaurante recibe reservas %s. Elegí otro horario.".formatted(rangos));
+        }
+        HorarioAtencion franja = delDia.stream().filter(f -> f.incluye(hora)).findFirst().orElseThrow();
+        LocalTime ultimaLlegada = franja.ultimaLlegada(MINUTOS_ULTIMA_LLEGADA);
+        if (hora.isAfter(ultimaLlegada)) {
+            throw new BusinessException(("La última llegada es %d minutos antes del cierre: ese día podés llegar "
+                    + "hasta las %s.").formatted(MINUTOS_ULTIMA_LLEGADA, ultimaLlegada.format(HORA)));
         }
     }
 

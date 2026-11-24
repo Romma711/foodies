@@ -19,11 +19,12 @@ import java.lang.Exception;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
-import java.util.function.Predicate;
 
 @Service
 public class ReservaService {
@@ -42,7 +43,12 @@ public class ReservaService {
     private HorarioAtencionService horarioService;
     @Autowired
     private CurrentUser currentUser;
+    @Autowired
+    private CupoReservas cupoReservas;
+    @Autowired
+    private Clock clock;
 
+    @Transactional
     public ReservaDetailDTO createReserva(ReservaRequesDTO reserva) {
         // The owner is always the authenticated user; a different idUsuario in the body is rejected.
         Usuario usuario = usuarioActual();
@@ -56,8 +62,8 @@ public class ReservaService {
             throw new BusinessException("El restaurante es obligatorio");
         }
 
-        Restaurant restaurante = restauranteRepo.findById(reserva.getIdRestaurant())
-                .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
+        // Locked until commit: the capacity read below and the insert happen without another booking in between.
+        Restaurant restaurante = cupoReservas.bloquear(reserva.getIdRestaurant());
 
         //Esto verifica si el restaurant esta activo
         ReservaValidations.validateRestaurantIsActive(restaurante);
@@ -68,19 +74,16 @@ public class ReservaService {
         LocalTime horaParseada = LocalTime.parse(reserva.getHorarioLlegada().trim());
 
         //Valida la fecha si es antes o despues de la fecha de hoy
-        ReservaValidations.validateDate(reserva.getFechaReserva());
+        ReservaValidations.validateDate(reserva.getFechaReserva(), LocalDate.now(clock));
 
         Date fecha = parseFecha(reserva.getFechaReserva());
-        horarioService.validarLlegada(restaurante, LocalDate.parse(reserva.getFechaReserva()), horaParseada);
-        // El cupo se valida en el espacio elegido, contando solo sus reservas no canceladas.
+        LocalDate dia = LocalDate.parse(reserva.getFechaReserva().trim());
+        ReservaValidations.validateNotPast(dia, horaParseada, LocalDateTime.now(clock));
+        horarioService.validarLlegada(restaurante, dia, horaParseada);
+        // El cupo se valida en el espacio elegido, contando solo sus reservas activas.
         // El cupo del día es el cupo especial del espacio si lo tiene, si no su capacidad.
         Espacio espacio = espacioService.paraReservar(restaurante, reserva.getIdEspacio());
-        int cupoDelDia = espacioService.cupoDelDia(espacio, LocalDate.parse(reserva.getFechaReserva()));
-        List<Reserva> reservasDelDia = reservaRepo.findAllByEspacio_IdAndFechaReserva(espacio.getId(), fecha);
-        ReservaValidations.validateCupo(
-                reserva.getCantidad(),
-                personas(reservasDelDia, estado -> estado != EstadoReserva.CANCELADA),
-                cupoDelDia);
+        cupoReservas.validar(espacio, dia, reserva.getCantidad(), null);
 
         Reserva reservanueva = new Reserva();
         reservanueva.setCantidad(reserva.getCantidad());
@@ -88,9 +91,9 @@ public class ReservaService {
         reservanueva.setHorariollegada(horaParseada);
         reservanueva.setEstadoReserva(estadoInicial(
                 restaurante,
-                cupoDelDia,
+                cupoReservas.cupo(espacio, dia),
                 reserva.getCantidad(),
-                personas(reservasDelDia, estado -> estado == EstadoReserva.ACEPTADA)));
+                cupoReservas.aceptadas(espacio, dia, null)));
         reservanueva.setUsuario(usuario);
         reservanueva.setRestaurant(restaurante);
         reservanueva.setEspacio(espacio);
@@ -109,13 +112,6 @@ public class ReservaService {
             // Captura cualquier otra excepción relacionada con fechas
             throw new BusinessException("Error al procesar la fecha. Verifique el formato yyyy-MM-dd");
         }
-    }
-
-    private static int personas(List<Reserva> reservas, Predicate<EstadoReserva> estado) {
-        return reservas.stream()
-                .filter(r -> estado.test(r.getEstadoReserva()))
-                .mapToInt(Reserva::getCantidad)
-                .sum();
     }
 
     /**
@@ -156,6 +152,7 @@ public class ReservaService {
         if (!esDuenio(r)) {
             throw new ForbiddenException("Solo podés modificar tus propias reservas");
         }
+        cupoReservas.bloquear(r.getRestaurant().getId());
         if (dto == null) {
             throw new BusinessException("No hay datos para modificar");
         }
@@ -181,14 +178,14 @@ public class ReservaService {
         String fechaTexto = dto.getFechaReserva() != null
                 ? dto.getFechaReserva().trim()
                 : new SimpleDateFormat("yyyy-MM-dd").format(r.getFechaReserva());
-        ReservaValidations.validateDate(fechaTexto);
+        ReservaValidations.validateDate(fechaTexto, LocalDate.now(clock));
         LocalDate fecha = LocalDate.parse(fechaTexto);
         LocalTime hora = r.getHorariollegada();
         if (dto.getHorarioLlegada() != null) {
             ReservaValidations.validateTime(dto.getHorarioLlegada());
             hora = LocalTime.parse(dto.getHorarioLlegada().trim());
         }
-        ReservaValidations.validateNotPast(fecha, hora);
+        ReservaValidations.validateNotPast(fecha, hora, LocalDateTime.now(clock));
         horarioService.validarLlegada(r.getRestaurant(), fecha, hora);
 
         // Capacity of the (new) espacio on the new day, without counting this same reservation.
@@ -199,15 +196,7 @@ public class ReservaService {
             throw new BusinessException("Elegí en qué espacio querés reservar");
         }
         Date fechaReserva = parseFecha(fechaTexto);
-        int cupoDelDia = espacioService.cupoDelDia(espacio, fecha);
-        List<Reserva> otrasDelDia = reservaRepo
-                .findAllByEspacio_IdAndFechaReserva(espacio.getId(), fechaReserva).stream()
-                .filter(otra -> !otra.getId().equals(r.getId()))
-                .toList();
-        ReservaValidations.validateCupo(
-                cantidad,
-                personas(otrasDelDia, estado -> estado != EstadoReserva.CANCELADA),
-                cupoDelDia);
+        cupoReservas.validar(espacio, fecha, cantidad, r.getId());
 
         r.setCantidad(cantidad);
         r.setFechaReserva(fechaReserva);
