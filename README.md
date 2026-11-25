@@ -653,6 +653,7 @@ Se envían con `JavaMailSender`. Por defecto apuntan al sandbox de [Mailtrap](ht
 | `MAIL_PORT` | `2525` |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | vacías (las da Mailtrap) |
 | `MAIL_FROM` | `no-reply@foodies.com` |
+| `MAIL_LOCAL_HOSTNAME` | `localhost` (nombre del equipo en el saludo SMTP y en el Message-ID; evita una demora de unos 5 s por mail en algunas PC con Windows) |
 
 ###
 ## 🎡 Roles y Permisos
