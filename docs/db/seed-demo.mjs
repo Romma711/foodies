@@ -15,7 +15,8 @@
 //   3 strikes cannot book (D6): its reservations are skipped with a warning.
 // - Reviews are kept between runs and only missing ones are created: since D12 a client can only
 //   review after the restaurant marked an attended reservation, which the API cannot create in the
-//   past. On a fresh database the demo reviews are skipped with a warning.
+//   past. On a fresh database the demo reviews are skipped with a warning: load them afterwards
+//   with docs/db/seed-demo-resenas.sql (SQL, demo database only, D20).
 // Data that does not belong to the demo restaurants is never touched.
 // Every demo account uses DEMO_PASSWORD.
 

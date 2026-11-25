@@ -741,6 +741,11 @@ Login
 - `docs/db/crear-usuario-local.sql`: crea la base `foodies` y el usuario `foodies_app` (correr una vez como root).
 - `docs/db/seed-demo.mjs`: con el backend levantado, `node docs/db/seed-demo.mjs` carga 6 restaurantes aprobados, 8 clientes, reseñas y reservas (algunas canceladas) para ver el dashboard del admin. Todas las cuentas de demo usan la contraseña `demo1234`.
   - Turnos de demo: 12:00, 13:30, 20:00 y 21:30 de 90 minutos y 23:00 de 60 minutos (ninguno se superpone, D29). Una base que todavía tiene el viejo turno de las 22:30 se corrige sola al volver a correr el seed: primero borra todas las reservas de los restaurantes de demo (de cualquier cliente), así el turno sobrante queda sin reservas futuras y se puede quitar; después crea el de las 23:00.
+- `docs/db/seed-demo-resenas.sql`: reseñas de demo (D20). Desde D12 solo reseña quien asistió, y la API no puede crear asistencias en el pasado, así que en una base nueva el seed no crea reseñas. Este script, solo para la base de demo, inserta por cada reseña de demo una reserva pasada `ASISTIO` de ese cliente en ese restaurante y la reseña, para que el catálogo muestre calificaciones. La regla de la API no cambia.
+  - Correrlo después de `node docs/db/seed-demo.mjs`, contra la misma base: `mysql -u <usuario> -p <base> < docs/db/seed-demo-resenas.sql` (o abrirlo y ejecutarlo en MySQL Workbench con esa base seleccionada). Con la base en un contenedor Docker: `docker exec -i <contenedor> mysql -u <usuario> -p<contraseña> <base> < docs/db/seed-demo-resenas.sql`.
+  - Es idempotente: solo inserta la reserva si ese cliente no tiene una `ASISTIO` en ese restaurante, y la reseña si todavía no reseñó ese restaurante; correrlo dos veces no duplica nada. Al final muestra cuántas reseñas y asistencias de demo hay.
+  - Solo toca filas de demo: busca clientes y restaurantes por sus cuentas `@demo.foodies.com` y saltea las que no existen.
+  - Hay que volver a correrlo después de cada corrida del seed, que borra todas las reservas de los restaurantes de demo (también las `ASISTIO` pasadas) pero conserva las reseñas.
 
 <h3>📢 Autor</h3>
 
