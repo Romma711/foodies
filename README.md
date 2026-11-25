@@ -271,7 +271,7 @@ archivo type=file (PDF, máximo 10 MB)
 { "dia": "SATURDAY", "inicio": "20:00", "duracionMinutos": 90 }   // duracionMinutos opcional (90)
 ```
 >- El cupo de cada espacio rige por turno y la hora de llegada es el inicio del turno. Un restaurante sin turnos sigue con cupo por día
->- Duración entre 15 y 360 minutos, terminando a la medianoche como máximo; con horario cargado, el turno tiene que empezar y terminar dentro de una franja de ese día (`400`). Dos turnos el mismo día a la misma hora: `409`
+>- Duración entre 15 y 360 minutos, terminando a la medianoche como máximo; con horario cargado, el turno tiene que empezar y terminar dentro de una franja de ese día (`400`). Dos turnos el mismo día a la misma hora: `409` (`TURNO_DUPLICADO`). Un turno no puede superponerse con otro activo del mismo día (D29): `409` con `codigo` `TURNO_SUPERPUESTO`, `params` `{ "inicio", "fin" }` del otro turno y mensaje "Se superpone con el turno de 21:30 a 23:00". Los que se tocan en el borde (21:30–23:00 y 23:00–00:00) se permiten; al modificar, el turno no choca consigo mismo
 >- `POST` responde `201`
 ###
 >`DELETE` `/api/restaurantes/me/turnos/{id}`
@@ -714,6 +714,7 @@ Login
 
 - `docs/db/crear-usuario-local.sql`: crea la base `foodies` y el usuario `foodies_app` (correr una vez como root).
 - `docs/db/seed-demo.mjs`: con el backend levantado, `node docs/db/seed-demo.mjs` carga 6 restaurantes aprobados, 8 clientes, reseñas y reservas (algunas canceladas) para ver el dashboard del admin. Todas las cuentas de demo usan la contraseña `demo1234`.
+  - Turnos de demo: 12:00, 13:30, 20:00 y 21:30 de 90 minutos y 23:00 de 60 minutos (ninguno se superpone, D29). Una base que todavía tiene el viejo turno de las 22:30 se corrige sola al volver a correr el seed: primero borra todas las reservas de los restaurantes de demo (de cualquier cliente), así el turno sobrante queda sin reservas futuras y se puede quitar; después crea el de las 23:00.
 
 <h3>📢 Autor</h3>
 

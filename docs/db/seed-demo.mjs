@@ -34,11 +34,15 @@ const DIAS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'
 const todosLosDias = (...franjas) =>
   DIAS.flatMap((dia) => franjas.map(([apertura, cierre]) => ({ dia, apertura, cierre })));
 const ALMUERZO_Y_CENA = todosLosDias(['12:00', '16:00'], ['20:00', '00:00']);
-// Shifts of 90 minutes every day; each one ends before its opening range closes (D11).
+// Shifts every day, 90 minutes unless stated; each one ends before its opening range closes (D11)
+// and none overlaps another (D29): the last one is 23:00-00:00, right after 21:30-23:00.
 const turnosTodosLosDias = (...inicios) =>
-  DIAS.flatMap((dia) => inicios.map((inicio) => ({ dia, inicio, duracionMinutos: 90 })));
-const TURNOS_ALMUERZO_Y_CENA = turnosTodosLosDias('12:00', '13:30', '20:00', '21:30', '22:30');
-const TURNOS_CENA = turnosTodosLosDias('20:00', '21:30', '22:30');
+  DIAS.flatMap((dia) => inicios.map((inicio) => {
+    const [hora, duracionMinutos] = Array.isArray(inicio) ? inicio : [inicio, 90];
+    return { dia, inicio: hora, duracionMinutos };
+  }));
+const TURNOS_ALMUERZO_Y_CENA = turnosTodosLosDias('12:00', '13:30', '20:00', '21:30', ['23:00', 60]);
+const TURNOS_CENA = turnosTodosLosDias('20:00', '21:30', ['23:00', 60]);
 const RESTAURANTES = [
   { nombre: 'La Brasa de Güemes', horarios: ALMUERZO_Y_CENA, turnos: TURNOS_ALMUERZO_Y_CENA, especialidad: 'PARRILLA', direccion: 'Güemes 2850, Mar del Plata', telefono: '223 451-2850', latitud: -38.0141, longitud: -57.5434,
     espacios: [salon(40), { tipo: 'PATIO', nombre: 'Patio cervecero', capacidad: 20 }] },
@@ -318,7 +322,10 @@ async function prepararEspacios(restaurantes) {
 
 /**
  * Leaves each restaurant with exactly its demo shifts. Runs after the cleanup, because a shift with
- * future reservations cannot be changed or removed.
+ * future reservations cannot be changed or removed (409 TURNO_CON_RESERVAS): the cleanup deletes
+ * every reservation of the demo restaurants, so a leftover shift (for example the old 22:30 one,
+ * replaced by 23:00-00:00) is always free to remove. Leftovers are removed before the missing
+ * shifts are created, because shifts of the same day cannot overlap (D29).
  */
 async function prepararTurnos(restaurantes) {
   console.log('Turnos');

@@ -179,11 +179,23 @@ public class TurnoService {
         if (fin > 24 * 60) {
             throw new BusinessException("TURNO_PASA_MEDIANOCHE", java.util.Map.of(), "El turno tiene que terminar a la medianoche como máximo");
         }
-        boolean repetido = turnoRepo.findAllByRestaurant_IdAndDiaAndActivoTrueOrderByInicioAsc(restaurant.getId(),
+        List<Turno> otros = turnoRepo.findAllByRestaurant_IdAndDiaAndActivoTrueOrderByInicioAsc(restaurant.getId(),
                         request.dia()).stream()
-                .anyMatch(t -> !t.getId().equals(turnoId) && t.getInicio().equals(inicio));
-        if (repetido) {
+                .filter(t -> !t.getId().equals(turnoId))
+                .toList();
+        if (otros.stream().anyMatch(t -> t.getInicio().equals(inicio))) {
             throw new ConflictException("TURNO_DUPLICADO", java.util.Map.of(), "Ya tenés un turno ese día a esa hora");
+        }
+        // D29: shifts of the same day cannot overlap; touching ends (21:30-23:00 and 23:00-00:00) is fine.
+        int desde = inicio.getHour() * 60 + inicio.getMinute();
+        Optional<Turno> superpuesto = otros.stream()
+                .filter(t -> desde < t.finEnMinutos() && t.getInicio().getHour() * 60 + t.getInicio().getMinute() < fin)
+                .findFirst();
+        if (superpuesto.isPresent()) {
+            String otroInicio = superpuesto.get().getInicio().format(HORA);
+            String otroFin = superpuesto.get().fin().format(HORA);
+            throw new ConflictException("TURNO_SUPERPUESTO", java.util.Map.of("inicio", otroInicio, "fin", otroFin),
+                    "Se superpone con el turno de %s a %s".formatted(otroInicio, otroFin));
         }
         horarioService.validarTurno(restaurant, request.dia(), inicio, fin);
         turno.setDia(request.dia());

@@ -214,4 +214,66 @@ class TurnosTest {
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(turnoRepo.findById(turno)).hasValueSatisfying(t -> assertThat(t.getActivo()).isTrue());
     }
+    @Test
+    void d29UnTurnoNoSeSuperponeConOtroDelMismoDia() {
+        Encargado encargado = api.nuevoEncargado();
+        Long noche = idTurno(crearTurno(encargado, "SATURDAY", "21:30", 90));
+
+        ResponseEntity<Map> pisado = crearTurno(encargado, "SATURDAY", "22:30", 90);
+        assertThat(pisado.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(pisado.getBody()).containsEntry("codigo", "TURNO_SUPERPUESTO")
+                .containsEntry("params", Map.of("inicio", "21:30", "fin", "23:00"))
+                .containsEntry("mensaje", "Se superpone con el turno de 21:30 a 23:00");
+        ResponseEntity<Map> antes = crearTurno(encargado, "SATURDAY", "20:30", 90);
+        assertThat(antes.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(antes.getBody()).containsEntry("codigo", "TURNO_SUPERPUESTO");
+        ResponseEntity<Map> envuelve = crearTurno(encargado, "SATURDAY", "21:00", 180);
+        assertThat(envuelve.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        ResponseEntity<Map> mismoInicio = crearTurno(encargado, "SATURDAY", "21:30", 60);
+        assertThat(mismoInicio.getBody()).containsEntry("codigo", "TURNO_DUPLICADO");
+
+        assertThat(turnoRepo.findAllByRestaurant_IdAndActivoTrueOrderByDiaAscInicioAsc(encargado.restaurantId()))
+                .extracting(t -> t.getId()).containsExactly(noche);
+    }
+
+    @Test
+    void d29LosTurnosQueSeTocanEnElBordeSePermiten() {
+        Encargado encargado = api.nuevoEncargado();
+        assertThat(crearTurno(encargado, "SATURDAY", "21:30", 90).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(crearTurno(encargado, "SATURDAY", "23:00", 60).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(crearTurno(encargado, "SATURDAY", "20:00", 90).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        // Another day does not clash.
+        assertThat(crearTurno(encargado, "SUNDAY", "22:00", 90).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void d29AlModificarUnTurnoNoChocaConsigoMismoPeroSiConLosDemas() {
+        Encargado encargado = api.nuevoEncargado();
+        Long primero = idTurno(crearTurno(encargado, "SATURDAY", "20:00", 90));
+        idTurno(crearTurno(encargado, "SATURDAY", "22:00", 60));
+
+        ResponseEntity<Map> alargado = api.send(HttpMethod.PUT, "/api/restaurantes/me/turnos/" + primero,
+                encargado.token(), Map.of("dia", "SATURDAY", "inicio", "20:00", "duracionMinutos", 120), Map.class);
+        assertThat(alargado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(alargado.getBody()).containsEntry("fin", "22:00");
+
+        ResponseEntity<Map> pisa = api.send(HttpMethod.PUT, "/api/restaurantes/me/turnos/" + primero,
+                encargado.token(), Map.of("dia", "SATURDAY", "inicio", "20:30", "duracionMinutos", 120), Map.class);
+        assertThat(pisa.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(pisa.getBody()).containsEntry("codigo", "TURNO_SUPERPUESTO")
+                .containsEntry("params", Map.of("inicio", "22:00", "fin", "23:00"));
+        assertThat(turnoRepo.findById(primero)).hasValueSatisfying(t -> {
+            assertThat(t.getInicio()).isEqualTo(LocalTime.of(20, 0));
+            assertThat(t.getDuracionMinutos()).isEqualTo(120);
+        });
+    }
+
+    @Test
+    void d29UnTurnoQuitadoNoBloqueaAOtro() {
+        Encargado encargado = api.nuevoEncargado();
+        Long viejo = idTurno(crearTurno(encargado, "SATURDAY", "22:30", 90));
+        assertThat(api.status(HttpMethod.DELETE, "/api/restaurantes/me/turnos/" + viejo, encargado.token(), null))
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(crearTurno(encargado, "SATURDAY", "21:30", 90).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
 }
