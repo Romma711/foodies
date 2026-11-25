@@ -234,6 +234,13 @@ public class ListaEsperaService {
         return entradas.stream().map(ListaEsperaService::toPanelDto).toList();
     }
 
+    /** The client's account was deactivated: all its open entries are closed (D25). */
+    @Transactional
+    public void cerrarDelCliente(Usuario usuario) {
+        listaRepo.findAllByUsuario_IdAndEstadoIn(usuario.getId(), ABIERTAS)
+                .forEach(e -> e.setEstado(EstadoListaEspera.CANCELADA));
+    }
+
     /** The client booked that restaurant and day: its open entry is closed. */
     @Transactional
     public void cerrarAlReservar(Usuario usuario, Restaurant restaurant, LocalDate fecha) {

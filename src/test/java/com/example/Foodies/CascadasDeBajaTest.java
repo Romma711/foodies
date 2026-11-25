@@ -3,6 +3,9 @@ package com.example.Foodies;
 import com.example.Foodies.AutorizacionTestSupport.Cliente;
 import com.example.Foodies.AutorizacionTestSupport.Encargado;
 import com.example.Foodies.Enums.EstadoReserva;
+import com.example.Foodies.ListaEspera.EntradaListaEspera;
+import com.example.Foodies.ListaEspera.EstadoListaEspera;
+import com.example.Foodies.ListaEspera.ListaEsperaRepository;
 import com.example.Foodies.Reserva.ReservaRepository;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Restaurant.RestaurantRepository;
@@ -23,6 +26,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +55,8 @@ class CascadasDeBajaTest {
     private UsuarioRepository usuarioRepo;
     @Autowired
     private RelojDePrueba reloj;
+    @Autowired
+    private ListaEsperaRepository listaRepo;
 
     private AutorizacionTestSupport api;
     private static final LocalDate MANIANA = LocalDate.now().plusDays(1);
@@ -192,5 +198,63 @@ class CascadasDeBajaTest {
         assertThat(borrar.getBody()).containsEntry("mensaje",
                 "El cliente tiene reservas o reseñas: dalo de baja en lugar de borrarlo.");
         assertThat(usuarioRepo.findById(cliente.id())).isPresent();
+    }
+    private Long anotarEnEspera(Cliente cliente, Long restaurantId, LocalDate fecha) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("idRestaurant", restaurantId);
+        body.put("fechaReserva", fecha.toString());
+        body.put("horarioLlegada", "20:00");
+        body.put("cantidad", 2);
+        ResponseEntity<Map> resp = api.send(HttpMethod.POST, "/api/lista-espera", cliente.token(), body, Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        return ((Number) resp.getBody().get("id")).longValue();
+    }
+
+    private EstadoListaEspera estadoEspera(Long id) {
+        return listaRepo.findById(id).orElseThrow().getEstado();
+    }
+
+    private void marcar(Long id, EstadoListaEspera estado) {
+        EntradaListaEspera entrada = listaRepo.findById(id).orElseThrow();
+        entrada.setEstado(estado);
+        listaRepo.save(entrada);
+    }
+
+    @Test
+    void d25DarDeBajaAUnClienteCierraSusInscripcionesAbiertas() {
+        Encargado encargado = api.nuevoEncargado();
+        api.crearReserva(api.nuevoCliente(), encargado.restaurantId(), MANIANA, 10);
+        api.crearReserva(api.nuevoCliente(), encargado.restaurantId(), MANIANA.plusDays(1), 10);
+        api.crearReserva(api.nuevoCliente(), encargado.restaurantId(), MANIANA.plusDays(2), 10);
+        Cliente cliente = api.nuevoCliente();
+        Cliente otro = api.nuevoCliente();
+        Long esperando = anotarEnEspera(cliente, encargado.restaurantId(), MANIANA);
+        Long notificada = anotarEnEspera(cliente, encargado.restaurantId(), MANIANA.plusDays(1));
+        Long vencida = anotarEnEspera(cliente, encargado.restaurantId(), MANIANA.plusDays(2));
+        Long ajena = anotarEnEspera(otro, encargado.restaurantId(), MANIANA);
+        marcar(notificada, EstadoListaEspera.NOTIFICADA);
+        marcar(vencida, EstadoListaEspera.VENCIDA);
+
+        assertThat(activo("usuarios", cliente.id(), false).getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        assertThat(estadoEspera(esperando)).isEqualTo(EstadoListaEspera.CANCELADA);
+        assertThat(estadoEspera(notificada)).isEqualTo(EstadoListaEspera.CANCELADA);
+        assertThat(estadoEspera(vencida)).isEqualTo(EstadoListaEspera.VENCIDA);
+        assertThat(estadoEspera(ajena)).isEqualTo(EstadoListaEspera.ESPERANDO);
+    }
+
+    @Test
+    void d25ElClienteQueBorraSuCuentaSaleDeLasListasDeEspera() {
+        Encargado encargado = api.nuevoEncargado();
+        api.crearReserva(api.nuevoCliente(), encargado.restaurantId(), MANIANA, 10);
+        Cliente cliente = api.nuevoCliente();
+        Long entrada = anotarEnEspera(cliente, encargado.restaurantId(), MANIANA);
+        Long reserva = api.crearReserva(cliente, encargado.restaurantId(), MANIANA.plusDays(1), 2);
+
+        assertThat(api.status(HttpMethod.DELETE, "/api/clientes/" + cliente.id(), cliente.token(), null))
+                .isEqualTo(HttpStatus.NO_CONTENT);
+
+        assertThat(estadoEspera(entrada)).isEqualTo(EstadoListaEspera.CANCELADA);
+        assertThat(estado(reserva)).isEqualTo(EstadoReserva.CANCELADA);
     }
 }

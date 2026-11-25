@@ -33,9 +33,13 @@ public class CancelacionEnCascada {
         this.listaEspera = listaEspera;
     }
 
-    /** Future active reservations of the client, now cancelled; each restaurant is told by email. */
+    /**
+     * Future active reservations of the client, now cancelled; each restaurant is told by email. Its
+     * open waitlist entries are closed first (D25), so the seats it frees are never offered to it.
+     */
     @Transactional
     public List<Reserva> cancelarDelCliente(Usuario cliente) {
+        listaEspera.cerrarDelCliente(cliente);
         List<Reserva> canceladas = cancelar(
                 reservaRepo.findAllByUsuario_IdAndEstadoReservaIn(cliente.getId(), EstadoReserva.ACTIVOS));
         canceladas.forEach(avisos::canceladaPorBajaDelCliente);
