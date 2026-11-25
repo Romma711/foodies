@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<?> handleForbidden(ForbiddenException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "prohibido", "mensaje", ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(cuerpo("prohibido", ex));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -59,16 +59,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<?> handleEntityNotFound(EntityNotFoundException ex){
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error","entidad no encontrada","mensaje",ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(cuerpo("entidad no encontrada", ex));
     }
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<?> handleBusinessException(BusinessException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "error", "error de negocio",
-                        "mensaje", ex.getMessage()
-                ));
+                .body(cuerpo("error de negocio", ex));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<?> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(cuerpo("conflicto", ex));
     }
 
     @ExceptionHandler(ListNoContentException.class)
@@ -107,7 +109,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handlerNotValidCupoException(NotValidCupoException ex){
         return  ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error","error conflicto","mensaje",ex.getMessage()));
+                .body(cuerpo("error conflicto", ex));
     }
 
     /** A path or query value of the wrong type, e.g. {@code /api/restaurantes/abc} or an unknown enum value. */
@@ -180,6 +182,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "error interno",
                         "mensaje", "Ocurrió un error inesperado. Intentá de nuevo más tarde."));
+    }
+
+    /**
+     * {@code { error, mensaje }} as always, plus {@code codigo} and {@code params} when the error has a
+     * machine-readable code (business rules of the reservation flow).
+     */
+    private static Map<String, Object> cuerpo(String error, ErrorConCodigo ex) {
+        Map<String, Object> cuerpo = new java.util.LinkedHashMap<>();
+        cuerpo.put("error", error);
+        cuerpo.put("mensaje", ex.getMessage());
+        if (ex.getCodigo() != null) {
+            cuerpo.put("codigo", ex.getCodigo());
+            cuerpo.put("params", ex.getParams());
+        }
+        return cuerpo;
     }
 
     private static ResponseEntity<Map<String, String>> badRequest(String error, String mensaje) {

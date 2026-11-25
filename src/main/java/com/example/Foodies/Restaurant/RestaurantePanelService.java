@@ -15,22 +15,37 @@ import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
+import com.example.Foodies.ListaEspera.Dtos.EntradaListaEsperaPanelDTO;
+import com.example.Foodies.ListaEspera.ListaEsperaService;
+import com.example.Foodies.Moderacion.AvisosReserva;
+import com.example.Foodies.Moderacion.ModeracionService;
+import com.example.Foodies.Reserva.CupoReservas;
 import com.example.Foodies.Reserva.Reserva;
 import com.example.Foodies.Reserva.ReservaRepository;
 import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
 import com.example.Foodies.Restaurant.Dtos.MiRestauranteDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.Comparator;
 import java.util.List;
 
 /** Everything a manager does in their panel, always scoped to the restaurant of the authenticated user. */
 @Service
 public class RestaurantePanelService {
+
+    /** The manager marks attendance from the arrival time up to this many hours later. */
+    public static final int HORAS_PARA_MARCAR_ASISTENCIA = 48;
+    private static final Set<EstadoReserva> ESTADOS_DEL_RESTAURANTE = EnumSet.of(EstadoReserva.ACEPTADA,
+            EstadoReserva.RECHAZADA, EstadoReserva.CANCELADA, EstadoReserva.ASISTIO, EstadoReserva.NO_ASISTIO);
 
     private final RestaurantRepository restaurantRepo;
     private final ReservaRepository reservaRepo;
@@ -39,11 +54,18 @@ public class RestaurantePanelService {
     private final FotoService fotoService;
     private final EspacioService espacioService;
     private final CurrentUser currentUser;
+    private final CupoReservas cupoReservas;
+    private final Clock clock;
+    private final AvisosReserva avisos;
+    private final ModeracionService moderacionService;
+    private final ListaEsperaService listaEspera;
 
     public RestaurantePanelService(RestaurantRepository restaurantRepo, ReservaRepository reservaRepo,
                                    CartaService cartaService, CupoEspecialService cupoEspecialService,
                                    FotoService fotoService, EspacioService espacioService,
-                                   CurrentUser currentUser) {
+                                   CurrentUser currentUser, CupoReservas cupoReservas, Clock clock,
+                                   AvisosReserva avisos, ModeracionService moderacionService,
+                                   ListaEsperaService listaEspera) {
         this.restaurantRepo = restaurantRepo;
         this.reservaRepo = reservaRepo;
         this.cartaService = cartaService;
@@ -51,6 +73,11 @@ public class RestaurantePanelService {
         this.fotoService = fotoService;
         this.espacioService = espacioService;
         this.currentUser = currentUser;
+        this.cupoReservas = cupoReservas;
+        this.clock = clock;
+        this.avisos = avisos;
+        this.moderacionService = moderacionService;
+        this.listaEspera = listaEspera;
     }
 
     @Transactional(readOnly = true)
@@ -94,18 +121,91 @@ public class RestaurantePanelService {
                 .toList();
     }
 
-    @Transactional
+    /** Open waitlist entries of the manager's restaurant (S7d, D23); see {@link ListaEsperaService#delRestaurante}. */
+    public List<EntradaListaEsperaPanelDTO> getListaEspera(String fecha) {
+        return listaEspera.delRestaurante(miRestaurante(), fecha);
+    }
+
+    /**
+     * The manager moves a reservation of their restaurant through its lifecycle:
+     * <ul>
+     *   <li>before the arrival time: PENDIENTE to ACEPTADA (capacity checked again) or RECHAZADA;
+     *       PENDIENTE or ACEPTADA to CANCELADA;</li>
+     *   <li>from the arrival time up to 48 hours later: ACEPTADA to ASISTIO or NO_ASISTIO.</li>
+     * </ul>
+     * Final states never change.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReservaPanelDTO cambiarEstadoReserva(Long reservaId, EstadoReserva estado) {
-        if (estado != EstadoReserva.ACEPTADA && estado != EstadoReserva.CANCELADA) {
-            throw new BusinessException("El estado debe ser ACEPTADA o CANCELADA");
+        if (estado == null || !ESTADOS_DEL_RESTAURANTE.contains(estado)) {
+            throw new BusinessException("ESTADO_INVALIDO", java.util.Map.of(), "El estado debe ser ACEPTADA, RECHAZADA, CANCELADA, ASISTIO o NO_ASISTIO");
         }
         Reserva reserva = reservaRepo.findById(reservaId)
                 .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada"));
-        if (reserva.getRestaurant() == null || !reserva.getRestaurant().getId().equals(miRestaurante().getId())) {
-            throw new ForbiddenException("La reserva no pertenece a tu restaurante");
+        Restaurant restaurant = miRestaurante();
+        if (reserva.getRestaurant() == null || !reserva.getRestaurant().getId().equals(restaurant.getId())) {
+            throw new ForbiddenException("RESERVA_DE_OTRO_RESTAURANTE", java.util.Map.of(), "La reserva no pertenece a tu restaurante");
+        }
+        cupoReservas.bloquear(restaurant.getId());
+        EstadoReserva actual = reserva.getEstadoReserva();
+        if (actual.esFinal()) {
+            throw new BusinessException("ESTADO_FINAL", java.util.Map.of("estado", actual.name()), "La reserva ya está %s y no se puede cambiar".formatted(descripcion(actual)));
+        }
+        LocalDateTime ahora = LocalDateTime.now(clock);
+        LocalDateTime llegada = reserva.llegada();
+        if (estado == EstadoReserva.ASISTIO || estado == EstadoReserva.NO_ASISTIO) {
+            if (actual != EstadoReserva.ACEPTADA) {
+                throw new BusinessException("ASISTENCIA_SIN_ACEPTAR", java.util.Map.of(), "Solo podés marcar la asistencia de una reserva aceptada");
+            }
+            if (ahora.isBefore(llegada)) {
+                throw new BusinessException("ASISTENCIA_ANTICIPADA", java.util.Map.of(), "La asistencia se marca desde la hora de llegada de la reserva");
+            }
+            if (ahora.isAfter(llegada.plusHours(HORAS_PARA_MARCAR_ASISTENCIA))) {
+                throw new BusinessException("ASISTENCIA_FUERA_DE_PLAZO", java.util.Map.of("horas", HORAS_PARA_MARCAR_ASISTENCIA), "Pasaron más de %d horas de la reserva: ya no se puede marcar la asistencia"
+                        .formatted(HORAS_PARA_MARCAR_ASISTENCIA));
+            }
+        } else {
+            if (!ahora.isBefore(llegada)) {
+                throw new BusinessException("RESERVA_YA_PASO", java.util.Map.of(), 
+                        "La hora de la reserva ya pasó: solo podés marcar si el cliente asistió o no");
+            }
+            if (estado == EstadoReserva.ACEPTADA) {
+                if (actual == EstadoReserva.ACEPTADA) {
+                    throw new BusinessException("YA_ACEPTADA", java.util.Map.of(), "La reserva ya está aceptada");
+                }
+                if (reserva.getEspacio() != null) {
+                    cupoReservas.validar(reserva.getEspacio(), reserva.fechaLocal(), reserva.getTurno(),
+                            reserva.getCantidad(), reserva.getId());
+                }
+            }
+            if (estado == EstadoReserva.RECHAZADA && actual != EstadoReserva.PENDIENTE) {
+                throw new BusinessException("RECHAZO_INVALIDO", java.util.Map.of(), "Solo podés rechazar una reserva pendiente; una aceptada se cancela");
+            }
         }
         reserva.setEstadoReserva(estado);
-        return ReservaPanelDTO.from(reservaRepo.save(reserva));
+        Reserva guardada = reservaRepo.save(reserva);
+        if (estado == EstadoReserva.NO_ASISTIO && guardada.getUsuario() != null) {
+            moderacionService.registrarAusencia(guardada.getUsuario());
+        } else if (estado == EstadoReserva.RECHAZADA) {
+            avisos.rechazada(guardada);
+            listaEspera.lugarLiberado(guardada);
+        } else if (estado == EstadoReserva.CANCELADA) {
+            avisos.canceladaPorRestaurante(guardada);
+            listaEspera.lugarLiberado(guardada);
+        }
+        return ReservaPanelDTO.from(guardada);
+    }
+
+    /** How a final state reads in an error message, e.g. "La reserva ya está cancelada". */
+    private static String descripcion(EstadoReserva estado) {
+        return switch (estado) {
+            case CANCELADA -> "cancelada";
+            case RECHAZADA -> "rechazada";
+            case ASISTIO -> "marcada como asistida";
+            case NO_ASISTIO -> "marcada como ausente";
+            case VENCIDA -> "vencida";
+            default -> estado.name().toLowerCase();
+        };
     }
 
     public List<EspacioDTO> getEspacios() {

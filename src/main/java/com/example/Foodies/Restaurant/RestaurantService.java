@@ -8,6 +8,8 @@ import com.example.Foodies.Carta.CartaService;
 import com.example.Foodies.Enums.EspecialidadDeComida;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
+import com.example.Foodies.Exception.ConflictException;
+import com.example.Foodies.Reserva.CancelacionEnCascada;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ListNoContentException;
 import com.example.Foodies.Restaurant.Dtos.RestaurantDetailDTO;
@@ -40,12 +42,14 @@ public class RestaurantService {
     private CartaService cartaService;
     @Autowired
     private FotoService fotoService;
+    @Autowired
+    private CancelacionEnCascada cancelacionEnCascada;
 
 
 
 
     public List<RestaurantListDTO> getByEspecialidad(EspecialidadDeComida especialidadDeComida){
-        List<Restaurant> restaurants = restaurantRepo.findByEspecialidadAndAprobadoTrueAndActivoTrue(especialidadDeComida);
+        List<Restaurant> restaurants = restaurantRepo.findByEspecialidadAndAprobadoTrueAndActivoTrueAndUsuario_ActivoTrue(especialidadDeComida);
         if(restaurants.isEmpty()){
             throw new ListNoContentException("No hay restaurantes con esta especialidad");
         }
@@ -53,7 +57,7 @@ public class RestaurantService {
     }
 
     public List<RestaurantListDTO> getAll() {
-        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrueAndActivoTrue();
+        List<Restaurant> restaurantes = restaurantRepo.findByAprobadoTrueAndActivoTrueAndUsuario_ActivoTrue();
         if(restaurantes.isEmpty()){
             throw new ListNoContentException("No hay restaurantes");
         }
@@ -64,7 +68,7 @@ public class RestaurantService {
     public RestaurantDetailDTO getRestaurantById(Long restaurantId){
         // Public detail: only approved restaurants that were not deactivated by an admin (Phase 3).
         Restaurant restaurant = restaurantRepo.findById(restaurantId)
-                .filter(r -> r.isAprobado() && !Boolean.FALSE.equals(r.getActivo()))
+                .filter(Restaurant::isPublicado)
                 .orElseThrow(()-> new EntityNotFoundException("restaurant No encontado"));
        return restaurantMapper.toDetailDTO(restaurant);
     }
@@ -95,6 +99,11 @@ public class RestaurantService {
     @Transactional
     public void eliminarRestaurante(Long id){
         Restaurant restaurant = restaurantRepo.findById(id).orElseThrow(()-> new EntityNotFoundException("Restaurante no encontrado"));
+        // Deleting would erase reservations clients still count on: deactivating cancels them and tells the clients.
+        if (cancelacionEnCascada.tieneReservasFuturas(restaurant)) {
+            throw new ConflictException("RESTAURANTE_CON_RESERVAS", java.util.Map.of(), "El restaurante tiene reservas activas a futuro: "
+                    + "dalo de baja primero, así se cancelan y se avisa a los clientes.");
+        }
         // The carta row goes away by cascade; its stored PDF has to be removed explicitly.
         cartaService.eliminarArchivo(restaurant);
         fotoService.eliminarArchivos(restaurant);

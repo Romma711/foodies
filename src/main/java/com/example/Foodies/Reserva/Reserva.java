@@ -3,6 +3,7 @@ package com.example.Foodies.Reserva;
 import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Espacio.Espacio;
 import com.example.Foodies.Restaurant.Restaurant;
+import com.example.Foodies.Turno.Turno;
 import com.example.Foodies.Usuario.Usuario;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -10,7 +11,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 @Entity
@@ -33,8 +40,10 @@ public class Reserva {
     @NotNull
     private LocalTime horariollegada;
 
-    @Column(nullable = false)
+    /** Stored as varchar (not a MySQL enum) so new states can be added; see {@link EstadoReservaMigracion}. */
+    @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private EstadoReserva estadoReserva;
 
     @ManyToOne
@@ -49,4 +58,26 @@ public class Reserva {
     @ManyToOne
     @JoinColumn(name = "espacio_id")
     private Espacio espacio;
+
+    /** Shift of the reservation (RF24); null for restaurants without shifts and older rows. */
+    @ManyToOne
+    @JoinColumn(name = "turno_id")
+    private Turno turno;
+
+    /** {@code fechaReserva} as a date; JPA may return {@code java.sql.Date}/{@code Timestamp}. */
+    public LocalDate fechaLocal() {
+        if (fechaReserva == null) {
+            return null;
+        }
+        if (fechaReserva instanceof java.sql.Date sql) {
+            return sql.toLocalDate();
+        }
+        return new Date(fechaReserva.getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    /** Date and arrival time together. */
+    public LocalDateTime llegada() {
+        LocalDate fecha = fechaLocal();
+        return fecha == null || horariollegada == null ? null : LocalDateTime.of(fecha, horariollegada);
+    }
 }

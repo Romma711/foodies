@@ -102,7 +102,9 @@ Para probar endpoints protegidos, hacé login en `POST /api/auth/login`, copiá 
 >`DELETE`
 >
 >`/api/clientes/{id}`
->- Elimina al cliente solicitado (el admin o el propio cliente; otro id responde `403`)
+>- El propio cliente: da de baja su cuenta (baja lógica, `204`). Sus reservas futuras activas se cancelan y se le avisa a cada restaurante; el historial se conserva y la cuenta ya no puede iniciar sesión
+>- El admin: borra la cuenta solo si no tiene reservas ni reseñas; si las tiene responde `409` ("dalo de baja en lugar de borrarlo")
+>- Otro id responde `403`
 ###
 >`PATCH`
 
@@ -146,6 +148,7 @@ Para probar endpoints protegidos, hacé login en `POST /api/auth/login`, copiá 
 >`/api/restaurantes/{id}`
 >
 > - Eliminar restaurante (solo `ROLE_ADMIN`; también borra el PDF de su carta)
+> - Con reservas activas a futuro responde `409`: primero hay que darlo de baja, eso las cancela y avisa a los clientes
 ###
 >`PATCH` (solo `ROLE_ADMIN`; el encargado usa `PATCH /api/restaurantes/me`)
 
@@ -247,12 +250,38 @@ archivo type=file (PDF, máximo 10 MB)
 >`GET` `/api/restaurantes/me/reservas`
 >- Reservas del restaurante ordenadas por fecha y hora (`[]` si no hay), con `idEspacio` y `espacioNombre`
 ###
+>`GET` `/api/restaurantes/me/lista-espera?fecha=YYYY-MM-DD`
+>- Lista de espera del propio restaurante, solo lectura (D23): inscripciones `ESPERANDO` y `NOTIFICADA`, ordenadas por fecha, horario y momento de inscripción. Con `fecha`, solo ese día; sin `fecha`, de hoy en adelante. `cliente` es el nombre y apellido, o el email si no tiene nombre. Fecha inválida: `400` con `codigo` `FECHA_FORMATO_INVALIDO`. Solo `ROLE_ENCARGADO` (cliente o admin: `403`)
+```json
+[{ "id": 1, "fecha": "2026-12-04", "horario": "20:00", "idTurno": 147, "cantidad": 2, "estado": "ESPERANDO", "creada": "2026-11-25T10:30:00", "cliente": "Ana Gómez" }]
+```
+###
 >`PATCH` `/api/reservas/{id}/estado`
 ```
 > Body
-{ "estado": "ACEPTADA" }   // o "CANCELADA"
+{ "estado": "ACEPTADA" }   // ACEPTADA, RECHAZADA, CANCELADA, ASISTIO o NO_ASISTIO
 ```
->- Solo para reservas del propio restaurante (si no, `403`)
+>- Solo para reservas del propio restaurante (si no, `403`). Con el restaurante dado de baja, `403` (panel en modo lectura)
+>- Antes de la hora de llegada: `PENDIENTE` → `ACEPTADA` (vuelve a validar el cupo) o `RECHAZADA`; `PENDIENTE` o `ACEPTADA` → `CANCELADA`. Después de la llegada solo se marca la asistencia
+>- Desde la hora de llegada y hasta 48 horas después: `ACEPTADA` → `ASISTIO` o `NO_ASISTIO`. Cada 3 `NO_ASISTIO` el cliente suma un strike automático
+>- Los estados finales (`CANCELADA`, `RECHAZADA`, `ASISTIO`, `NO_ASISTIO`, `VENCIDA`) no cambian más. Cualquier otro cambio responde `400` con el motivo
+>- Rechazar o cancelar le avisa al cliente por mail y le ofrece el lugar a la lista de espera
+###
+### Turnos (RF24)
+>`GET` `/api/restaurantes/me/turnos`
+>- Turnos del restaurante: `[{ "id", "dia", "inicio", "fin", "duracionMinutos" }]`
+###
+>`POST` `/api/restaurantes/me/turnos` · `PUT` `/api/restaurantes/me/turnos/{id}`
+```
+> Body
+{ "dia": "SATURDAY", "inicio": "20:00", "duracionMinutos": 90 }   // duracionMinutos opcional (90)
+```
+>- El cupo de cada espacio rige por turno y la hora de llegada es el inicio del turno. Un restaurante sin turnos sigue con cupo por día
+>- Duración entre 15 y 360 minutos, terminando a la medianoche como máximo; con horario cargado, el turno tiene que empezar y terminar dentro de una franja de ese día (`400`). Dos turnos el mismo día a la misma hora: `409` (`TURNO_DUPLICADO`). Un turno no puede superponerse con otro activo del mismo día (D29): `409` con `codigo` `TURNO_SUPERPUESTO`, `params` `{ "inicio", "fin" }` del otro turno y mensaje "Se superpone con el turno de 21:30 a 23:00". Los que se tocan en el borde (21:30–23:00 y 23:00–00:00) se permiten; al modificar, el turno no choca consigo mismo
+>- `POST` responde `201`
+###
+>`DELETE` `/api/restaurantes/me/turnos/{id}`
+>- Quita el turno (`204`). Un turno con reservas activas a futuro no se cambia ni se borra (`409`)
 ###
 ## 🍽️ CARTAS
 Los PDF ya no se guardan en la base de datos: se guardan en un almacenamiento de archivos (Cloudflare R2 en producción, disco local en desarrollo) y la tabla `cartas` solo guarda la clave del archivo.
@@ -296,9 +325,14 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 }
 ```
 
->- Crear nueva reserva. La reserva queda a nombre del usuario del token: `idUsuario` es opcional y, si es de otro usuario, responde `403`
->- `idEspacio` es obligatorio: un espacio activo de ese restaurante (si no, `400`). El cupo del día se valida en ese espacio (su cupo especial o su capacidad), sin revelar la capacidad
->- Las respuestas de reservas incluyen `idEspacio` y `espacioNombre`
+>- Crear nueva reserva. Solo `ROLE_CLIENTE` (otro rol: `403`). La reserva queda a nombre del usuario del token: `idUsuario` es opcional y, si es de otro usuario, responde `403`
+>- `idEspacio` es obligatorio: un espacio activo de ese restaurante (si no, `400`). El cupo se valida en ese espacio (su cupo especial o su capacidad) por día, o por turno si el restaurante tiene turnos, sin revelar la capacidad
+>- `idTurno` es opcional: con turnos, si no se envía se usa el turno que empieza en `horarioLlegada`; si ninguno coincide responde `400` con los turnos de ese día
+>- La fecha y hora no pueden haber pasado (`400`); la última llegada es 60 minutos antes del cierre (con turnos, el turno tiene que terminar antes del cierre)
+>- Un cliente tiene como máximo una reserva activa (`PENDIENTE` o `ACEPTADA`) por restaurante y día, y dos reservas activas en restaurantes distintos tienen que estar a 2 horas o más (`409`)
+>- Con 3 strikes el cliente puede entrar y ver sus reservas pero no reservar (`403`)
+>- Se avisa por mail al restaurante. Reservar cierra la inscripción del cliente en la lista de espera de ese restaurante y día
+>- Las respuestas de reservas incluyen `idEspacio`, `espacioNombre` e `idTurno` (`null` sin turnos)
 ###
 >`GET`
 >
@@ -339,21 +373,54 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
   "fechaReserva": "2026-12-24",
   "horarioLlegada": "21:30",
   "idEspacio": 3,
+  "idTurno": 7,
   "estadoReserva": "CANCELADA"
 }
 ```
 
 >- Solo el dueño de la reserva (si no, `403`)
 >- Con `estadoReserva` solo se acepta `CANCELADA` (cancela la reserva e ignora los demás campos); otro valor responde `400`
->- Si cambia fecha, hora, cantidad o espacio, la reserva vuelve a `PENDIENTE`. Se valida: cantidad mayor a 0, fecha y hora no anteriores a ahora (y hasta 3 meses), y cupo del día en el espacio (el nuevo, si cambia) sin contar esta misma reserva. Los errores responden `400` con `{ "error", "mensaje" }`
->- Una reserva `CANCELADA` no se puede modificar (`400`)
+>- Solo hasta 30 minutos antes de la llegada (después, `400`: los cambios de último momento se hablan con el restaurante)
+>- Si cambia fecha, hora, turno, cantidad o espacio, se vuelve a evaluar la auto-aceptación: queda `ACEPTADA` si la cubre, si no vuelve a `PENDIENTE`. Se valida: cantidad mayor a 0, fecha y hora no anteriores a ahora (y hasta 3 meses), duplicados (`409`) y cupo del día o del turno en el espacio (el nuevo, si cambia) sin contar esta misma reserva. Los errores responden `400` con `{ "error", "mensaje" }`
+>- Cancelar le avisa al restaurante por mail y le ofrece el lugar a la lista de espera
+>- Una reserva `CANCELADA` o en otro estado final no se puede modificar (`400`)
 ###
 
 >`DELETE`
 >
 >/api/reservas/{id}
 >
->- Eliminar reserva por ID (su dueño o el admin; si no, `403`)
+>- Eliminar reserva por ID (solo el admin). El cliente recibe `403`: las reservas se cancelan, no se borran
+###
+### Estados y reglas de una reserva
+>- `PENDIENTE` → `ACEPTADA` / `RECHAZADA` / `CANCELADA`; `ACEPTADA` → `CANCELADA` / `ASISTIO` / `NO_ASISTIO`
+>- Una reserva `PENDIENTE` que nadie aceptó antes de su hora de llegada pasa a `VENCIDA` (tarea programada cada 5 minutos)
+>- Solo `PENDIENTE` y `ACEPTADA` ocupan cupo y cuentan como reserva activa
+>- Dar de baja un cliente, un restaurante o su encargado cancela sus reservas futuras activas y le avisa a la otra parte por mail. Dar de baja un cliente (el admin o el propio cliente al borrar su cuenta) también pasa a `CANCELADA` sus inscripciones abiertas en listas de espera (`ESPERANDO` o `NOTIFICADA`, D25). Un restaurante dado de baja (o con su encargado dado de baja) sale del catálogo y su panel queda en modo lectura
+>- Los errores de estas reglas suman `codigo` (estable, por ejemplo `RESERVA_DUPLICADA`, `PLAZO_VENCIDO`, `SIN_CUPO_TURNO`) y `params` (los valores del mensaje, por ejemplo `{ "minutos": 30 }`) además de `error` y `mensaje`, para que el front los traduzca. Los errores sin código responden como siempre
+>- Mails: reserva nueva → restaurante; aceptada, rechazada o cancelada por el restaurante → cliente; cancelada por el cliente → restaurante; bajas → parte afectada; lugar libre → primero de la lista de espera
+###
+>`GET` `/api/restaurantes/{id}/turnos`
+>- Turnos del restaurante (público)
+###
+>`GET` `/api/restaurantes/{id}/disponibilidad?fecha=yyyy-MM-dd`
+>- Lugares libres por turno y espacio (público). Con turnos: `{ "fecha", "porTurnos": true, "turnos": [{ "idTurno", "inicio", "fin", "espacios": [{ "idEspacio", "nombre", "tipo", "libres" }] }] }` (solo los turnos que todavía no empezaron). Sin turnos: un único bloque del día con `idTurno`, `inicio` y `fin` en `null`
+###
+## ⏳ LISTA DE ESPERA (RF25, `ROLE_CLIENTE`)
+>`POST` `/api/lista-espera`
+```
+> Body
+{ "idRestaurant": 1, "fechaReserva": "2026-12-24", "horarioLlegada": "21:30", "idTurno": null, "cantidad": 2 }
+```
+>- Solo si no hay lugar en ningún espacio para esa fecha y horario o turno (si hay, `409` "Hay lugar en ese horario: reservá directamente"). Una inscripción abierta por cliente, restaurante y día (`409`). Con 3 strikes, `403`
+>- Responde `201` con `{ "id", "idRestaurant", "nombreResto", "fecha", "horario", "idTurno", "cantidad", "estado", "creada" }`
+>- Cuando se libera lugar (cancelación, rechazo o baja) se le avisa por mail a la primera inscripción que entra y queda `NOTIFICADA`. El lugar no se guarda: el cliente reserva como siempre. Las inscripciones vencen al pasar su horario (`VENCIDA`)
+###
+>`GET` `/api/lista-espera/mias`
+>- Inscripciones del cliente (sin las que dejó), de la más nueva a la más vieja
+###
+>`DELETE` `/api/lista-espera/{id}`
+>- Salir de la lista (`204`). Una inscripción de otro cliente responde `403`
 
 ## 📄 RESEÑAS
 
@@ -371,6 +438,7 @@ Con `STORAGE_PROVIDER=r2`, si falta alguna variable la app no arranca y el error
 }
 ```
 >- Crear nueva reseña
+>- Solo quien asistió: hace falta una reserva marcada `ASISTIO` por ese restaurante (si no, `403`). El restaurante tiene que estar publicado (aprobado y activo; si no, `404`). Una reseña por restaurante
 ###
 >`GET`
 >
@@ -527,12 +595,32 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 >
 >`/api/admin/usuarios/{id}/strikes` · `/api/admin/restaurantes/{id}/strikes`
 >
->- Suma un strike y envía el aviso por email (al usuario o al encargado del restaurante). `motivo` es obligatorio (5 a 255 caracteres). A los administradores no se les puede dar strikes. Si el email falla, el strike igual se guarda y `emailEnviado` vuelve en `false`. Con 3 strikes, `sugerirBaja` es `true` y no se admiten más (400): el siguiente paso es la baja. Limitación conocida: el contador se incrementa sin bloqueo, así que dos strikes simultáneos sobre la misma cuenta pueden contarse como uno; es aceptable porque la moderación la hace un solo administrador
+>- Suma un strike y envía el aviso por email (al usuario o al encargado del restaurante). `motivo` es obligatorio (5 a 255 caracteres). A los administradores no se les puede dar strikes. Si el email falla, el strike igual se guarda y `emailEnviado` vuelve en `false`. Con 3 strikes, `sugerirBaja` es `true` y no se admiten más (400): el siguiente paso es la baja. Limitación conocida: el contador se incrementa sin bloqueo, así que dos strikes simultáneos sobre la misma cuenta pueden contarse como uno; es aceptable porque la moderación la hace un solo administrador. No se puede sancionar una cuenta o restaurante dado de baja (400). Con 3 strikes el cliente sigue entrando y viendo sus reservas, pero no puede reservar ni anotarse en listas de espera
 ```json
 { "motivo": "Lenguaje ofensivo en una reseña" }
 ```
 ```json
 { "id": 4, "nombre": "Ana Gómez", "email": "ana@mail.com", "strikes": 3, "sugerirBaja": true, "emailEnviado": true }
+```
+###
+
+>`POST`
+>
+>`/api/admin/usuarios/{id}/strikes/quitar` · `/api/admin/restaurantes/{id}/strikes/quitar`
+>
+>- Quita un strike (D16), sin mandar mail. Responde `200` con `{ "strikes": <total actual> }`. `motivo` vacío: `400` `MOTIVO_OBLIGATORIO` ("Indicá el motivo"); más de 255 caracteres: `400` `MOTIVO_MUY_LARGO`. Sin strikes: `409` `SIN_STRIKES` ("No tiene strikes para quitar"). Id inexistente: `404`. Un cliente que baja de 3 strikes vuelve a poder reservar
+```json
+{ "motivo": "Lo revisamos y fue un error de carga" }
+```
+###
+
+>`GET`
+>
+>`/api/admin/usuarios/{id}/strikes` · `/api/admin/restaurantes/{id}/strikes`
+>
+>- Historial de strikes, del más nuevo al más viejo (solo admin; `404` si el id no existe). Cada cambio del contador queda registrado: `tipo` `SUMA` o `QUITA`, `origen` `ADMIN` (sumado o quitado por el admin) o `AUSENCIAS` (strike automático por 3 ausencias, con el mismo motivo del mail) y el total que dejó. Los strikes dados antes de esta versión no tienen historial
+```json
+[{ "id": 1, "fecha": "2026-11-25T10:30:00", "tipo": "SUMA", "origen": "ADMIN", "motivo": "No se presentó", "totalDespues": 2 }]
 ```
 ###
 
@@ -560,7 +648,7 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 >
 >`/api/admin/usuarios/{id}/activo` · `/api/admin/restaurantes/{id}/activo`
 >
->- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al intentar loguearse (con cualquier contraseña) y en cualquier request con un token anterior. Las consultas públicas (`GET /api/restaurantes`, `/especialidad` y `/{id}`) solo muestran restaurantes aprobados y activos a la vez; el detalle de uno pendiente, rechazado o dado de baja responde 404. Un restaurante dado de baja tampoco acepta reservas nuevas (`POST /api/reservas` responde 404 `Restaurante no encontrado`). A un administrador no se lo puede dar de baja (400)
+>- Baja lógica (`false`) o reactivación (`true`); no borra nada. Un usuario dado de baja recibe 403 `cuenta dada de baja` al intentar loguearse (con cualquier contraseña) y en cualquier request con un token anterior. Las consultas públicas (`GET /api/restaurantes`, `/especialidad` y `/{id}`) solo muestran restaurantes aprobados y activos a la vez; el detalle de uno pendiente, rechazado o dado de baja responde 404. Un restaurante dado de baja tampoco acepta reservas nuevas (`POST /api/reservas` responde 404 `Restaurante no encontrado`). A un administrador no se lo puede dar de baja (400). Dar de baja cancela las reservas futuras activas del cliente, del restaurante o del restaurante de ese encargado y avisa por mail a la otra parte; un restaurante cuyo encargado fue dado de baja también sale del catálogo, y el panel de un restaurante dado de baja solo permite lecturas (`403` en cualquier escritura)
 ```json
 { "activo": false }
 ```
@@ -573,6 +661,13 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 | El restaurante acepta una reserva (`PATCH /api/reservas/{id}/estado` con `ACEPTADA`) o la reserva se crea ya aceptada por la aceptación automática | Cliente | `Foodies: tu reserva en {restaurante} está confirmada` (fecha, hora, personas y dirección) |
 | El admin aprueba un restaurante (`PUT /api/admin/restaurantes/{id}/aprobar`) | Encargado | `Foodies: tu restaurante {restaurante} fue aprobado` |
 | El admin aplica un strike | Usuario o encargado | `Foodies: aviso de sanción (n de 3)` |
+| El restaurante marca la tercera ausencia (`NO_ASISTIO`) | Cliente | `Foodies: aviso de sanción (n de 3)` (strike automático) |
+| Un cliente reserva | Restaurante | `Foodies: nueva reserva en {restaurante}` |
+| El restaurante rechaza una reserva | Cliente | `Foodies: tu reserva en {restaurante} no fue confirmada` |
+| El restaurante cancela una reserva | Cliente | `Foodies: {restaurante} canceló tu reserva` |
+| El cliente cancela, o su cuenta se da de baja | Restaurante | `Foodies: se canceló una reserva en {restaurante}` |
+| El restaurante o su encargado se dan de baja | Cliente | `Foodies: tu reserva en {restaurante} fue cancelada` |
+| Se libera lugar en una fecha con lista de espera | Primer cliente anotado que entra | `Foodies: se liberó un lugar en {restaurante}` |
 
 Los avisos de reserva confirmada y de restaurante aprobado salen después de guardar el cambio y no se repiten si la reserva ya estaba aceptada o el restaurante ya estaba aprobado. Si el correo falla, la operación igual queda hecha y el error queda en el log.
 
@@ -584,6 +679,7 @@ Se envían con `JavaMailSender`. Por defecto apuntan al sandbox de [Mailtrap](ht
 | `MAIL_PORT` | `2525` |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | vacías (las da Mailtrap) |
 | `MAIL_FROM` | `no-reply@foodies.com` |
+| `MAIL_LOCAL_HOSTNAME` | `localhost` (nombre del equipo en el saludo SMTP y en el Message-ID; evita una demora de unos 5 s por mail en algunas PC con Windows) |
 
 ###
 ## 🎡 Roles y Permisos
@@ -644,6 +740,12 @@ Login
 
 - `docs/db/crear-usuario-local.sql`: crea la base `foodies` y el usuario `foodies_app` (correr una vez como root).
 - `docs/db/seed-demo.mjs`: con el backend levantado, `node docs/db/seed-demo.mjs` carga 6 restaurantes aprobados, 8 clientes, reseñas y reservas (algunas canceladas) para ver el dashboard del admin. Todas las cuentas de demo usan la contraseña `demo1234`.
+  - Turnos de demo: 12:00, 13:30, 20:00 y 21:30 de 90 minutos y 23:00 de 60 minutos (ninguno se superpone, D29). Una base que todavía tiene el viejo turno de las 22:30 se corrige sola al volver a correr el seed: primero borra todas las reservas de los restaurantes de demo (de cualquier cliente), así el turno sobrante queda sin reservas futuras y se puede quitar; después crea el de las 23:00.
+- `docs/db/seed-demo-resenas.sql`: reseñas de demo (D20). Desde D12 solo reseña quien asistió, y la API no puede crear asistencias en el pasado, así que en una base nueva el seed no crea reseñas. Este script, solo para la base de demo, inserta por cada reseña de demo una reserva pasada `ASISTIO` de ese cliente en ese restaurante y la reseña, para que el catálogo muestre calificaciones. La regla de la API no cambia.
+  - Correrlo después de `node docs/db/seed-demo.mjs`, contra la misma base: `mysql -u <usuario> -p <base> < docs/db/seed-demo-resenas.sql` (o abrirlo y ejecutarlo en MySQL Workbench con esa base seleccionada). Con la base en un contenedor Docker: `docker exec -i <contenedor> mysql -u <usuario> -p<contraseña> <base> < docs/db/seed-demo-resenas.sql`.
+  - Es idempotente: solo inserta la reserva si ese cliente no tiene una `ASISTIO` en ese restaurante, y la reseña si todavía no reseñó ese restaurante; correrlo dos veces no duplica nada. Al final muestra cuántas reseñas y asistencias de demo hay.
+  - Solo toca filas de demo: busca clientes y restaurantes por sus cuentas `@demo.foodies.com` y saltea las que no existen.
+  - Hay que volver a correrlo después de cada corrida del seed, que borra todas las reservas de los restaurantes de demo (también las `ASISTIO` pasadas) pero conserva las reseñas.
 
 <h3>📢 Autor</h3>
 

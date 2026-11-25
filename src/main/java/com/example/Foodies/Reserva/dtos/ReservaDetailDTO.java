@@ -15,5 +15,7 @@ public record ReservaDetailDTO(
     String nombreUsuario,
     String nombreResto,
     Long idEspacio,
-    String espacioNombre
+    String espacioNombre,
+    /** Shift of the reservation (RF24); null when the restaurant has no shifts. */
+    Long idTurno
 ) { }

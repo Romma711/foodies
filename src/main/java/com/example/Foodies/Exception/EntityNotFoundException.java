@@ -1,7 +1,13 @@
 package com.example.Foodies.Exception;
 
-public class EntityNotFoundException extends RuntimeException {
+import java.util.Map;
+
+public class EntityNotFoundException extends ErrorConCodigo {
     public EntityNotFoundException(String message) {
-        super(message);
+        super(null, Map.of(), message);
+    }
+
+    public EntityNotFoundException(String codigo, Map<String, Object> params, String message) {
+        super(codigo, params, message);
     }
 }

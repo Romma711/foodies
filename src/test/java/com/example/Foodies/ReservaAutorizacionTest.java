@@ -148,14 +148,14 @@ class ReservaAutorizacionTest {
     }
 
     @Test
-    void elDuenioYElAdminPuedenBorrarLaReserva() {
+    void soloElAdminPuedeBorrarLaReserva() {
         Encargado encargado = api.nuevoEncargado();
         Cliente duenio = api.nuevoCliente();
         Long propia = api.crearReserva(duenio, encargado.restaurantId(), MANIANA, 2);
-        Long otra = api.crearReserva(duenio, encargado.restaurantId(), MANIANA, 2);
 
-        assertThat(api.status(HttpMethod.DELETE, "/api/reservas/" + propia, duenio.token(), null)).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(api.status(HttpMethod.DELETE, "/api/reservas/" + otra, api.admin(), null)).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(reservaRepo.findAllById(List.of(propia, otra))).isEmpty();
+        assertThat(api.status(HttpMethod.DELETE, "/api/reservas/" + propia, duenio.token(), null)).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(reservaRepo.findById(propia)).isPresent();
+        assertThat(api.status(HttpMethod.DELETE, "/api/reservas/" + propia, api.admin(), null)).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(reservaRepo.findAllById(List.of(propia))).isEmpty();
     }
 }

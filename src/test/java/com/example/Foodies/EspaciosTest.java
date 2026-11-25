@@ -274,13 +274,13 @@ class EspaciosTest {
         Long salonId = salonPrincipal(encargado).getId();
         Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
 
-        assertThat(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
-        ResponseEntity<Map> salonLleno = api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 1);
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), salonId, fecha, 10).getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> salonLleno = api.reservar(api.nuevoCliente(), encargado.restaurantId(), salonId, fecha, 1);
         assertThat(salonLleno.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(salonLleno.getBody().toString()).doesNotContain("10");
 
-        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 1).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), patioId, fecha, 4).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), patioId, fecha, 1).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         ResponseEntity<List> publico = api.send(HttpMethod.GET, "/api/restaurantes/" + encargado.restaurantId()
                 + "/espacios?fecha=" + fecha + "&cantidad=1", null, null, List.class);
@@ -296,9 +296,9 @@ class EspaciosTest {
         Long patioId = crearEspacio(encargado, "PATIO", "Patio", 4);
         api.send(HttpMethod.PATCH, "/api/restaurantes/me", encargado.token(), Map.of("porcentajeAutoAceptacion", 50), Map.class);
 
-        assertThat(estado(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 2))).isEqualTo("ACEPTADA");
-        assertThat(estado(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 1))).isEqualTo("PENDIENTE");
-        assertThat(estado(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 5))).isEqualTo("ACEPTADA");
+        assertThat(estado(api.reservar(api.nuevoCliente(), encargado.restaurantId(), patioId, fecha, 2))).isEqualTo("ACEPTADA");
+        assertThat(estado(api.reservar(api.nuevoCliente(), encargado.restaurantId(), patioId, fecha, 1))).isEqualTo("PENDIENTE");
+        assertThat(estado(api.reservar(api.nuevoCliente(), encargado.restaurantId(), salonId, fecha, 5))).isEqualTo("ACEPTADA");
     }
 
     @Test
@@ -376,14 +376,14 @@ class EspaciosTest {
         assertThat(api.send(HttpMethod.PUT, cupoPath(salonId, fecha), encargado.token(), Map.of("cupo", 6), Map.class)
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 1).getStatusCode())
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), patioId, fecha, 1).getStatusCode())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 6).getStatusCode())
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), salonId, fecha, 6).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
-        assertThat(api.reservar(cliente, encargado.restaurantId(), salonId, fecha, 1).getStatusCode())
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), salonId, fecha, 1).getStatusCode())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
         // Otro día el patio vuelve a su capacidad normal.
-        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha.plusDays(1), 4).getStatusCode())
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), patioId, fecha.plusDays(1), 4).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
 
         ResponseEntity<List> lista = api.send(HttpMethod.GET, "/api/restaurantes/me/cupos-especiales",
@@ -395,7 +395,7 @@ class EspaciosTest {
 
         assertThat(api.status(HttpMethod.DELETE, cupoPath(patioId, fecha), encargado.token(), null))
                 .isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(api.reservar(cliente, encargado.restaurantId(), patioId, fecha, 4).getStatusCode())
+        assertThat(api.reservar(api.nuevoCliente(), encargado.restaurantId(), patioId, fecha, 4).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
     }
 

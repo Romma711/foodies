@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 public class HorarioAtencionService {
 
     public static final int MAX_FRANJAS_POR_DIA = 3;
+    /** Latest arrival: this many minutes before the closing time of the range. */
+    public static final int MINUTOS_ULTIMA_LLEGADA = 60;
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
     private static final Comparator<HorarioAtencion> ORDEN =
             Comparator.comparing(HorarioAtencion::getDia).thenComparing(HorarioAtencion::getApertura);
@@ -47,7 +49,7 @@ public class HorarioAtencionService {
     @Transactional(readOnly = true)
     public List<FranjaHorariaDTO> listarPublico(Long restaurantId) {
         Restaurant restaurant = restaurantRepo.findById(restaurantId)
-                .filter(r -> r.isAprobado() && !Boolean.FALSE.equals(r.getActivo()))
+                .filter(Restaurant::isPublicado)
                 .orElseThrow(() -> new EntityNotFoundException("Restaurante no encontrado"));
         return listar(restaurant);
     }
@@ -94,13 +96,37 @@ public class HorarioAtencionService {
         }
         List<HorarioAtencion> delDia = franjas.stream().filter(f -> f.getDia() == fecha.getDayOfWeek()).toList();
         if (delDia.isEmpty()) {
-            throw new BusinessException("Ese día el restaurante está cerrado. Elegí otra fecha.");
+            throw new BusinessException("RESTAURANTE_CERRADO", java.util.Map.of(), "Ese día el restaurante está cerrado. Elegí otra fecha.");
         }
         if (delDia.stream().noneMatch(f -> f.incluye(hora))) {
             String rangos = delDia.stream()
                     .map(f -> "de %s a %s".formatted(f.getApertura().format(HORA), f.getCierre().format(HORA)))
                     .collect(Collectors.joining(" y "));
-            throw new BusinessException("Ese día el restaurante recibe reservas %s. Elegí otro horario.".formatted(rangos));
+            throw new BusinessException("FUERA_DE_HORARIO", java.util.Map.of("franjas", delDia.stream().map(f -> java.util.Map.of("apertura", f.getApertura().format(HORA), "cierre", f.getCierre().format(HORA))).toList()), "Ese día el restaurante recibe reservas %s. Elegí otro horario.".formatted(rangos));
+        }
+        HorarioAtencion franja = delDia.stream().filter(f -> f.incluye(hora)).findFirst().orElseThrow();
+        LocalTime ultimaLlegada = franja.ultimaLlegada(MINUTOS_ULTIMA_LLEGADA);
+        if (hora.isAfter(ultimaLlegada)) {
+            throw new BusinessException("ULTIMA_LLEGADA", java.util.Map.of("minutos", MINUTOS_ULTIMA_LLEGADA, "hora", ultimaLlegada.format(HORA)), ("La última llegada es %d minutos antes del cierre: ese día podés llegar "
+                    + "hasta las %s.").formatted(MINUTOS_ULTIMA_LLEGADA, ultimaLlegada.format(HORA)));
+        }
+    }
+
+    /**
+     * A shift must start and end inside one opening range of its day (D11 with shifts). Nothing to
+     * check when the restaurant has no opening hours.
+     */
+    @Transactional(readOnly = true)
+    public void validarTurno(Restaurant restaurant, java.time.DayOfWeek dia, LocalTime inicio, int finEnMinutos) {
+        List<HorarioAtencion> franjas = franjas(restaurant.getId());
+        if (franjas.isEmpty()) {
+            return;
+        }
+        boolean entra = franjas.stream()
+                .filter(f -> f.getDia() == dia)
+                .anyMatch(f -> !inicio.isBefore(f.getApertura()) && finEnMinutos <= f.cierreEnMinutos());
+        if (!entra) {
+            throw new BusinessException("TURNO_FUERA_DE_HORARIO", java.util.Map.of(), "El turno tiene que empezar y terminar dentro del horario de atención de ese día");
         }
     }
 

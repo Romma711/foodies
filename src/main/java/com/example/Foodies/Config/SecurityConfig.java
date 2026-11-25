@@ -68,6 +68,8 @@ public class SecurityConfig {
                                 "/api/restaurantes/*/fotos",
                                 "/api/restaurantes/*/espacios",
                                 "/api/restaurantes/*/horarios",
+                                "/api/restaurantes/*/turnos",
+                                "/api/restaurantes/*/disponibilidad",
                                 "/api/carta/*",
                                 "/api/files/**",
                                 // Interactive API docs (Swagger UI + OpenAPI JSON)
@@ -79,6 +81,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/resenas").permitAll()
                         // Writes by id are not ownership-checked, so only admins may use them.
                         .requestMatchers("/api/restaurantes/*", "/api/carta/**").hasAuthority("ROLE_ADMIN")
+                        // Waitlist (RF25): the client's own entries only.
+                        .requestMatchers("/api/lista-espera", "/api/lista-espera/**").hasAuthority("ROLE_CLIENTE")
                         .requestMatchers(
                                 "/api/reservas/**",
                                 "/api/clientes/*",
