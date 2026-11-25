@@ -1,9 +1,12 @@
 package com.example.Foodies.Moderacion;
 
 import com.example.Foodies.Moderacion.dtos.EstadoSolicitudDTO;
+import com.example.Foodies.Moderacion.dtos.HistorialStrikeDTO;
+import com.example.Foodies.Moderacion.dtos.QuitarStrikeRequestDTO;
 import com.example.Foodies.Moderacion.dtos.SolicitudRestauranteDTO;
 import com.example.Foodies.Moderacion.dtos.StrikeRequestDTO;
 import com.example.Foodies.Moderacion.dtos.StrikeResultadoDTO;
+import com.example.Foodies.Moderacion.dtos.StrikesDTO;
 import com.example.Foodies.Moderacion.dtos.UbicacionRequestDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -91,6 +94,40 @@ public class ModeracionController {
     public ResponseEntity<StrikeResultadoDTO> strikeUsuario(@PathVariable Long id,
                                                             @Valid @RequestBody StrikeRequestDTO request) {
         return ResponseEntity.ok(moderacionService.strikeUsuario(id, request.motivo()));
+    }
+
+    /**
+     * Removes one strike from a restaurant (S7c), without email.
+     *
+     * @return 200 with the strikes left; 400 MOTIVO_OBLIGATORIO; 409 SIN_STRIKES; 404 if it does not exist
+     */
+    @PostMapping("/restaurantes/{id}/strikes/quitar")
+    public ResponseEntity<StrikesDTO> quitarStrikeRestaurante(@PathVariable Long id,
+                                                              @RequestBody(required = false) QuitarStrikeRequestDTO request) {
+        return ResponseEntity.ok(moderacionService.quitarStrikeRestaurante(id, request == null ? null : request.motivo()));
+    }
+
+    /**
+     * Removes one strike from a user (S7c), without email.
+     *
+     * @return 200 with the strikes left; 400 MOTIVO_OBLIGATORIO; 409 SIN_STRIKES; 404 if it does not exist
+     */
+    @PostMapping("/usuarios/{id}/strikes/quitar")
+    public ResponseEntity<StrikesDTO> quitarStrikeUsuario(@PathVariable Long id,
+                                                          @RequestBody(required = false) QuitarStrikeRequestDTO request) {
+        return ResponseEntity.ok(moderacionService.quitarStrikeUsuario(id, request == null ? null : request.motivo()));
+    }
+
+    /** Strike history of a restaurant, newest first (S7d); 404 if it does not exist. */
+    @GetMapping("/restaurantes/{id}/strikes")
+    public ResponseEntity<List<HistorialStrikeDTO>> historialRestaurante(@PathVariable Long id) {
+        return ResponseEntity.ok(moderacionService.historialRestaurante(id));
+    }
+
+    /** Strike history of a user, newest first (S7d); 404 if it does not exist. */
+    @GetMapping("/usuarios/{id}/strikes")
+    public ResponseEntity<List<HistorialStrikeDTO>> historialUsuario(@PathVariable Long id) {
+        return ResponseEntity.ok(moderacionService.historialUsuario(id));
     }
 
     /**

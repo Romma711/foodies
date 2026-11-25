@@ -598,6 +598,26 @@ Los restaurantes tienen `estado` (`PENDIENTE`, `APROBADO`, `RECHAZADO`), sincron
 ```
 ###
 
+>`POST`
+>
+>`/api/admin/usuarios/{id}/strikes/quitar` · `/api/admin/restaurantes/{id}/strikes/quitar`
+>
+>- Quita un strike (D16), sin mandar mail. Responde `200` con `{ "strikes": <total actual> }`. `motivo` vacío: `400` `MOTIVO_OBLIGATORIO` ("Indicá el motivo"); más de 255 caracteres: `400` `MOTIVO_MUY_LARGO`. Sin strikes: `409` `SIN_STRIKES` ("No tiene strikes para quitar"). Id inexistente: `404`. Un cliente que baja de 3 strikes vuelve a poder reservar
+```json
+{ "motivo": "Lo revisamos y fue un error de carga" }
+```
+###
+
+>`GET`
+>
+>`/api/admin/usuarios/{id}/strikes` · `/api/admin/restaurantes/{id}/strikes`
+>
+>- Historial de strikes, del más nuevo al más viejo (solo admin; `404` si el id no existe). Cada cambio del contador queda registrado: `tipo` `SUMA` o `QUITA`, `origen` `ADMIN` (sumado o quitado por el admin) o `AUSENCIAS` (strike automático por 3 ausencias, con el mismo motivo del mail) y el total que dejó. Los strikes dados antes de esta versión no tienen historial
+```json
+[{ "id": 1, "fecha": "2026-11-25T10:30:00", "tipo": "SUMA", "origen": "ADMIN", "motivo": "No se presentó", "totalDespues": 2 }]
+```
+###
+
 >`PUT`
 >
 >`/api/admin/restaurantes/{id}/ubicacion`

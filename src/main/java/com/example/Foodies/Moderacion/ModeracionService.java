@@ -3,11 +3,14 @@ package com.example.Foodies.Moderacion;
 import com.example.Foodies.Enums.EstadoRestaurante;
 import com.example.Foodies.Enums.Role;
 import com.example.Foodies.Exception.BusinessException;
+import com.example.Foodies.Exception.ConflictException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Foto.FotoService;
 import com.example.Foodies.Moderacion.dtos.EstadoSolicitudDTO;
+import com.example.Foodies.Moderacion.dtos.HistorialStrikeDTO;
 import com.example.Foodies.Moderacion.dtos.SolicitudRestauranteDTO;
 import com.example.Foodies.Moderacion.dtos.StrikeResultadoDTO;
+import com.example.Foodies.Moderacion.dtos.StrikesDTO;
 import com.example.Foodies.Moderacion.dtos.UbicacionRequestDTO;
 import com.example.Foodies.Restaurant.Restaurant;
 import com.example.Foodies.Usuario.Usuario;
@@ -16,6 +19,9 @@ import com.example.Foodies.Usuario.UsuarioService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -37,17 +43,26 @@ public class ModeracionService {
     private final UsuarioService usuarioService;
     private final EmailService emailService;
     private final FotoService fotoService;
+    private final HistorialStrikeRepository historialRepo;
+    private final Clock clock;
+
+    /** Longest reason the strike history keeps. */
+    public static final int MAX_MOTIVO = 255;
 
     public ModeracionService(ModeracionRestaurantRepository restaurantRepo,
                              UsuarioRepository usuarioRepo,
                              UsuarioService usuarioService,
                              EmailService emailService,
-                             FotoService fotoService) {
+                             FotoService fotoService,
+                             HistorialStrikeRepository historialRepo,
+                             Clock clock) {
         this.restaurantRepo = restaurantRepo;
         this.usuarioRepo = usuarioRepo;
         this.usuarioService = usuarioService;
         this.emailService = emailService;
         this.fotoService = fotoService;
+        this.historialRepo = historialRepo;
+        this.clock = clock;
     }
 
     /**
@@ -123,6 +138,7 @@ public class ModeracionService {
         validarActiva(usuario.getActivo());
         validarLimite(usuario.getStrikes());
         usuario.setStrikes(usuario.getStrikes() + 1);
+        registrar(usuario, null, HistorialStrike.Tipo.SUMA, HistorialStrike.Origen.ADMIN, motivo, usuario.getStrikes());
         String nombre = Stream.of(usuario.getNombre(), usuario.getApellido())
                 .filter(parte -> parte != null && !parte.isBlank())
                 .collect(Collectors.joining(" "));
@@ -143,8 +159,93 @@ public class ModeracionService {
         validarActiva(restaurant.getActivo());
         validarLimite(restaurant.getStrikes());
         restaurant.setStrikes(restaurant.getStrikes() + 1);
+        registrar(null, restaurant, HistorialStrike.Tipo.SUMA, HistorialStrike.Origen.ADMIN, motivo, restaurant.getStrikes());
         return notificar(restaurant.getId(), restaurant.getNombre(), restaurant.getUsuario().getEmail(),
                 restaurant.getStrikes(), motivo);
+    }
+
+    /**
+     * Removes one strike from a user (S7c, D16). No email is sent; the change is kept in the history.
+     * A client that drops below the limit can book again (D6 reads the counter).
+     *
+     * @return the strikes left
+     * @throws EntityNotFoundException if the user does not exist
+     * @throws BusinessException       if the reason is blank or too long
+     * @throws ConflictException       if the user has no strikes
+     */
+    @Transactional
+    public StrikesDTO quitarStrikeUsuario(Long usuarioId, String motivo) {
+        Usuario usuario = usuarioRepo.findById(usuarioId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        String limpio = motivoValido(motivo);
+        int strikes = validarConStrikes(usuario.getStrikes());
+        usuario.setStrikes(strikes - 1);
+        registrar(usuario, null, HistorialStrike.Tipo.QUITA, HistorialStrike.Origen.ADMIN, limpio, usuario.getStrikes());
+        return new StrikesDTO(usuario.getStrikes());
+    }
+
+    /** Removes one strike from a restaurant (S7c); same rules as {@link #quitarStrikeUsuario}. */
+    @Transactional
+    public StrikesDTO quitarStrikeRestaurante(Long restaurantId, String motivo) {
+        Restaurant restaurant = buscarRestaurante(restaurantId);
+        String limpio = motivoValido(motivo);
+        int strikes = validarConStrikes(restaurant.getStrikes());
+        restaurant.setStrikes(strikes - 1);
+        registrar(null, restaurant, HistorialStrike.Tipo.QUITA, HistorialStrike.Origen.ADMIN, limpio, restaurant.getStrikes());
+        return new StrikesDTO(restaurant.getStrikes());
+    }
+
+    /** Strike history of a user, newest first (S7d). */
+    @Transactional(readOnly = true)
+    public List<HistorialStrikeDTO> historialUsuario(Long usuarioId) {
+        if (!usuarioRepo.existsById(usuarioId)) {
+            throw new EntityNotFoundException("Usuario no encontrado");
+        }
+        return historialRepo.findAllByUsuario_IdOrderByFechaDescIdDesc(usuarioId).stream()
+                .map(HistorialStrikeDTO::from)
+                .toList();
+    }
+
+    /** Strike history of a restaurant, newest first (S7d). */
+    @Transactional(readOnly = true)
+    public List<HistorialStrikeDTO> historialRestaurante(Long restaurantId) {
+        buscarRestaurante(restaurantId);
+        return historialRepo.findAllByRestaurant_IdOrderByFechaDescIdDesc(restaurantId).stream()
+                .map(HistorialStrikeDTO::from)
+                .toList();
+    }
+
+    private static String motivoValido(String motivo) {
+        if (motivo == null || motivo.isBlank()) {
+            throw new BusinessException("MOTIVO_OBLIGATORIO", java.util.Map.of(), "Indicá el motivo");
+        }
+        String limpio = motivo.strip();
+        if (limpio.length() > MAX_MOTIVO) {
+            throw new BusinessException("MOTIVO_MUY_LARGO", java.util.Map.of("maximo", MAX_MOTIVO),
+                    "El motivo puede tener hasta %d caracteres".formatted(MAX_MOTIVO));
+        }
+        return limpio;
+    }
+
+    private static int validarConStrikes(Integer strikes) {
+        if (strikes == null || strikes <= 0) {
+            throw new ConflictException("SIN_STRIKES", java.util.Map.of(), "No tiene strikes para quitar");
+        }
+        return strikes;
+    }
+
+    /** Keeps one change of a strike counter in the history (S7d). */
+    private void registrar(Usuario usuario, Restaurant restaurant, HistorialStrike.Tipo tipo,
+                           HistorialStrike.Origen origen, String motivo, int totalDespues) {
+        HistorialStrike entrada = new HistorialStrike();
+        entrada.setUsuario(usuario);
+        entrada.setRestaurant(restaurant);
+        entrada.setFecha(LocalDateTime.now(clock).truncatedTo(ChronoUnit.SECONDS));
+        entrada.setTipo(tipo);
+        entrada.setOrigen(origen);
+        entrada.setMotivo(motivo.strip());
+        entrada.setTotalDespues(totalDespues);
+        historialRepo.save(entrada);
     }
 
     /**
@@ -196,6 +297,7 @@ public class ModeracionService {
                 .collect(Collectors.joining(" "));
         int total = cliente.getStrikes();
         String motivo = "No asististe a %d reservas sin avisar.".formatted(AUSENCIAS_POR_STRIKE);
+        registrar(cliente, null, HistorialStrike.Tipo.SUMA, HistorialStrike.Origen.AUSENCIAS, motivo, total);
         DespuesDelCommit.ejecutar(() -> emailService.enviarAvisoSancion(email, nombre, total, LIMITE_STRIKES, motivo));
         return true;
     }
