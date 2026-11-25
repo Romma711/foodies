@@ -9,6 +9,7 @@ import com.example.Foodies.Espacio.Dtos.EspacioDTO;
 import com.example.Foodies.Espacio.Dtos.EspacioRequestDTO;
 import com.example.Foodies.Foto.Dtos.FotoDTO;
 import com.example.Foodies.Foto.FotoService;
+import com.example.Foodies.ListaEspera.Dtos.EntradaListaEsperaPanelDTO;
 import com.example.Foodies.Reserva.dtos.ReservaPanelDTO;
 import com.example.Foodies.Restaurant.Dtos.MiRestauranteDTO;
 import com.example.Foodies.Restaurant.Dtos.RestaurantPatchDTO;
@@ -62,6 +63,12 @@ public class RestaurantePanelController {
     @GetMapping("/me/reservas")
     public List<ReservaPanelDTO> getReservas() {
         return panelService.getReservas();
+    }
+
+    /** Open waitlist entries of the restaurant (S7d, D23), read only; {@code fecha} yyyy-MM-dd, today onwards without it. */
+    @GetMapping("/me/lista-espera")
+    public List<EntradaListaEsperaPanelDTO> getListaEspera(@RequestParam(required = false) String fecha) {
+        return panelService.getListaEspera(fecha);
     }
 
     /** Espacios del restaurante (activos e inactivos) con su capacidad. */

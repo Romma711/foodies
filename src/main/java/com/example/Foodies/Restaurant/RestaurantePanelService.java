@@ -15,6 +15,7 @@ import com.example.Foodies.Enums.EstadoReserva;
 import com.example.Foodies.Exception.BusinessException;
 import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
+import com.example.Foodies.ListaEspera.Dtos.EntradaListaEsperaPanelDTO;
 import com.example.Foodies.ListaEspera.ListaEsperaService;
 import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Moderacion.ModeracionService;
@@ -118,6 +119,11 @@ public class RestaurantePanelService {
                 .sorted(Comparator.comparing(ReservaPanelDTO::fecha, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(ReservaPanelDTO::horarioLlegada, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
+    }
+
+    /** Open waitlist entries of the manager's restaurant (S7d, D23); see {@link ListaEsperaService#delRestaurante}. */
+    public List<EntradaListaEsperaPanelDTO> getListaEspera(String fecha) {
+        return listaEspera.delRestaurante(miRestaurante(), fecha);
     }
 
     /**

@@ -16,5 +16,14 @@ public interface ListaEsperaRepository extends JpaRepository<EntradaListaEspera,
     List<EntradaListaEspera> findAllByRestaurant_IdAndFechaAndEstadoOrderByCreadaAscIdAsc(
             Long restaurantId, LocalDate fecha, EstadoListaEspera estado);
 
+    List<EntradaListaEspera> findAllByRestaurant_IdAndEstadoInAndFechaGreaterThanEqualOrderByFechaAscHorarioAscCreadaAscIdAsc(
+            Long restaurantId, Collection<EstadoListaEspera> estados, LocalDate desde);
+
+    List<EntradaListaEspera> findAllByRestaurant_IdAndEstadoInAndFechaOrderByHorarioAscCreadaAscIdAsc(
+            Long restaurantId, Collection<EstadoListaEspera> estados, LocalDate fecha);
+
+    /** Open entries of a client, closed when its account is deactivated (S7e). */
+    List<EntradaListaEspera> findAllByUsuario_IdAndEstadoIn(Long usuarioId, Collection<EstadoListaEspera> estados);
+
     List<EntradaListaEspera> findAllByEstadoInAndFechaLessThanEqual(Collection<EstadoListaEspera> estados, LocalDate hasta);
 }

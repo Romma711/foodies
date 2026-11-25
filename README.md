@@ -250,6 +250,12 @@ archivo type=file (PDF, máximo 10 MB)
 >`GET` `/api/restaurantes/me/reservas`
 >- Reservas del restaurante ordenadas por fecha y hora (`[]` si no hay), con `idEspacio` y `espacioNombre`
 ###
+>`GET` `/api/restaurantes/me/lista-espera?fecha=YYYY-MM-DD`
+>- Lista de espera del propio restaurante, solo lectura (D23): inscripciones `ESPERANDO` y `NOTIFICADA`, ordenadas por fecha, horario y momento de inscripción. Con `fecha`, solo ese día; sin `fecha`, de hoy en adelante. `cliente` es el nombre y apellido, o el email si no tiene nombre. Fecha inválida: `400` con `codigo` `FECHA_FORMATO_INVALIDO`. Solo `ROLE_ENCARGADO` (cliente o admin: `403`)
+```json
+[{ "id": 1, "fecha": "2026-12-04", "horario": "20:00", "idTurno": 147, "cantidad": 2, "estado": "ESPERANDO", "creada": "2026-11-25T10:30:00", "cliente": "Ana Gómez" }]
+```
+###
 >`PATCH` `/api/reservas/{id}/estado`
 ```
 > Body

@@ -10,6 +10,7 @@ import com.example.Foodies.Exception.EntityNotFoundException;
 import com.example.Foodies.Exception.ForbiddenException;
 import com.example.Foodies.Horario.HorarioAtencionService;
 import com.example.Foodies.ListaEspera.Dtos.EntradaListaEsperaDTO;
+import com.example.Foodies.ListaEspera.Dtos.EntradaListaEsperaPanelDTO;
 import com.example.Foodies.ListaEspera.Dtos.ListaEsperaRequestDTO;
 import com.example.Foodies.Moderacion.AvisosReserva;
 import com.example.Foodies.Moderacion.ModeracionService;
@@ -35,6 +36,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
@@ -206,6 +208,32 @@ public class ListaEsperaService {
                 });
     }
 
+    /**
+     * Open entries (ESPERANDO, NOTIFICADA) of a restaurant for its panel (S7d, D23), by date, time and
+     * creation. With {@code fecha} (yyyy-MM-dd) only that day; without it, today and later. Read only.
+     *
+     * @throws BusinessException FECHA_FORMATO_INVALIDO when {@code fecha} is not a valid date
+     */
+    @Transactional(readOnly = true)
+    public List<EntradaListaEsperaPanelDTO> delRestaurante(Restaurant restaurant, String fecha) {
+        List<EntradaListaEspera> entradas;
+        if (fecha == null || fecha.isBlank()) {
+            entradas = listaRepo.findAllByRestaurant_IdAndEstadoInAndFechaGreaterThanEqualOrderByFechaAscHorarioAscCreadaAscIdAsc(
+                    restaurant.getId(), ABIERTAS, LocalDate.now(clock));
+        } else {
+            LocalDate dia;
+            try {
+                dia = LocalDate.parse(fecha.strip());
+            } catch (DateTimeParseException e) {
+                throw new BusinessException("FECHA_FORMATO_INVALIDO", java.util.Map.of(),
+                        "Formato de fecha inválido. Debe ser yyyy-MM-dd (ejemplo: 2024-12-25)");
+            }
+            entradas = listaRepo.findAllByRestaurant_IdAndEstadoInAndFechaOrderByHorarioAscCreadaAscIdAsc(
+                    restaurant.getId(), ABIERTAS, dia);
+        }
+        return entradas.stream().map(ListaEsperaService::toPanelDto).toList();
+    }
+
     /** The client booked that restaurant and day: its open entry is closed. */
     @Transactional
     public void cerrarAlReservar(Usuario usuario, Restaurant restaurant, LocalDate fecha) {
@@ -242,6 +270,17 @@ public class ListaEsperaService {
     private Usuario usuarioActual() {
         return usuarioRepo.findByEmail(currentUser.email())
                 .orElseThrow(() -> new ForbiddenException("No hay un usuario autenticado"));
+    }
+
+    private static EntradaListaEsperaPanelDTO toPanelDto(EntradaListaEspera e) {
+        Usuario cliente = e.getUsuario();
+        String nombre = java.util.stream.Stream.of(cliente.getNombre(), cliente.getApellido())
+                .filter(parte -> parte != null && !parte.isBlank())
+                .map(String::strip)
+                .collect(java.util.stream.Collectors.joining(" "));
+        return new EntradaListaEsperaPanelDTO(e.getId(), e.getFecha(), e.getHorario().format(HORA),
+                e.getTurno() == null ? null : e.getTurno().getId(), e.getCantidad(), e.getEstado(),
+                e.getCreada(), nombre.isEmpty() ? cliente.getEmail() : nombre);
     }
 
     private static EntradaListaEsperaDTO toDto(EntradaListaEspera e) {
