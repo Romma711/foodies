@@ -178,14 +178,21 @@ public class ListaEsperaService {
      */
     @Transactional
     public void lugarLiberado(Reserva liberada) {
-        Restaurant restaurant = liberada.getRestaurant();
-        LocalDate fecha = liberada.fechaLocal();
+        lugarLiberado(liberada.getRestaurant(), liberada.fechaLocal(), liberada.getTurno());
+    }
+
+    /**
+     * Same as {@link #lugarLiberado(Reserva)} for a slot given by restaurant, day and shift, used when a
+     * modified reservation leaves its previous slot or takes fewer seats in it.
+     */
+    @Transactional
+    public void lugarLiberado(Restaurant restaurant, LocalDate fecha, Turno turno) {
         if (restaurant == null || fecha == null || !restaurant.isPublicado()) {
             return;
         }
         reservaRepo.flush();
         LocalDateTime ahora = LocalDateTime.now(clock);
-        Long turnoId = liberada.getTurno() == null ? null : liberada.getTurno().getId();
+        Long turnoId = turno == null ? null : turno.getId();
         listaRepo.findAllByRestaurant_IdAndFechaAndEstadoOrderByCreadaAscIdAsc(restaurant.getId(), fecha,
                         EstadoListaEspera.ESPERANDO).stream()
                 .filter(e -> Objects.equals(e.getTurno() == null ? null : e.getTurno().getId(), turnoId))

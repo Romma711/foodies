@@ -263,6 +263,13 @@ public class ReservaService {
         Date fechaReserva = parseFecha(fechaTexto);
         cupoReservas.validar(espacio, fecha, turno, cantidad, r.getId());
 
+        // The slot the reservation leaves (or takes fewer seats in) may now fit a waiting client.
+        LocalDate fechaAnterior = r.fechaLocal();
+        Turno turnoAnterior = r.getTurno();
+        boolean liberaLugar = cantidad < r.getCantidad() || !fecha.equals(fechaAnterior)
+                || !java.util.Objects.equals(idDe(turno), idDe(turnoAnterior))
+                || !java.util.Objects.equals(hora, r.getHorariollegada());
+
         r.setCantidad(cantidad);
         r.setFechaReserva(fechaReserva);
         r.setHorariollegada(hora);
@@ -271,7 +278,15 @@ public class ReservaService {
         // Modifying re-evaluates auto-acceptance; otherwise the restaurant confirms it again.
         r.setEstadoReserva(estadoInicial(r.getRestaurant(), cupoReservas.cupo(espacio, fecha), cantidad,
                 cupoReservas.aceptadas(espacio, fecha, turno, r.getId())));
-        return toDetail(reservaRepo.save(r));
+        Reserva modificada = reservaRepo.save(r);
+        if (liberaLugar) {
+            listaEspera.lugarLiberado(modificada.getRestaurant(), fechaAnterior, turnoAnterior);
+        }
+        return toDetail(modificada);
+    }
+
+    private static Long idDe(Turno turno) {
+        return turno == null ? null : turno.getId();
     }
 
     /** Admin only: clients cancel, so the restaurant and the history keep the reservation. */

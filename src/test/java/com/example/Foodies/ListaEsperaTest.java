@@ -163,6 +163,39 @@ class ListaEsperaTest {
     }
 
     @Test
+    void modificarUnaReservaAMenosPersonasAvisaALaLista() {
+        Encargado encargado = api.nuevoEncargado();
+        Cliente ocupa = api.nuevoCliente();
+        Long reserva = api.crearReserva(ocupa, encargado.restaurantId(), FECHA, 4);
+        api.crearReserva(api.nuevoCliente(), encargado.restaurantId(), FECHA, 6);
+        Cliente espera = api.nuevoCliente();
+        Long entrada = id(anotar(espera, encargado.restaurantId(), 2));
+
+        ResponseEntity<Map> modificada = api.send(HttpMethod.PUT, "/api/reservas/" + reserva, ocupa.token(),
+                Map.of("cantidad", 2), Map.class);
+
+        assertThat(modificada.getStatusCode()).as("%s", modificada.getBody()).isEqualTo(HttpStatus.OK);
+        assertThat(estado(entrada)).isEqualTo(EstadoListaEspera.NOTIFICADA);
+        assertThat(mailsPara(espera.email())).hasSize(1);
+    }
+
+    @Test
+    void moverUnaReservaAOtroDiaAvisaALaListaDelDiaQueDeja() {
+        Encargado encargado = api.nuevoEncargado();
+        Cliente ocupa = api.nuevoCliente();
+        Long reserva = api.crearReserva(ocupa, encargado.restaurantId(), FECHA, 4);
+        api.crearReserva(api.nuevoCliente(), encargado.restaurantId(), FECHA, 6);
+        Cliente espera = api.nuevoCliente();
+        Long entrada = id(anotar(espera, encargado.restaurantId(), 4));
+
+        ResponseEntity<Map> movida = api.send(HttpMethod.PUT, "/api/reservas/" + reserva, ocupa.token(),
+                Map.of("fechaReserva", FECHA.plusDays(1).toString()), Map.class);
+
+        assertThat(movida.getStatusCode()).as("%s", movida.getBody()).isEqualTo(HttpStatus.OK);
+        assertThat(estado(entrada)).isEqualTo(EstadoListaEspera.NOTIFICADA);
+    }
+
+    @Test
     void elClienteSaleDeLaListaYNoPuedeTocarLaDeOtro() {
         Encargado encargado = api.nuevoEncargado();
         api.crearReserva(api.nuevoCliente(), encargado.restaurantId(), FECHA, 10);
